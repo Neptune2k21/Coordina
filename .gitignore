@@ -1,0 +1,19 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+
+# env
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# logs
+*.log
