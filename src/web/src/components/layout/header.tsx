@@ -27,14 +27,16 @@ const navItems = [
     label: "Solution",
     href: "#solution",
     eyebrow: "By team",
-    description: "A calmer operating layer for product, ops and delivery teams.",
+    description:
+      "A calmer operating layer for product, ops and delivery teams.",
     items: ["Product planning", "Client delivery", "Team rituals"],
   },
   {
     label: "Ressources",
     href: "#ressources",
     eyebrow: "Learn",
-    description: "Guides, changelog and patterns for building better workflows.",
+    description:
+      "Guides, changelog and patterns for building better workflows.",
     items: ["Playbooks", "Release notes", "API docs"],
   },
 ] as const
@@ -57,10 +59,10 @@ export function Header() {
             <Command className="relative size-5 text-white transition-transform duration-300 group-hover:rotate-12 dark:text-zinc-950" />
           </span>
           <span className="flex flex-col">
-            <span className="text-[15px] font-semibold leading-none tracking-normal">
+            <span className="text-[15px] leading-none font-semibold tracking-normal">
               Coordina
             </span>
-            <span className="mt-1 text-[11px] font-medium leading-none text-muted-foreground">
+            <span className="mt-1 text-[11px] leading-none font-medium text-muted-foreground">
               Workspace OS
             </span>
           </span>
@@ -74,15 +76,15 @@ export function Header() {
             <div key={item.href} className="group relative">
               <a
                 href={item.href}
-                className="flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-zinc-600 transition-all duration-300 hover:bg-zinc-950/[0.04] hover:text-zinc-950 focus-visible:bg-zinc-950/[0.04] focus-visible:text-zinc-950 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:bg-white/10 dark:focus-visible:text-white"
+                className="flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-zinc-600 transition-all duration-300 hover:bg-zinc-950/[0.04] hover:text-zinc-950 focus-visible:bg-zinc-950/[0.04] focus-visible:text-zinc-950 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:bg-white/10 dark:focus-visible:text-white"
               >
                 {item.label}
                 <CaretDown className="size-3.5 transition-transform duration-300 group-hover:rotate-180" />
               </a>
 
-              <div className="pointer-events-none absolute left-1/2 top-12 w-[320px] -translate-x-1/2 translate-y-2 opacity-0 transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              <div className="pointer-events-none absolute top-12 left-1/2 w-[320px] -translate-x-1/2 translate-y-2 opacity-0 transition-all duration-300 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
                 <div className="rounded-[22px] border border-zinc-950/[0.08] bg-white/92 p-4 shadow-[0_28px_90px_rgba(24,24,27,0.16)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/92 dark:shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                  <p className="text-[11px] font-semibold tracking-[0.16em] text-zinc-400 uppercase">
                     {item.eyebrow}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
@@ -145,8 +147,8 @@ export function Header() {
         className={cn(
           "relative mx-4 grid overflow-hidden rounded-[28px] border border-zinc-950/[0.08] bg-white/92 shadow-[0_28px_80px_rgba(24,24,27,0.16)] backdrop-blur-2xl transition-[grid-template-rows,opacity,transform] duration-300 sm:mx-6 md:hidden dark:border-white/10 dark:bg-zinc-950/94",
           isOpen
-            ? "grid-rows-[1fr] translate-y-0 opacity-100"
-            : "pointer-events-none grid-rows-[0fr] -translate-y-3 opacity-0"
+            ? "translate-y-0 grid-rows-[1fr] opacity-100"
+            : "pointer-events-none -translate-y-3 grid-rows-[0fr] opacity-0"
         )}
       >
         <div className="min-h-0">
@@ -171,19 +173,19 @@ export function Header() {
               <div className="grid grid-cols-3 gap-2 pb-2">
                 <div className="rounded-2xl bg-zinc-950/[0.035] p-3 dark:bg-white/[0.06]">
                   <CirclesThreePlus className="mb-2 size-4 text-muted-foreground" />
-                  <p className="text-[11px] font-medium leading-4 text-muted-foreground">
+                  <p className="text-[11px] leading-4 font-medium text-muted-foreground">
                     Boards
                   </p>
                 </div>
                 <div className="rounded-2xl bg-zinc-950/[0.035] p-3 dark:bg-white/[0.06]">
                   <BookOpenText className="mb-2 size-4 text-muted-foreground" />
-                  <p className="text-[11px] font-medium leading-4 text-muted-foreground">
+                  <p className="text-[11px] leading-4 font-medium text-muted-foreground">
                     Docs
                   </p>
                 </div>
                 <div className="rounded-2xl bg-zinc-950/[0.035] p-3 dark:bg-white/[0.06]">
                   <Buildings className="mb-2 size-4 text-muted-foreground" />
-                  <p className="text-[11px] font-medium leading-4 text-muted-foreground">
+                  <p className="text-[11px] leading-4 font-medium text-muted-foreground">
                     Teams
                   </p>
                 </div>

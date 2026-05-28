@@ -1,0 +1,40 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+
+namespace Coordina.Api.Tests;
+
+public sealed class ApiEndpointsTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+  private readonly HttpClient _client = factory.CreateClient();
+
+  [Fact]
+  public async Task Root_ReturnsWelcomeMessage()
+  {
+    var response = await _client.GetAsync("/");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<WelcomeResponse>();
+    Assert.NotNull(payload);
+    Assert.Equal("Bienvenue sur l'API de Coordina !", payload.Message);
+  }
+
+  [Fact]
+  public async Task Health_ReturnsServiceStatus()
+  {
+    var response = await _client.GetAsync("/health");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<HealthResponse>();
+    Assert.NotNull(payload);
+    Assert.Equal("tout est ok", payload.Status);
+    Assert.Equal("Coordina API", payload.Service);
+  }
+
+  private sealed record WelcomeResponse(string Message);
+
+  private sealed record HealthResponse(string Status, string Service, DateTime Time);
+}
