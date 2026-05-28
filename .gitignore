@@ -17,3 +17,8 @@ obj/
 
 # logs
 *.log
+
+# tests and coverage
+TestResults/
+coverage/
+coverage.cobertura.xml
