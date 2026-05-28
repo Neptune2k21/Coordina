@@ -1,10 +1,13 @@
+using Coordina.Api.modules.health;
+
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapGet("/", () => new
+app.MapGet("/", () => Results.Ok(new
 {
-    App = "Coordina",
-    Message = "API is running"
-});
+    message = "Bienvenue sur l'API de Coordina !"
+}));
+
+app.MapHealthEndpoints();
 
 app.Run();
