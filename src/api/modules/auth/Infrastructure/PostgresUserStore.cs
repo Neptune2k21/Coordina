@@ -1,72 +1,69 @@
+using Coordina.Api.Infrastructure.Persistence;
 using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Domain;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Coordina.Api.Modules.Auth.Infrastructure;
 
-public sealed class PostgresUserStore(NpgsqlDataSource dataSource) : IUserStore
+public sealed class PostgresUserStore(CoordinaDbContext dbContext) : IUserStore
 {
   public async Task<UserAccount?> FindByEmailAsync(
     string normalizedEmail,
     CancellationToken cancellationToken)
   {
-    await using var command = dataSource.CreateCommand("""
-      select id, name, email, normalized_email, password_hash, created_at
-      from auth_users
-      where normalized_email = @normalizedEmail
-      limit 1;
-      """);
-    command.Parameters.AddWithValue("normalizedEmail", normalizedEmail);
+    var user = await dbContext.AuthUsers
+      .AsNoTracking()
+      .SingleOrDefaultAsync(
+        user => user.NormalizedEmail == normalizedEmail,
+        cancellationToken);
 
-    await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-    if (!await reader.ReadAsync(cancellationToken))
+    if (user is null)
     {
       return null;
     }
 
-    return new UserAccount(
-      reader.GetGuid(0),
-      reader.GetString(1),
-      reader.GetString(2),
-      reader.GetString(3),
-      reader.GetString(4),
-      reader.GetFieldValue<DateTimeOffset>(5));
+    return ToDomain(user);
   }
 
   public async Task<bool> CreateAsync(
     UserAccount user,
     CancellationToken cancellationToken)
   {
-    await using var command = dataSource.CreateCommand("""
-      insert into auth_users (
-        id,
-        name,
-        email,
-        normalized_email,
-        password_hash,
-        created_at
-      )
-      values (
-        @id,
-        @name,
-        @email,
-        @normalizedEmail,
-        @passwordHash,
-        @createdAt
-      )
-      on conflict (normalized_email) do nothing;
-      """);
+    dbContext.AuthUsers.Add(new AuthUserEntity
+    {
+      Id = user.Id,
+      Name = user.Name,
+      Email = user.Email,
+      NormalizedEmail = user.NormalizedEmail,
+      PasswordHash = user.PasswordHash,
+      CreatedAt = user.CreatedAt
+    });
 
-    command.Parameters.AddWithValue("id", user.Id);
-    command.Parameters.AddWithValue("name", user.Name);
-    command.Parameters.AddWithValue("email", user.Email);
-    command.Parameters.AddWithValue("normalizedEmail", user.NormalizedEmail);
-    command.Parameters.AddWithValue("passwordHash", user.PasswordHash);
-    command.Parameters.AddWithValue("createdAt", user.CreatedAt);
+    try
+    {
+      await dbContext.SaveChangesAsync(cancellationToken);
+    }
+    catch (DbUpdateException exception)
+      when (exception.InnerException is PostgresException
+      {
+        SqlState: PostgresErrorCodes.UniqueViolation
+      })
+    {
+      return false;
+    }
 
-    var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
+    return true;
+  }
 
-    return affectedRows == 1;
+  private static UserAccount ToDomain(AuthUserEntity user)
+  {
+    return new UserAccount(
+      user.Id,
+      user.Name,
+      user.Email,
+      user.NormalizedEmail,
+      user.PasswordHash,
+      user.CreatedAt);
   }
 }

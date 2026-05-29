@@ -1,4 +1,4 @@
-using Npgsql;
+using Microsoft.EntityFrameworkCore;
 
 namespace Coordina.Api.Infrastructure.Persistence;
 
@@ -11,8 +11,10 @@ public static class PostgresModule
     var options = PostgresOptions.FromEnvironment(configuration);
 
     services.AddSingleton(options);
-    services.AddSingleton(_ => NpgsqlDataSource.Create(
-      options.ToConnectionString()));
+    services.AddDbContext<CoordinaDbContext>(dbContextOptions =>
+    {
+      dbContextOptions.UseNpgsql(options.ToConnectionString());
+    });
 
     return services;
   }
