@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Coordina.Api.Tests.Support;
 
 namespace Coordina.Api.Tests;
 
-public sealed class ApiEndpointsTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ApiEndpointsTests(ApiTestApplicationFactory factory)
+    : IClassFixture<ApiTestApplicationFactory>
 {
   private readonly HttpClient _client = factory.CreateClient();
 

@@ -4,10 +4,12 @@ import { describe, expect, it } from "vitest"
 import App from "./App"
 
 describe("App", () => {
-  it("renders the Coordina header", () => {
+  it("renders the landing page by default", () => {
     render(<App />)
 
     expect(screen.getByRole("link", { name: "Coordina" })).toBeInTheDocument()
-    expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Coordina" })
+    ).toBeInTheDocument()
   })
 })

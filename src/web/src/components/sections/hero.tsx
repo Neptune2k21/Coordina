@@ -49,7 +49,7 @@ export function Hero() {
                 asChild
                 className="h-12 rounded-full bg-zinc-950 px-6 text-sm text-white shadow-[0_18px_44px_rgba(9,9,11,0.22)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
               >
-                <a href="#get-started">
+                <a href="/login">
                   Get started
                   <ArrowRight className="size-4" />
                 </a>
