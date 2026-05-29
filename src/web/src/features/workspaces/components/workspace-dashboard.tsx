@@ -69,7 +69,10 @@ export function WorkspaceDashboard() {
           <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
             <WorkspaceCreateDialog />
             <div className="hidden items-center gap-2 rounded-full border border-zinc-950/10 bg-white/62 px-3 py-2 text-xs font-medium text-muted-foreground shadow-[0_12px_34px_rgba(24,24,27,0.07)] backdrop-blur-xl sm:flex dark:border-white/10 dark:bg-white/[0.06]">
-              <Lightning className="size-4 text-teal-600 dark:text-teal-300" weight="fill" />
+              <Lightning
+                className="size-4 text-teal-600 dark:text-teal-300"
+                weight="fill"
+              />
               Context persisted
               <ArrowRight className="size-3.5 opacity-50" />
             </div>

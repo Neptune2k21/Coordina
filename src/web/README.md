@@ -1,21 +1,61 @@
-# React + TypeScript + Vite + shadcn/ui
+# Coordina Web
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+React application for Coordina.
 
-## Adding components
+## Stack
 
-To add components to your app, run the following command:
+| Area | Technology |
+| --- | --- |
+| Runtime | React 19 |
+| Language | TypeScript |
+| Build | Vite |
+| Styling | Tailwind CSS 4 |
+| UI primitives | shadcn-style components, Radix UI |
+| Tests | Vitest, Testing Library, Playwright |
+
+## Commands
+
+Run all commands from the repository root:
 
 ```bash
-npx shadcn@latest add button
+pnpm --dir src/web install
+pnpm --dir src/web dev
+pnpm --dir src/web test
+pnpm --dir src/web typecheck
+pnpm --dir src/web lint
+pnpm --dir src/web build
 ```
 
-This will place the ui components in the `src/components` directory.
+Or use the root Makefile:
 
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button"
+```bash
+make web
+make web-test
+make web-typecheck
+make web-build
 ```
+
+## Environment
+
+The web app reads the API base URL from:
+
+```dotenv
+VITE_API_URL=http://localhost:5050
+```
+
+If the variable is not set, the app defaults to `http://localhost:5050`.
+
+## Structure
+
+```text
+src
+├── components       # Shared layout, docs, and UI primitives
+├── features
+│   ├── auth         # Auth session, API client, forms
+│   ├── docs         # In-app documentation page
+│   └── workspaces   # Workspace state, API client, screens
+├── lib              # Shared utilities
+└── main.tsx         # App entrypoint
+```
+
+The root [README.md](../../README.md) contains the full project setup and quality gate documentation.

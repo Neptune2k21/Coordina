@@ -18,12 +18,8 @@ import type { WorkspaceMember } from "@/features/workspaces/workspace-types"
 
 export function WorkspaceMembersPanel() {
   const { session } = useAuth()
-  const {
-    activeWorkspace,
-    isMutating,
-    listMembers,
-    removeMember,
-  } = useWorkspaces()
+  const { activeWorkspace, isMutating, listMembers, removeMember } =
+    useWorkspaces()
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -102,15 +98,17 @@ export function WorkspaceMembersPanel() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-zinc-950 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(9,9,11,0.12)] dark:bg-white dark:text-zinc-950">
-                    {(member.name ?? member.email ?? "U").slice(0, 1).toUpperCase()}
+                    {(member.name ?? member.email ?? "U")
+                      .slice(0, 1)
+                      .toUpperCase()}
                   </span>
                   <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {member.name ?? member.email ?? member.userId}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {member.email ?? member.userId}
-                  </p>
+                    <p className="truncate text-sm font-medium">
+                      {member.name ?? member.email ?? member.userId}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {member.email ?? member.userId}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -120,9 +118,9 @@ export function WorkspaceMembersPanel() {
                     ) : null}
                     {member.role}
                   </span>
-                  {activeWorkspace?.role === "OWNER"
-                    && member.role !== "OWNER"
-                    && member.userId !== session?.user.id ? (
+                  {activeWorkspace?.role === "OWNER" &&
+                  member.role !== "OWNER" &&
+                  member.userId !== session?.user.id ? (
                     <Button
                       type="button"
                       variant="destructive"

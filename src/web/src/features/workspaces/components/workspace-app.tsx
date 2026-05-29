@@ -4,7 +4,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { SaasShell } from "@/components/layout/saas-shell"
 import { WorkspaceDashboard } from "@/features/workspaces/components/workspace-dashboard"
 import { WorkspaceOnboarding } from "@/features/workspaces/components/workspace-onboarding"
-import { WorkspaceProvider, useWorkspaces } from "@/features/workspaces/workspace-context"
+import {
+  WorkspaceProvider,
+  useWorkspaces,
+} from "@/features/workspaces/workspace-context"
 
 export function WorkspaceApp() {
   return (
