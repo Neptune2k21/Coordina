@@ -72,6 +72,7 @@ export const docsSections = [
     body: "Run Postgres, the .NET API, and the Vite app. The frontend is served on the Vite port, while API calls use `VITE_API_URL`.",
     code: {
       filename: "terminal",
+      language: "bash",
       value: installCode,
     },
     icon: Lightning,
