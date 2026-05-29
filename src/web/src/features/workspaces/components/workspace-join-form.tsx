@@ -2,7 +2,12 @@ import { ArrowRight, CircleNotch } from "@phosphor-icons/react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { ApiError } from "@/features/auth/auth-api"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
@@ -36,7 +41,9 @@ export function WorkspaceJoinForm({ compact = false }: { compact?: boolean }) {
     >
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor={compact ? "join-workspace-compact" : "join-workspace"}>
+          <FieldLabel
+            htmlFor={compact ? "join-workspace-compact" : "join-workspace"}
+          >
             Invitation code
           </FieldLabel>
           <div className="flex flex-col gap-2 sm:flex-row">

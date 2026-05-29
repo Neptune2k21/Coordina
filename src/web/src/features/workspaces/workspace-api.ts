@@ -28,10 +28,7 @@ export async function createWorkspace(accessToken: string, name: string) {
   })
 }
 
-export async function joinWorkspace(
-  accessToken: string,
-  inviteCode: string
-) {
+export async function joinWorkspace(accessToken: string, inviteCode: string) {
   return request<Workspace>("/workspaces/join", accessToken, {
     method: "POST",
     body: JSON.stringify({ inviteCode }),

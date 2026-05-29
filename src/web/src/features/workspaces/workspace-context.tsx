@@ -47,9 +47,9 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null)
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(
-    () => localStorage.getItem(activeWorkspaceStorageKey)
-  )
+  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<
+    string | null
+  >(() => localStorage.getItem(activeWorkspaceStorageKey))
   const [isLoading, setIsLoading] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,8 +63,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     (nextWorkspaces: Workspace[]) => {
       const storedWorkspaceId = localStorage.getItem(activeWorkspaceStorageKey)
       const nextActiveWorkspace =
-        nextWorkspaces.find((workspace) => workspace.id === storedWorkspaceId) ??
-        nextWorkspaces[0]
+        nextWorkspaces.find(
+          (workspace) => workspace.id === storedWorkspaceId
+        ) ?? nextWorkspaces[0]
 
       if (nextActiveWorkspace) {
         persistActiveWorkspaceId(nextActiveWorkspace.id)
@@ -115,9 +116,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     queueMicrotask(() => void refresh())
   }, [refresh])
 
-  const setActiveWorkspaceId = useCallback((workspaceId: string) => {
-    persistActiveWorkspaceId(workspaceId)
-  }, [persistActiveWorkspaceId])
+  const setActiveWorkspaceId = useCallback(
+    (workspaceId: string) => {
+      persistActiveWorkspaceId(workspaceId)
+    },
+    [persistActiveWorkspaceId]
+  )
 
   const create = useCallback(
     async (name: string) => {
@@ -150,10 +154,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setIsMutating(true)
 
       try {
-        const workspace = await joinWorkspace(
-          session.accessToken,
-          inviteCode
-        )
+        const workspace = await joinWorkspace(session.accessToken, inviteCode)
         setWorkspaces((current) => {
           const withoutDuplicate = current.filter(
             (item) => item.id !== workspace.id

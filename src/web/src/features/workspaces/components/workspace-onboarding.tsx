@@ -61,7 +61,10 @@ export function WorkspaceOnboarding() {
           </Card>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Sparkle className="size-4 text-teal-600 dark:text-teal-300" weight="fill" />
+          <Sparkle
+            className="size-4 text-teal-600 dark:text-teal-300"
+            weight="fill"
+          />
           Invitation codes are single-use and checked by the API.
         </div>
       </div>
