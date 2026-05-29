@@ -3,21 +3,14 @@ import {
   Clock,
   Command,
   Kanban,
-  SignOut,
   UsersThree,
 } from "@phosphor-icons/react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
-import { getCurrentUser, login, register } from "@/features/auth/auth-api"
-import type {
-  AuthFormValues,
-  AuthMode,
-  AuthSession,
-} from "@/features/auth/auth-types"
+import { login, register } from "@/features/auth/auth-api"
+import { useAuth } from "@/features/auth/auth-context"
+import type { AuthFormValues, AuthMode } from "@/features/auth/auth-types"
 import { AuthForm } from "@/features/auth/components/auth-form"
-
-const storageKey = "coordina.auth.session"
 
 const workspaceSignals = [
   "Plan launches with your team",
@@ -45,25 +38,8 @@ const previewCards = [
 
 export function AuthSection() {
   const [mode, setMode] = useState<AuthMode>("login")
-  const [session, setSession] = useState<AuthSession | null>(() =>
-    readStoredSession()
-  )
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    const storedSession = readStoredSession()
-
-    if (!storedSession) {
-      return
-    }
-
-    void getCurrentUser(storedSession.accessToken)
-      .then((user) => setSession({ ...storedSession, user }))
-      .catch(() => {
-        localStorage.removeItem(storageKey)
-        setSession(null)
-      })
-  }, [])
+  const { setSession } = useAuth()
 
   async function handleSubmit(values: AuthFormValues) {
     setIsSubmitting(true)
@@ -77,17 +53,13 @@ export function AuthSection() {
               password: values.password,
             })
 
-      localStorage.setItem(storageKey, JSON.stringify(nextSession))
       setSession(nextSession)
+      window.history.pushState({}, "", "/app")
+      window.dispatchEvent(new PopStateEvent("popstate"))
       return nextSession
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  function signOut() {
-    localStorage.removeItem(storageKey)
-    setSession(null)
   }
 
   return (
@@ -188,89 +160,41 @@ export function AuthSection() {
           </div>
 
           <div className="mx-auto flex w-full max-w-[430px] flex-1 flex-col justify-center py-10">
-            {session ? (
-              <div className="grid gap-5">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Active workspace
-                  </p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-normal">
-                    Welcome back, {session.user.name}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    You are signed in as {session.user.email}. Your session
-                    stays active until{" "}
-                    {new Intl.DateTimeFormat("en-US", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }).format(new Date(session.expiresAt))}
-                    .
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-md"
-                  onClick={signOut}
-                >
-                  <SignOut className="size-4" />
-                  Sign out
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="mb-8">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {mode === "login"
-                      ? "Sign in to continue"
-                      : "Create your workspace account"}
-                  </p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-normal">
-                    {mode === "login" ? "Welcome back" : "Start with Coordina"}
-                  </h2>
-                </div>
-                <AuthForm
-                  key={mode}
-                  mode={mode}
-                  isSubmitting={isSubmitting}
-                  onSubmit={handleSubmit}
-                />
-                <p className="mt-6 text-center text-sm text-muted-foreground">
-                  {mode === "login"
-                    ? "New to Coordina?"
-                    : "Already have an account?"}{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-zinc-950 underline-offset-4 hover:underline dark:text-white"
-                    onClick={() =>
-                      setMode((current) =>
-                        current === "login" ? "register" : "login"
-                      )
-                    }
-                  >
-                    {mode === "login" ? "Create an account" : "Sign in"}
-                  </button>
-                </p>
-              </>
-            )}
+            <div className="mb-8">
+              <p className="text-sm font-medium text-muted-foreground">
+                {mode === "login"
+                  ? "Sign in to continue"
+                  : "Create your workspace account"}
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-normal">
+                {mode === "login" ? "Welcome back" : "Start with Coordina"}
+              </h2>
+            </div>
+            <AuthForm
+              key={mode}
+              mode={mode}
+              isSubmitting={isSubmitting}
+              onSubmit={handleSubmit}
+            />
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {mode === "login"
+                ? "New to Coordina?"
+                : "Already have an account?"}{" "}
+              <button
+                type="button"
+                className="font-semibold text-zinc-950 underline-offset-4 hover:underline dark:text-white"
+                onClick={() =>
+                  setMode((current) =>
+                    current === "login" ? "register" : "login"
+                  )
+                }
+              >
+                {mode === "login" ? "Create an account" : "Sign in"}
+              </button>
+            </p>
           </div>
         </div>
       </div>
     </section>
   )
-}
-
-function readStoredSession(): AuthSession | null {
-  const value = localStorage.getItem(storageKey)
-
-  if (!value) {
-    return null
-  }
-
-  try {
-    return JSON.parse(value) as AuthSession
-  } catch {
-    localStorage.removeItem(storageKey)
-    return null
-  }
 }

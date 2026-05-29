@@ -27,10 +27,10 @@ help:
 	@echo "  make docker-down  Stoppe les services Docker"
 	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
 
-api:
+api: api-migrate
 	dotnet run --project $(API_PROJECT) --urls $(API_URL)
 
-api-watch:
+api-watch: api-migrate
 	dotnet watch --project $(API_PROJECT) --urls $(API_URL)
 
 api-restore:

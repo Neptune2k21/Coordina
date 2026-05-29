@@ -3,6 +3,7 @@ using System;
 using Coordina.Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Coordina.Api.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CoordinaDbContext))]
-    partial class CoordinaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529143000_AddWorkspaces")]
+    partial class AddWorkspaces
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -83,53 +86,6 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("workspaces", (string)null);
                 });
 
-            modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceInviteEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CodeHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("code_hash");
-
-                    b.Property<DateTimeOffset?>("ConsumedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("consumed_at");
-
-                    b.Property<Guid?>("ConsumedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("consumed_by_user_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_user_id");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CodeHash")
-                        .IsUnique();
-
-                    b.HasIndex("WorkspaceId");
-
-                    b.ToTable("workspace_invites", (string)null);
-                });
-
             modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceMemberEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -165,17 +121,6 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("workspace_members", (string)null);
                 });
 
-            modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceInviteEntity", b =>
-                {
-                    b.HasOne("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceEntity", "Workspace")
-                        .WithMany("Invites")
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Workspace");
-                });
-
             modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceMemberEntity", b =>
                 {
                     b.HasOne("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceEntity", "Workspace")
@@ -189,8 +134,6 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceEntity", b =>
                 {
-                    b.Navigation("Invites");
-
                     b.Navigation("Members");
                 });
 #pragma warning restore 612, 618

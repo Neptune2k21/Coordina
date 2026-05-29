@@ -7,17 +7,19 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { AuthProvider } from "@/features/auth/auth-context"
 import { AuthSection } from "@/features/auth/components/auth-section"
 
 describe("AuthSection", () => {
   afterEach(() => {
     cleanup()
     localStorage.clear()
+    window.history.replaceState({}, "", "/login")
     vi.restoreAllMocks()
   })
 
   it("renders the login form by default", () => {
-    render(<AuthSection />)
+    renderAuthSection()
 
     expect(
       screen.getByRole("heading", { name: "Welcome back" })
@@ -28,7 +30,7 @@ describe("AuthSection", () => {
   })
 
   it("shows client validation errors", async () => {
-    render(<AuthSection />)
+    renderAuthSection()
 
     fireEvent.click(
       screen.getByRole("button", { name: /sign in to coordina/i })
@@ -40,7 +42,7 @@ describe("AuthSection", () => {
     ).toBeInTheDocument()
   })
 
-  it("registers a user and shows the active session", async () => {
+  it("registers a user and redirects to the app", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -55,7 +57,7 @@ describe("AuthSection", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    render(<AuthSection />)
+    renderAuthSection()
 
     fireEvent.click(screen.getByRole("button", { name: "Create an account" }))
 
@@ -72,10 +74,13 @@ describe("AuthSection", () => {
       screen.getByRole("button", { name: /create workspace account/i })
     )
 
-    expect(
-      await screen.findByText("Welcome back, Ada Lovelace")
-    ).toBeInTheDocument()
-    expect(screen.getByText(/ada@coordina.test/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/app")
+    })
+
+    expect(localStorage.getItem("coordina.auth.session")).toContain(
+      "ada@coordina.test"
+    )
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -87,3 +92,11 @@ describe("AuthSection", () => {
     })
   })
 })
+
+function renderAuthSection() {
+  return render(
+    <AuthProvider>
+      <AuthSection />
+    </AuthProvider>
+  )
+}

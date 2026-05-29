@@ -1,4 +1,5 @@
 using Coordina.Api.Modules.Auth.Infrastructure;
+using Coordina.Api.Modules.Workspaces.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Coordina.Api.Infrastructure.Persistence;
@@ -7,6 +8,9 @@ public sealed class CoordinaDbContext(DbContextOptions<CoordinaDbContext> option
   : DbContext(options)
 {
   public DbSet<AuthUserEntity> AuthUsers => Set<AuthUserEntity>();
+  public DbSet<WorkspaceEntity> Workspaces => Set<WorkspaceEntity>();
+  public DbSet<WorkspaceMemberEntity> WorkspaceMembers => Set<WorkspaceMemberEntity>();
+  public DbSet<WorkspaceInviteEntity> WorkspaceInvites => Set<WorkspaceInviteEntity>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
