@@ -18,7 +18,7 @@ public sealed class ApiEndpointsTests(ApiTestApplicationFactory factory)
 
     var payload = await response.Content.ReadFromJsonAsync<WelcomeResponse>();
     Assert.NotNull(payload);
-    Assert.Equal("Bienvenue sur l'API de Coordina !", payload.Message);
+    Assert.Equal("Welcome to the Coordina API.", payload.Message);
   }
 
   [Fact]
@@ -30,7 +30,7 @@ public sealed class ApiEndpointsTests(ApiTestApplicationFactory factory)
 
     var payload = await response.Content.ReadFromJsonAsync<HealthResponse>();
     Assert.NotNull(payload);
-    Assert.Equal("tout est ok", payload.Status);
+    Assert.Equal("ok", payload.Status);
     Assert.Equal("Coordina API", payload.Service);
   }
 

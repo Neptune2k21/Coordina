@@ -35,12 +35,12 @@ const navItems = [
   },
   {
     label: "Resources",
-    href: "#resources",
+    href: "/docs",
     eyebrow: "Learn",
     description:
       "Guides, changelog and patterns for building better workflows.",
     icon: BookOpenText,
-    items: ["Playbooks", "Release notes", "API docs"],
+    items: ["Platform docs", "API tester", "OpenAPI schema"],
   },
 ] as const
 

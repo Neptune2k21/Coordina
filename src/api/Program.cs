@@ -2,6 +2,7 @@ using Coordina.Api.Infrastructure.Configuration;
 using Coordina.Api.Infrastructure.Persistence;
 using Coordina.Api.Modules.Auth;
 using Coordina.Api.Modules.Health;
+using Scalar.AspNetCore;
 
 EnvFile.LoadNearest();
 
@@ -24,17 +25,25 @@ builder.Services.AddCors(options =>
 builder.Services.AddPostgres(builder.Configuration);
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddAuthorization();
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
 app.UseCors("WebApp");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapOpenApi();
+app.MapScalarApiReference("/api-docs", options =>
+{
+  options.Title = "Coordina API";
+});
 
 app.MapGet("/", () => Results.Ok(new
 {
-  message = "Bienvenue sur l'API de Coordina !"
-}));
+  message = "Welcome to the Coordina API."
+}))
+.WithTags("System")
+.WithSummary("API welcome message");
 
 app.MapAuthEndpoints();
 app.MapHealthEndpoints();

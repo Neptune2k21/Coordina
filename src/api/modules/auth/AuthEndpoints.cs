@@ -13,9 +13,16 @@ public static class AuthEndpoints
       .MapGroup("/auth")
       .WithTags("Auth");
 
-    group.MapPost("/register", Register);
-    group.MapPost("/login", Login);
-    group.MapGet("/me", GetCurrentUser).RequireAuthorization();
+    group.MapPost("/register", Register)
+      .WithSummary("Create a workspace account")
+      .WithDescription("Creates a user account and returns an access token.");
+    group.MapPost("/login", Login)
+      .WithSummary("Sign in")
+      .WithDescription("Authenticates a user and returns an access token.");
+    group.MapGet("/me", GetCurrentUser)
+      .RequireAuthorization()
+      .WithSummary("Get current user")
+      .WithDescription("Returns the user attached to the bearer token.");
 
     return app;
   }
