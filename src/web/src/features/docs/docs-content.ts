@@ -4,6 +4,7 @@ import {
   FileText,
   Lightning,
   ShieldCheck,
+  StackSimple,
 } from "@phosphor-icons/react"
 
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5050"
@@ -13,6 +14,11 @@ export const docsApiBaseUrl = apiBaseUrl
 export const docsNavItems = [
   { id: "quickstart", label: "Quickstart" },
   { id: "auth", label: "Authentication" },
+  { id: "workspaces-api", label: "Workspace API" },
+  { id: "workspaces-security", label: "Security model" },
+  { id: "workspaces-ux", label: "Workspace UX" },
+  { id: "workspaces-ui", label: "shadcn usage" },
+  { id: "tests", label: "Testing" },
   { id: "environment", label: "Environment" },
   { id: "api", label: "API testing" },
 ] as const
@@ -51,6 +57,55 @@ export const curlCode = `curl -X POST ${apiBaseUrl}/auth/register \\
     "email": "maya@coordina.test",
     "password": "Password123!"
   }'`
+
+export const workspaceApiCode = `GET    /workspaces
+POST   /workspaces              { "name": "Product Team" }
+GET    /workspaces/{workspaceId}
+POST   /workspaces/join         { "inviteCode": "A1B2C3D4E5F6" }
+POST   /workspaces/{workspaceId}/invites
+GET    /workspaces/{workspaceId}/members
+DELETE /workspaces/{workspaceId}/members/{memberUserId}
+DELETE /workspaces/{workspaceId}
+
+All workspace endpoints require:
+Authorization: Bearer <accessToken>`
+
+export const workspaceSecurityCode = `Tenant isolation rules:
+- list queries are filtered by current user membership
+- details return 404 for non-members
+- join requires a valid one-time invitation code
+- create auto-creates OWNER membership
+- invite code creation requires OWNER membership
+- member removal requires OWNER membership
+- delete requires OWNER membership
+- frontend state never grants access; the API validates every request`
+
+export const workspaceUxCode = `Workspace UI:
+- /login authenticates with the existing JWT flow
+- /app loads the user's workspaces
+- no workspace: onboarding cards with create dialog and invite-code join form
+- existing workspace: persistent sidebar/topbar shell
+- active workspace id persists in localStorage as coordina.activeWorkspaceId
+- workspace switching is instant and does not reload the page`
+
+export const shadcnUsageCode = `Workspace primitives:
+- Card: onboarding, workspace list, status panels
+- Button: commands and icon actions
+- Dialog: create workspace form
+- DropdownMenu: workspace switcher and user actions
+- Input: create and join forms
+- Field: labels, grouping, validation copy
+- Separator: shell and panel structure`
+
+export const testCode = `dotnet test tests/api/Coordina.Api.Tests.csproj
+
+Manual test:
+1. Register or sign in at /login
+2. Open /app
+3. Create a workspace and confirm OWNER role
+4. Generate an invitation code, sign in as another user, redeem it once
+5. Confirm the member can view but cannot delete
+6. Confirm a non-member receives 404 for workspace details`
 
 export const apiResources = [
   {
@@ -91,6 +146,50 @@ export const docsSections = [
     title: "Authentication",
   },
   {
+    body: "Workspaces are the root tenant boundary for Coordina. Projects, tasks, realtime channels, and future modules should scope data through the active workspace id.",
+    code: {
+      filename: "workspace-endpoints.txt",
+      language: "http",
+      value: workspaceApiCode,
+    },
+    icon: StackSimple,
+    id: "workspaces-api",
+    title: "Workspace API",
+  },
+  {
+    body: "The server enforces membership and owner checks on every workspace endpoint. The frontend keeps useful state, but it is never trusted for authorization.",
+    code: {
+      filename: "security-model.txt",
+      language: "txt",
+      value: workspaceSecurityCode,
+    },
+    icon: ShieldCheck,
+    id: "workspaces-security",
+    title: "Security model",
+  },
+  {
+    body: "The authenticated app uses a shadcn-based SaaS shell with an onboarding path for new accounts and an active workspace context for returning users.",
+    code: {
+      filename: "workspace-ux.txt",
+      language: "txt",
+      value: workspaceUxCode,
+    },
+    icon: BracketsCurly,
+    id: "workspaces-ux",
+    title: "Frontend UX",
+  },
+  {
+    body: "Workspace screens are built from reusable shadcn primitives so future modules can share the same SaaS surface.",
+    code: {
+      filename: "shadcn-usage.txt",
+      language: "txt",
+      value: shadcnUsageCode,
+    },
+    icon: FileText,
+    id: "workspaces-ui",
+    title: "shadcn usage",
+  },
+  {
     body: "Keep secrets in `.env`. Use `.env.example` as the shape of the config, never as production values.",
     code: {
       filename: ".env.example",
@@ -100,6 +199,17 @@ export const docsSections = [
     icon: Database,
     id: "environment",
     title: "Environment",
+  },
+  {
+    body: "Backend integration tests cover workspace creation, member isolation, owner-only delete, unauthorized rejection, and list filtering. Use the manual flow to verify the app end to end.",
+    code: {
+      filename: "workspace-tests.txt",
+      language: "txt",
+      value: testCode,
+    },
+    icon: Lightning,
+    id: "tests",
+    title: "Testing",
   },
 ] as const
 
@@ -111,14 +221,17 @@ export function getDocsLlmContext() {
     "Routes:",
     "- /: marketing home",
     "- /login: authentication page",
+    "- /app: authenticated workspace console",
     "- /docs: platform documentation",
     "",
     "API:",
     `- OpenAPI JSON: ${apiBaseUrl}/openapi/v1.json`,
     `- API testing UI: ${apiBaseUrl}/api-docs`,
+    "- Workspace endpoints require a bearer token and server-side membership validation.",
     "",
     "Commands:",
     installCode,
+    testCode,
     "",
     "Environment:",
     envCode,

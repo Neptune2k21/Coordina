@@ -2,6 +2,7 @@ using Coordina.Api.Infrastructure.Configuration;
 using Coordina.Api.Infrastructure.Persistence;
 using Coordina.Api.Modules.Auth;
 using Coordina.Api.Modules.Health;
+using Coordina.Api.Modules.Workspaces;
 using Scalar.AspNetCore;
 
 EnvFile.LoadNearest();
@@ -29,6 +30,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 
 builder.Services.AddAuthModule(builder.Configuration);
+builder.Services.AddWorkspacesModule();
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 
@@ -51,6 +53,7 @@ app.MapGet("/", () => Results.Ok(new
 .WithSummary("API welcome message");
 
 app.MapAuthEndpoints();
+app.MapWorkspacesEndpoints();
 app.MapHealthEndpoints();
 
 app.Run();
