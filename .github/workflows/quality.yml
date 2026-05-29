@@ -43,5 +43,18 @@ jobs:
       - name: Install web dependencies
         run: pnpm --dir src/web install --frozen-lockfile
 
+      - name: Install Playwright browser
+        run: pnpm --dir src/web exec playwright install --with-deps chromium
+
+      - name: Prepare CI environment
+        run: cp .env.example .env
+
+      - name: Start infrastructure
+        run: make docker-up
+
       - name: Run quality gate
         run: make quality
+
+      - name: Stop infrastructure
+        if: always()
+        run: make docker-down

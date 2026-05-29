@@ -6,10 +6,12 @@ public static class HealthEndpoints
   {
     app.MapGet("/health", () => Results.Ok(new
     {
-      status = "tout est ok",
+      status = "ok",
       service = "Coordina API",
       time = DateTime.UtcNow
-    }));
+    }))
+    .WithTags("System")
+    .WithSummary("Health check");
 
     return app;
   }

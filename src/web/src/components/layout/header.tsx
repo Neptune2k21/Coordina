@@ -35,12 +35,12 @@ const navItems = [
   },
   {
     label: "Resources",
-    href: "#resources",
+    href: "/docs",
     eyebrow: "Learn",
     description:
       "Guides, changelog and patterns for building better workflows.",
     icon: BookOpenText,
-    items: ["Playbooks", "Release notes", "API docs"],
+    items: ["Platform docs", "API tester", "OpenAPI schema"],
   },
 ] as const
 
@@ -128,7 +128,7 @@ export function Header() {
             variant="ghost"
             className="h-10 rounded-full px-4 text-sm text-muted-foreground hover:text-foreground"
           >
-            <a href="#login">
+            <a href="/login">
               <SignIn className="size-4" />
               Sign in
             </a>
@@ -137,7 +137,7 @@ export function Header() {
             asChild
             className="h-10 rounded-full bg-zinc-950 px-5 text-sm text-white shadow-[0_14px_34px_rgba(9,9,11,0.22)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
           >
-            <a href="#get-started">
+            <a href="/login">
               Get started
               <ArrowRight className="size-4" />
             </a>
@@ -205,7 +205,7 @@ export function Header() {
                 </div>
               </div>
               <Button asChild variant="outline" className="h-11 rounded-full">
-                <a href="#login" onClick={() => setIsOpen(false)}>
+                <a href="/login" onClick={() => setIsOpen(false)}>
                   Sign in
                 </a>
               </Button>
@@ -213,7 +213,7 @@ export function Header() {
                 asChild
                 className="h-11 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
               >
-                <a href="#get-started" onClick={() => setIsOpen(false)}>
+                <a href="/login" onClick={() => setIsOpen(false)}>
                   <Sparkle className="size-4" />
                   Get started
                 </a>
