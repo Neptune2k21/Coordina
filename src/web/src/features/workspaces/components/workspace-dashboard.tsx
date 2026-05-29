@@ -1,50 +1,48 @@
 import {
   ArrowRight,
   Kanban,
-  Lightning,
   Pulse,
   ShieldCheck,
-  UsersThree,
+  Sparkle,
 } from "@phosphor-icons/react"
 
+import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { WorkspaceCreateDialog } from "@/features/workspaces/components/workspace-create-dialog"
-import { WorkspaceInvitePanel } from "@/features/workspaces/components/workspace-invite-panel"
-import { WorkspaceJoinForm } from "@/features/workspaces/components/workspace-join-form"
-import { WorkspaceList } from "@/features/workspaces/components/workspace-list"
-import { WorkspaceMembersPanel } from "@/features/workspaces/components/workspace-members-panel"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
-const signals = [
+const dashboardSignals = [
   {
-    label: "Tenant scope",
-    value: "Isolated",
-    detail: "Server checked",
+    label: "Active module",
+    value: "Projects",
+    detail: "Workspace-scoped",
+    icon: Kanban,
+  },
+  {
+    label: "Access",
+    value: "Protected",
+    detail: "Server-enforced",
     icon: ShieldCheck,
   },
   {
-    label: "Members",
-    value: "Ready",
-    detail: "Invite-only",
-    icon: UsersThree,
-  },
-  {
-    label: "Projects",
-    value: "Next",
-    detail: "Coming layer",
-    icon: Kanban,
+    label: "Next layer",
+    value: "Tasks",
+    detail: "Coming after projects",
+    icon: Sparkle,
   },
 ] as const
 
 export function WorkspaceDashboard() {
   const { activeWorkspace } = useWorkspaces()
+
+  function navigate(path: string) {
+    window.history.pushState({}, "", path)
+    window.dispatchEvent(new PopStateEvent("popstate"))
+  }
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -56,36 +54,37 @@ export function WorkspaceDashboard() {
               <span className="grid size-5 place-items-center rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
                 <Pulse className="size-3.5" weight="bold" />
               </span>
-              Active workspace
+              Dashboard
             </div>
             <h1 className="mt-5 text-4xl leading-tight font-semibold tracking-normal text-zinc-950 sm:text-5xl dark:text-white">
               {activeWorkspace?.name}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-600 sm:text-base sm:leading-8 dark:text-zinc-300">
-              Secure tenant context is active. Members, invites, projects and
-              future realtime channels inherit this workspace boundary.
+              Un espace clair pour suivre le travail du workspace. Les membres,
+              invitations et réglages restent dans les paramètres.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
-            <WorkspaceCreateDialog />
-            <div className="hidden items-center gap-2 rounded-full border border-zinc-950/10 bg-white/62 px-3 py-2 text-xs font-medium text-muted-foreground shadow-[0_12px_34px_rgba(24,24,27,0.07)] backdrop-blur-xl sm:flex dark:border-white/10 dark:bg-white/[0.06]">
-              <Lightning
-                className="size-4 text-teal-600 dark:text-teal-300"
-                weight="fill"
-              />
-              Context persisted
-              <ArrowRight className="size-3.5 opacity-50" />
-            </div>
-          </div>
+          <Button
+            type="button"
+            className="h-11 rounded-full px-5 shadow-[0_18px_44px_rgba(9,9,11,0.16)]"
+            onClick={() => navigate("/app/projects")}
+          >
+            <Kanban className="size-4" weight="bold" />
+            Open projects
+            <ArrowRight className="size-4" />
+          </Button>
         </div>
       </section>
 
       <div className="grid gap-3 md:grid-cols-3">
-        {signals.map((signal) => {
+        {dashboardSignals.map((signal) => {
           const Icon = signal.icon
 
           return (
-            <Card key={signal.label}>
+            <Card
+              key={signal.label}
+              className="bg-white/82 dark:bg-white/[0.055]"
+            >
               <CardHeader className="rounded-md p-5 transition-transform duration-200 hover:-translate-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <CardDescription>{signal.label}</CardDescription>
@@ -100,39 +99,6 @@ export function WorkspaceDashboard() {
           )
         })}
       </div>
-
-      <Card className="overflow-hidden bg-white/82 shadow-[0_24px_70px_rgba(24,24,27,0.08)] backdrop-blur-xl dark:bg-white/[0.055]">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Pulse className="size-4" />
-            <CardTitle>Workspace access</CardTitle>
-          </div>
-          <CardDescription>
-            Only memberships returned by the API are shown here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WorkspaceList />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-        <WorkspaceInvitePanel />
-        <WorkspaceMembersPanel />
-      </div>
-
-      <Card className="bg-white/82 shadow-[0_24px_70px_rgba(24,24,27,0.08)] backdrop-blur-xl dark:bg-white/[0.055]">
-        <CardHeader>
-          <CardTitle>Join another workspace</CardTitle>
-          <CardDescription>
-            Joining creates a MEMBER role for your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <Separator />
-          <WorkspaceJoinForm compact />
-        </CardContent>
-      </Card>
     </div>
   )
 }

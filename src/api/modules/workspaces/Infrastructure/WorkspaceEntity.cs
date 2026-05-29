@@ -1,3 +1,5 @@
+using Coordina.Api.Modules.Projects.Infrastructure;
+
 namespace Coordina.Api.Modules.Workspaces.Infrastructure;
 
 public sealed class WorkspaceEntity
@@ -8,4 +10,5 @@ public sealed class WorkspaceEntity
 
   public ICollection<WorkspaceMemberEntity> Members { get; set; } = [];
   public ICollection<WorkspaceInviteEntity> Invites { get; set; } = [];
+  public ICollection<ProjectEntity> Projects { get; set; } = [];
 }
