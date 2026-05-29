@@ -97,6 +97,7 @@ Current modules:
 | --- | --- |
 | `auth` | Account registration, login, password hashing, JWT issuing |
 | `workspaces` | Workspace lifecycle, invitations, membership, authorization rules |
+| `projects` | Workspace-owned projects with tenant-scoped reads and owner-only deletion |
 | `health` | Runtime health endpoint |
 
 The web application mirrors this direction with feature folders:
@@ -105,6 +106,7 @@ The web application mirrors this direction with feature folders:
 src/web/src/features
 ├── auth          # Session state, auth API client, auth forms
 ├── docs          # In-app technical documentation
+├── projects      # Workspace-scoped project API client and SaaS screens
 └── workspaces    # Workspace state, onboarding, shell panels
 ```
 
@@ -247,12 +249,83 @@ Current rules include:
 | Rule | Behavior |
 | --- | --- |
 | Workspace reads | Scoped to the authenticated user's memberships |
+| Project reads | Nested under `/workspaces/{workspaceId}` and filtered by workspace id |
 | Non-member access | Hidden behind `404` responses |
-| Owner actions | Required for invites, member removal, and workspace deletion |
+| Owner actions | Required for invites, member removal, workspace deletion, and permanent project deletion |
 | Invite codes | One-time use, expiration-aware, stored hashed |
 | Frontend state | Useful for UX, never trusted for authorization |
 
 For vulnerability reporting and current security limits, read [SECURITY.md](SECURITY.md).
+
+## Projects Module
+
+Projects are the first structured work layer inside a workspace. V2 adds
+lifecycle status, project ownership, metadata, audit fields, and soft deletion.
+
+API endpoints:
+
+```http
+GET    /workspaces/{workspaceId}/projects
+GET    /workspaces/{workspaceId}/projects?includeArchived=true
+GET    /workspaces/{workspaceId}/projects?includeCompleted=true
+POST   /workspaces/{workspaceId}/projects
+GET    /workspaces/{workspaceId}/projects/{projectId}
+PATCH  /workspaces/{workspaceId}/projects/{projectId}
+DELETE /workspaces/{workspaceId}/projects/{projectId}            # archive
+DELETE /workspaces/{workspaceId}/projects/{projectId}/permanent  # hard delete
+```
+
+Lifecycle:
+
+| Status | Behavior |
+| --- | --- |
+| `ACTIVE` | Default status, returned by default list endpoint |
+| `ARCHIVED` | Hidden by default, returned with `includeArchived=true` |
+| `COMPLETED` | Hidden by default, returned with `includeCompleted=true`, read-only |
+
+Permission model:
+
+| Action | Server-side rule |
+| --- | --- |
+| Create project | Authenticated workspace member |
+| List and view projects | Authenticated workspace member |
+| Project details | Authenticated workspace member, project id scoped by workspace id |
+| Edit project | Workspace OWNER or project owner, unless completed |
+| Archive project | Workspace OWNER or project owner, unless completed |
+| Restore project | Workspace OWNER or project owner |
+| Permanent delete | Workspace OWNER only |
+
+Frontend flow:
+
+| Step | Behavior |
+| --- | --- |
+| Select workspace | Existing workspace context persists `coordina.activeWorkspaceId` |
+| Open Projects | `/app/projects` loads active projects by default |
+| Toggle filters | Archived/completed buttons call backend query params |
+| Create project | Dialog posts name, description, key, icon, and color |
+| Edit project | Dialog updates metadata/status through workspace-scoped API |
+| Archive/delete | Confirmation dialog calls archive or permanent delete endpoint |
+
+Manual testing:
+
+```text
+1. Register or sign in at /login.
+2. Create a workspace from /app.
+3. Open /app/projects and create a project.
+4. Archive it and confirm it disappears from the default list.
+5. Enable Archived and confirm it appears with ARCHIVED status.
+6. Mark a project COMPLETED and confirm edits/archive return 409.
+7. Invite a second user and assign project ownership.
+8. Confirm the project owner can edit/archive that project.
+9. Confirm another member receives 403 for edit/archive/delete.
+10. Confirm a non-member receives 404 for project list/details.
+```
+
+Run backend tests:
+
+```bash
+dotnet test tests/api/Coordina.Api.Tests.csproj
+```
 
 ## Roadmap Direction
 
@@ -260,7 +333,6 @@ The next meaningful layers are product layers, not more scaffolding:
 
 | Track | Intent |
 | --- | --- |
-| Projects | First real workspace-owned business object |
 | Tasks or boards | Core collaboration workflow |
 | Realtime updates | Shared workspace presence and live state |
 | Audit trail | Owner visibility into membership and sensitive actions |

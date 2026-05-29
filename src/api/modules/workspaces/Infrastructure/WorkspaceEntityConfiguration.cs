@@ -28,5 +28,10 @@ public sealed class WorkspaceEntityConfiguration
       .WithOne(member => member.Workspace)
       .HasForeignKey(member => member.WorkspaceId)
       .OnDelete(DeleteBehavior.Cascade);
+
+    builder.HasMany(workspace => workspace.Projects)
+      .WithOne(project => project.Workspace)
+      .HasForeignKey(project => project.WorkspaceId)
+      .OnDelete(DeleteBehavior.Cascade);
   }
 }
