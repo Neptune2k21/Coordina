@@ -3,7 +3,6 @@ using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
 
 namespace Coordina.Api.Modules.Auth;
 
@@ -20,11 +19,10 @@ public static class AuthModule
     authOptions.Validate();
 
     services.AddSingleton(authOptions);
-    services.AddSingleton<IUserStore, PostgresUserStore>();
+    services.AddScoped<IUserStore, PostgresUserStore>();
     services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
     services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     services.AddScoped<IAuthService, AuthService>();
-    services.AddHostedService<AuthSchemaInitializer>();
 
     var signingKey = new SymmetricSecurityKey(
       Encoding.UTF8.GetBytes(authOptions.SigningKey));
@@ -58,22 +56,6 @@ public static class AuthModule
     if (userStoreDescriptor is not null)
     {
       services.Remove(userStoreDescriptor);
-    }
-
-    var dataSourceDescriptor = services.SingleOrDefault(
-      descriptor => descriptor.ServiceType == typeof(NpgsqlDataSource));
-
-    if (dataSourceDescriptor is not null)
-    {
-      services.Remove(dataSourceDescriptor);
-    }
-
-    var initializerDescriptor = services.SingleOrDefault(
-      descriptor => descriptor.ImplementationType == typeof(AuthSchemaInitializer));
-
-    if (initializerDescriptor is not null)
-    {
-      services.Remove(initializerDescriptor);
     }
 
     services.AddSingleton<IUserStore, InMemoryUserStore>();
