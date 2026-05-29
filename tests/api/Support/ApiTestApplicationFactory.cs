@@ -9,6 +9,7 @@ public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>
 {
   protected override void ConfigureWebHost(IWebHostBuilder builder)
   {
+    builder.UseEnvironment("Testing");
     builder.ConfigureTestServices(services =>
     {
       services.AddInMemoryAuthStoreForTests();

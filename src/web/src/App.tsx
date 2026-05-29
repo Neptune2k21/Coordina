@@ -1,7 +1,7 @@
-import { DocsPage } from "@/components/docs/docs-page"
 import { Header } from "@/components/layout/header"
 import { Hero } from "@/components/sections/hero"
 import { AuthSection } from "@/features/auth/components/auth-section"
+import { PlatformDocsPage } from "@/features/docs/components/platform-docs-page"
 
 export function App() {
   const isLoginPage = window.location.pathname === "/login"
@@ -10,7 +10,7 @@ export function App() {
   return (
     <div className="min-h-svh bg-background text-foreground">
       {isDocsPage ? (
-        <DocsPage />
+        <PlatformDocsPage />
       ) : isLoginPage ? (
         <AuthSection />
       ) : (

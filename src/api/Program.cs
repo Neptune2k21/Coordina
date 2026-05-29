@@ -22,7 +22,12 @@ builder.Services.AddCors(options =>
       .AllowAnyMethod();
   });
 });
-builder.Services.AddPostgres(builder.Configuration);
+
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+  builder.Services.AddPostgres(builder.Configuration);
+}
+
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();

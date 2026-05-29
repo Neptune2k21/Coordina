@@ -1,0 +1,27 @@
+# VCS
+.git
+.github
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# .NET
+**/bin
+**/obj
+**/TestResults
+coverage
+coverage.cobertura.xml
+
+# Node
+**/node_modules
+src/web/dist
+src/web/test-results
+src/web/playwright-report
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.log
