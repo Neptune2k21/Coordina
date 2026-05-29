@@ -1,0 +1,29 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+
+WORKDIR /src
+
+COPY Coordina.sln Directory.Build.props ./
+COPY src/api/Coordina.Api.csproj src/api/
+COPY tests/api/Coordina.Api.Tests.csproj tests/api/
+
+RUN dotnet restore Coordina.sln -m:1
+
+COPY . .
+
+RUN dotnet publish src/api/Coordina.Api.csproj \
+  --configuration Release \
+  --no-restore \
+  --output /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+ENV ASPNETCORE_URLS=http://+:5050
+EXPOSE 5050
+
+USER $APP_UID
+
+ENTRYPOINT ["dotnet", "Coordina.Api.dll"]

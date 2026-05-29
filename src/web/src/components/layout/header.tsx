@@ -21,23 +21,26 @@ const navItems = [
     href: "#platform",
     eyebrow: "Core system",
     description: "Boards, tasks, docs and live context in one workspace.",
+    icon: CirclesThreePlus,
     items: ["Workspace graph", "Realtime boards", "Context blocks"],
   },
   {
-    label: "Solution",
+    label: "Teams",
     href: "#solution",
     eyebrow: "By team",
     description:
       "A calmer operating layer for product, ops and delivery teams.",
+    icon: Buildings,
     items: ["Product planning", "Client delivery", "Team rituals"],
   },
   {
-    label: "Ressources",
-    href: "#ressources",
+    label: "Resources",
+    href: "/docs",
     eyebrow: "Learn",
     description:
       "Guides, changelog and patterns for building better workflows.",
-    items: ["Playbooks", "Release notes", "API docs"],
+    icon: BookOpenText,
+    items: ["Platform docs", "API tester", "OpenAPI schema"],
   },
 ] as const
 
@@ -45,10 +48,10 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50">
-      <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(to_bottom,hsl(var(--background))_0%,hsl(var(--background)/0.88)_54%,transparent_100%)]" />
+    <header className="sticky top-0 z-50 border-b border-zinc-950/[0.08] bg-white/82 backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/78">
+      <div className="pointer-events-none absolute inset-x-0 top-full h-8 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.62),transparent)] dark:bg-[linear-gradient(to_bottom,rgba(9,9,11,0.46),transparent)]" />
 
-      <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <a
           href="/"
           className="group flex items-center gap-3"
@@ -63,49 +66,60 @@ export function Header() {
               Coordina
             </span>
             <span className="mt-1 text-[11px] leading-none font-medium text-muted-foreground">
-              Workspace OS
+              Team workspace
             </span>
           </span>
         </a>
 
         <nav
-          className="hidden rounded-full border border-zinc-950/[0.08] bg-white/72 p-1 shadow-[0_12px_44px_rgba(24,24,27,0.08)] backdrop-blur-2xl md:flex dark:border-white/10 dark:bg-white/[0.06] dark:shadow-[0_12px_44px_rgba(0,0,0,0.22)]"
+          className="hidden items-center gap-1 rounded-full border border-zinc-950/[0.08] bg-white/62 p-1 shadow-[0_10px_32px_rgba(24,24,27,0.07)] md:flex dark:border-white/10 dark:bg-white/[0.05] dark:shadow-none"
           aria-label="Main"
         >
-          {navItems.map((item) => (
-            <div key={item.href} className="group relative">
-              <a
-                href={item.href}
-                className="flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-zinc-600 transition-all duration-300 hover:bg-zinc-950/[0.04] hover:text-zinc-950 focus-visible:bg-zinc-950/[0.04] focus-visible:text-zinc-950 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:bg-white/10 dark:focus-visible:text-white"
-              >
-                {item.label}
-                <CaretDown className="size-3.5 transition-transform duration-300 group-hover:rotate-180" />
-              </a>
+          {navItems.map((item) => {
+            const Icon = item.icon
 
-              <div className="pointer-events-none absolute top-12 left-1/2 w-[320px] -translate-x-1/2 translate-y-2 opacity-0 transition-all duration-300 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="rounded-[22px] border border-zinc-950/[0.08] bg-white/92 p-4 shadow-[0_28px_90px_rgba(24,24,27,0.16)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/92 dark:shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
-                  <p className="text-[11px] font-semibold tracking-[0.16em] text-zinc-400 uppercase">
-                    {item.eyebrow}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
-                    {item.description}
-                  </p>
-                  <div className="mt-4 grid gap-1">
-                    {item.items.map((detail) => (
-                      <a
-                        key={detail}
-                        href={item.href}
-                        className="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-950/[0.04] hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
-                      >
-                        {detail}
-                        <ArrowRight className="size-3.5 opacity-45" />
-                      </a>
-                    ))}
+            return (
+              <div key={item.href} className="group relative">
+                <a
+                  href={item.href}
+                  className="flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-zinc-600 transition-all duration-200 hover:bg-zinc-950/[0.04] hover:text-zinc-950 focus-visible:bg-zinc-950/[0.04] focus-visible:text-zinc-950 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:bg-white/10 dark:focus-visible:text-white"
+                >
+                  {item.label}
+                  <CaretDown className="size-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                </a>
+
+                <div className="pointer-events-none absolute top-12 left-1/2 w-[318px] -translate-x-1/2 translate-y-2 opacity-0 transition-all duration-200 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="rounded-[22px] border border-zinc-950/[0.08] bg-white/94 p-4 shadow-[0_24px_76px_rgba(24,24,27,0.15)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/94 dark:shadow-[0_24px_76px_rgba(0,0,0,0.34)]">
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
+                        <Icon className="size-5" weight="bold" />
+                      </span>
+                      <div>
+                        <p className="text-[11px] font-semibold tracking-[0.16em] text-zinc-400 uppercase">
+                          {item.eyebrow}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-1">
+                      {item.items.map((detail) => (
+                        <a
+                          key={detail}
+                          href={item.href}
+                          className="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-950/[0.04] hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
+                        >
+                          {detail}
+                          <ArrowRight className="size-3.5 opacity-45 transition-transform group-hover:translate-x-0.5" />
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -114,16 +128,16 @@ export function Header() {
             variant="ghost"
             className="h-10 rounded-full px-4 text-sm text-muted-foreground hover:text-foreground"
           >
-            <a href="#login">
+            <a href="/login">
               <SignIn className="size-4" />
-              Login
+              Sign in
             </a>
           </Button>
           <Button
             asChild
             className="h-10 rounded-full bg-zinc-950 px-5 text-sm text-white shadow-[0_14px_34px_rgba(9,9,11,0.22)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
           >
-            <a href="#get-started">
+            <a href="/login">
               Get started
               <ArrowRight className="size-4" />
             </a>
@@ -134,7 +148,7 @@ export function Header() {
           type="button"
           variant="ghost"
           size="icon"
-          className="rounded-full border border-zinc-950/10 bg-white/72 shadow-[0_12px_32px_rgba(24,24,27,0.08)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-white/[0.06]"
+          className="rounded-full border border-zinc-950/10 bg-white/72 shadow-[0_12px_32px_rgba(24,24,27,0.08)] md:hidden dark:border-white/10 dark:bg-white/[0.06]"
           aria-label={isOpen ? "Close menu" : "Open menu"}
           aria-expanded={isOpen}
           onClick={() => setIsOpen((current) => !current)}
@@ -145,7 +159,7 @@ export function Header() {
 
       <div
         className={cn(
-          "relative mx-4 grid overflow-hidden rounded-[28px] border border-zinc-950/[0.08] bg-white/92 shadow-[0_28px_80px_rgba(24,24,27,0.16)] backdrop-blur-2xl transition-[grid-template-rows,opacity,transform] duration-300 sm:mx-6 md:hidden dark:border-white/10 dark:bg-zinc-950/94",
+          "relative mx-4 grid overflow-hidden rounded-[26px] border border-zinc-950/[0.08] bg-white/94 shadow-[0_24px_70px_rgba(24,24,27,0.14)] transition-[grid-template-rows,opacity,transform] duration-250 sm:mx-6 md:hidden dark:border-white/10 dark:bg-zinc-950/94",
           isOpen
             ? "translate-y-0 grid-rows-[1fr] opacity-100"
             : "pointer-events-none -translate-y-3 grid-rows-[0fr] opacity-0"
@@ -191,15 +205,15 @@ export function Header() {
                 </div>
               </div>
               <Button asChild variant="outline" className="h-11 rounded-full">
-                <a href="#login" onClick={() => setIsOpen(false)}>
-                  Login
+                <a href="/login" onClick={() => setIsOpen(false)}>
+                  Sign in
                 </a>
               </Button>
               <Button
                 asChild
                 className="h-11 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
               >
-                <a href="#get-started" onClick={() => setIsOpen(false)}>
+                <a href="/login" onClick={() => setIsOpen(false)}>
                   <Sparkle className="size-4" />
                   Get started
                 </a>

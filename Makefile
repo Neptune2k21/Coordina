@@ -1,4 +1,4 @@
-.PHONY: help api api-restore api-build api-format api-format-check api-test web web-build web-format web-format-check web-lint web-test web-typecheck test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
+.PHONY: help api api-restore api-build api-format api-format-check api-test web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -16,6 +16,7 @@ help:
 	@echo "  make web          Lance le front React"
 	@echo "  make web-build    Build le front React"
 	@echo "  make web-test     Lance les tests React"
+	@echo "  make web-e2e      Lance les tests end-to-end Playwright"
 	@echo "  make lint         Lance les linters"
 	@echo "  make test         Lance tous les tests"
 	@echo "  make quality      Lance format-check, lint, tests et builds"
@@ -62,10 +63,13 @@ web-lint:
 web-test:
 	pnpm --dir $(WEB_DIR) test
 
+web-e2e:
+	pnpm --dir $(WEB_DIR) e2e
+
 web-typecheck:
 	pnpm --dir $(WEB_DIR) typecheck
 
-test: api-test web-test
+test: api-test web-test web-e2e
 
 lint: api-format-check web-lint web-typecheck
 

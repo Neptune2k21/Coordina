@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Coordina.Api.Tests.Support;
 
 namespace Coordina.Api.Tests;
 
-public sealed class ApiEndpointsTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ApiEndpointsTests(ApiTestApplicationFactory factory)
+    : IClassFixture<ApiTestApplicationFactory>
 {
   private readonly HttpClient _client = factory.CreateClient();
 
@@ -18,7 +18,7 @@ public sealed class ApiEndpointsTests(WebApplicationFactory<Program> factory)
 
     var payload = await response.Content.ReadFromJsonAsync<WelcomeResponse>();
     Assert.NotNull(payload);
-    Assert.Equal("Bienvenue sur l'API de Coordina !", payload.Message);
+    Assert.Equal("Welcome to the Coordina API.", payload.Message);
   }
 
   [Fact]
@@ -30,7 +30,7 @@ public sealed class ApiEndpointsTests(WebApplicationFactory<Program> factory)
 
     var payload = await response.Content.ReadFromJsonAsync<HealthResponse>();
     Assert.NotNull(payload);
-    Assert.Equal("tout est ok", payload.Status);
+    Assert.Equal("ok", payload.Status);
     Assert.Equal("Coordina API", payload.Service);
   }
 
