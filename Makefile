@@ -75,7 +75,7 @@ web-lint:
 web-test:
 	pnpm --dir $(WEB_DIR) test
 
-web-e2e:
+web-e2e: api-migrate
 	pnpm --dir $(WEB_DIR) e2e
 
 web-typecheck:
