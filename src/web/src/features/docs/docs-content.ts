@@ -16,6 +16,7 @@ export const docsNavItems = [
   { id: "auth", label: "Authentication" },
   { id: "workspaces-api", label: "Workspace API" },
   { id: "workspaces-security", label: "Security model" },
+  { id: "projects-api", label: "Projects API" },
   { id: "workspaces-ux", label: "Workspace UX" },
   { id: "workspaces-ui", label: "shadcn usage" },
   { id: "tests", label: "Testing" },
@@ -80,13 +81,37 @@ export const workspaceSecurityCode = `Tenant isolation rules:
 - delete requires OWNER membership
 - frontend state never grants access; the API validates every request`
 
+export const projectsApiCode = `GET    /workspaces/{workspaceId}/projects
+GET    /workspaces/{workspaceId}/projects?includeArchived=true
+GET    /workspaces/{workspaceId}/projects?includeCompleted=true
+POST   /workspaces/{workspaceId}/projects
+       { "name": "Launch plan", "description": "Optional context", "key": "APP" }
+GET    /workspaces/{workspaceId}/projects/{projectId}
+PATCH  /workspaces/{workspaceId}/projects/{projectId}
+       { "status": "COMPLETED", "color": "teal" }
+DELETE /workspaces/{workspaceId}/projects/{projectId}
+DELETE /workspaces/{workspaceId}/projects/{projectId}/permanent
+
+Project rules:
+- all routes require Authorization: Bearer <accessToken>
+- every route validates membership against workspaceId
+- project lookup always includes both workspaceId and projectId
+- default list returns ACTIVE projects only
+- ARCHIVED and COMPLETED are included only by query param
+- COMPLETED projects are read-only
+- non-members receive 404
+- edit/archive requires workspace OWNER or project owner
+- permanent delete requires workspace OWNER`
+
 export const workspaceUxCode = `Workspace UI:
 - /login authenticates with the existing JWT flow
 - /app loads the user's workspaces
+- /app/projects loads projects for coordina.activeWorkspaceId
+- project filters are backend-backed: active by default, archived/completed on demand
 - no workspace: onboarding cards with create dialog and invite-code join form
 - existing workspace: persistent sidebar/topbar shell
 - active workspace id persists in localStorage as coordina.activeWorkspaceId
-- workspace switching is instant and does not reload the page`
+- workspace switching is instant and reloads workspace-scoped project data`
 
 export const shadcnUsageCode = `Workspace primitives:
 - Card: onboarding, workspace list, status panels
@@ -94,6 +119,9 @@ export const shadcnUsageCode = `Workspace primitives:
 - Dialog: create workspace form
 - DropdownMenu: workspace switcher and user actions
 - Input: create and join forms
+- Textarea: project descriptions
+- Badge: project lifecycle status
+- Skeleton: project loading states
 - Field: labels, grouping, validation copy
 - Separator: shell and panel structure`
 
@@ -103,9 +131,13 @@ Manual test:
 1. Register or sign in at /login
 2. Open /app
 3. Create a workspace and confirm OWNER role
-4. Generate an invitation code, sign in as another user, redeem it once
-5. Confirm the member can view but cannot delete
-6. Confirm a non-member receives 404 for workspace details`
+4. Open /app/projects and create a project
+5. Archive it and confirm it is hidden by default
+6. Enable Archived and confirm the status badge appears
+7. Mark a project Completed and confirm edits are blocked
+8. Generate an invitation code, sign in as another user, redeem it once
+9. Confirm only workspace owners or project owners can edit/archive
+10. Confirm a non-member receives 404 for workspace and project details`
 
 export const apiResources = [
   {
@@ -168,6 +200,17 @@ export const docsSections = [
     title: "Security model",
   },
   {
+    body: "Projects are the first workspace-owned business object. The API never serves a project by id alone; every read and delete is evaluated inside the workspace route.",
+    code: {
+      filename: "project-endpoints.txt",
+      language: "http",
+      value: projectsApiCode,
+    },
+    icon: StackSimple,
+    id: "projects-api",
+    title: "Projects API",
+  },
+  {
     body: "The authenticated app uses a shadcn-based SaaS shell with an onboarding path for new accounts and an active workspace context for returning users.",
     code: {
       filename: "workspace-ux.txt",
@@ -228,6 +271,7 @@ export function getDocsLlmContext() {
     `- OpenAPI JSON: ${apiBaseUrl}/openapi/v1.json`,
     `- API testing UI: ${apiBaseUrl}/api-docs`,
     "- Workspace endpoints require a bearer token and server-side membership validation.",
+    "- Project endpoints are nested below /workspaces/{workspaceId} and are always workspace-scoped.",
     "",
     "Commands:",
     installCode,

@@ -1,4 +1,4 @@
-import { CaretDown, Check, Plus } from "@phosphor-icons/react"
+import { CaretDown, Check, Gear } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -9,10 +9,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { WorkspaceCreateDialog } from "@/features/workspaces/components/workspace-create-dialog"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
 export function WorkspaceSwitcher() {
   const { activeWorkspace, setActiveWorkspaceId, workspaces } = useWorkspaces()
+
+  function navigate(path: string) {
+    window.history.pushState({}, "", path)
+    window.dispatchEvent(new PopStateEvent("popstate"))
+  }
 
   return (
     <DropdownMenu>
@@ -54,10 +60,11 @@ export function WorkspaceSwitcher() {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
-          <Plus className="size-4" />
-          Use the create button to add another
+        <DropdownMenuItem onSelect={() => navigate("/app/workspace-settings")}>
+          <Gear className="size-4" />
+          Workspace settings
         </DropdownMenuItem>
+        <WorkspaceCreateDialog trigger="menu-item" />
       </DropdownMenuContent>
     </DropdownMenu>
   )

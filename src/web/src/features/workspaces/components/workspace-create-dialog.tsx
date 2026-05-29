@@ -11,12 +11,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { ApiError } from "@/features/auth/auth-api"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
-export function WorkspaceCreateDialog() {
+type WorkspaceCreateDialogProps = {
+  trigger?: "button" | "menu-item"
+}
+
+export function WorkspaceCreateDialog({
+  trigger = "button",
+}: WorkspaceCreateDialogProps) {
   const { create, isMutating } = useWorkspaces()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
@@ -43,13 +55,20 @@ export function WorkspaceCreateDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          type="button"
-          className="h-11 rounded-full bg-zinc-950 px-5 text-sm text-white shadow-[0_18px_44px_rgba(9,9,11,0.2)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-        >
-          <Plus className="size-4" weight="bold" />
-          New workspace
-        </Button>
+        {trigger === "menu-item" ? (
+          <DropdownMenuItem onSelect={(event) => event.preventDefault()}>
+            <Plus className="size-4" />
+            Create workspace
+          </DropdownMenuItem>
+        ) : (
+          <Button
+            type="button"
+            className="h-11 rounded-full bg-zinc-950 px-5 text-sm text-white shadow-[0_18px_44px_rgba(9,9,11,0.2)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+          >
+            <Plus className="size-4" weight="bold" />
+            New workspace
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="rounded-[24px] border-zinc-950/10 bg-white/94 p-6 shadow-[0_34px_110px_rgba(24,24,27,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/94">
         <DialogHeader>

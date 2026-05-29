@@ -61,6 +61,78 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("auth_users", (string)null);
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Projects.Infrastructure.ProjectEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("icon");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("ProjectOwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_owner_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectOwnerId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "Name");
+
+                    b.HasIndex("WorkspaceId", "Status");
+
+                    b.ToTable("projects", (string)null);
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -165,6 +237,17 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("workspace_members", (string)null);
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Projects.Infrastructure.ProjectEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceEntity", "Workspace")
+                        .WithMany("Projects")
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Workspace");
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceInviteEntity", b =>
                 {
                     b.HasOne("Coordina.Api.Modules.Workspaces.Infrastructure.WorkspaceEntity", "Workspace")
@@ -192,6 +275,8 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Invites");
 
                     b.Navigation("Members");
+
+                    b.Navigation("Projects");
                 });
 #pragma warning restore 612, 618
         }
