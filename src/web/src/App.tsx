@@ -1,11 +1,24 @@
-import { useEffect, useState } from "react"
+import { lazy, Suspense, useEffect, useState } from "react"
 
-import { AuthProvider, useAuth } from "@/features/auth/auth-context"
 import { Header } from "@/components/layout/header"
 import { Hero } from "@/components/sections/hero"
-import { AuthSection } from "@/features/auth/components/auth-section"
-import { PlatformDocsPage } from "@/features/docs/components/platform-docs-page"
-import { WorkspaceApp } from "@/features/workspaces/components/workspace-app"
+import { AuthProvider, useAuth } from "@/features/auth/auth-context"
+
+const AuthSection = lazy(() =>
+  import("@/features/auth/components/auth-section").then((module) => ({
+    default: module.AuthSection,
+  }))
+)
+const PlatformDocsPage = lazy(() =>
+  import("@/features/docs/components/platform-docs-page").then((module) => ({
+    default: module.PlatformDocsPage,
+  }))
+)
+const WorkspaceApp = lazy(() =>
+  import("@/features/workspaces/components/workspace-app").then((module) => ({
+    default: module.WorkspaceApp,
+  }))
+)
 
 export function App() {
   return (
@@ -52,20 +65,26 @@ function AppRoutes() {
 
   return (
     <div className="min-h-svh bg-background text-foreground">
-      {isDocsPage ? (
-        <PlatformDocsPage />
-      ) : isAppPage && session ? (
-        <WorkspaceApp />
-      ) : isLoginPage ? (
-        <AuthSection />
-      ) : (
-        <>
-          <Header />
-          <Hero />
-        </>
-      )}
+      <Suspense fallback={<RouteFallback />}>
+        {isDocsPage ? (
+          <PlatformDocsPage />
+        ) : isAppPage && session ? (
+          <WorkspaceApp />
+        ) : isLoginPage ? (
+          <AuthSection />
+        ) : (
+          <>
+            <Header />
+            <Hero />
+          </>
+        )}
+      </Suspense>
     </div>
   )
+}
+
+function RouteFallback() {
+  return <div className="min-h-svh bg-background" />
 }
 
 export default App

@@ -3,6 +3,7 @@ using Coordina.Api.Infrastructure.Persistence;
 using Coordina.Api.Modules.Auth;
 using Coordina.Api.Modules.Health;
 using Coordina.Api.Modules.Projects;
+using Coordina.Api.Modules.Tasks;
 using Coordina.Api.Modules.Workspaces;
 using Scalar.AspNetCore;
 
@@ -33,6 +34,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddWorkspacesModule();
 builder.Services.AddProjectsModule();
+builder.Services.AddTasksModule();
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 
@@ -57,6 +59,8 @@ app.MapGet("/", () => Results.Ok(new
 app.MapAuthEndpoints();
 app.MapWorkspacesEndpoints();
 app.MapProjectsEndpoints();
+app.MapTasksEndpoints();
+app.MapBoardEndpoints();
 app.MapHealthEndpoints();
 
 app.Run();

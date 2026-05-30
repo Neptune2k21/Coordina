@@ -98,6 +98,7 @@ Current modules:
 | `auth` | Account registration, login, password hashing, JWT issuing |
 | `workspaces` | Workspace lifecycle, invitations, membership, authorization rules |
 | `projects` | Workspace-owned projects with tenant-scoped reads and owner-only deletion |
+| `tasks` | Project board system with templates, lists, cards, assignees, and workspace/project access checks |
 | `health` | Runtime health endpoint |
 
 The web application mirrors this direction with feature folders:
@@ -107,6 +108,7 @@ src/web/src/features
 ├── auth          # Session state, auth API client, auth forms
 ├── docs          # In-app technical documentation
 ├── projects      # Workspace-scoped project API client and SaaS screens
+├── tasks         # Project-scoped board API client, Kanban UI, and card panel
 └── workspaces    # Workspace state, onboarding, shell panels
 ```
 
@@ -326,6 +328,106 @@ Run backend tests:
 ```bash
 dotnet test tests/api/Coordina.Api.Tests.csproj
 ```
+
+## Project Shell And Board System
+
+Each project detail page is a container, not a single-purpose board screen.
+The shell owns project metadata and module navigation, while each module owns
+its own data and state.
+
+Project shell:
+
+| Area | Responsibility |
+| --- | --- |
+| Header | Project name, key, icon, description, and lifecycle badge |
+| Tabs | Board, Docs, and Settings module navigation |
+| Dynamic content | Renders the active project module without mixing concerns |
+
+Current project modules:
+
+| Tab | State |
+| --- | --- |
+| Board | Implemented Trello/Linear-style project board |
+| Docs | Placeholder only: `Coming soon - Notion-like Docs` |
+| Settings | Placeholder only: `Project settings coming soon` |
+
+### Project Board System
+
+Boards belong to a project, lists belong to boards, and cards belong to lists.
+The frontend renders the board as a compact horizontal work surface with inline
+list editing, quick card creation, native drag and drop, and a reusable right
+side panel for card details.
+
+```http
+GET    /workspaces/{workspaceId}/projects/{projectId}/board
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists
+PATCH  /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists/{listId}
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists/{listId}/cards
+PATCH  /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
+PATCH  /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}/move
+DELETE /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
+```
+
+Board templates:
+
+| Template | Generated lists |
+| --- | --- |
+| `BASIC` | To Do, In Progress, Done |
+| `AGILE_SCRUM` | Backlog, Sprint, In Progress, Review, Done |
+| `BUG_TRACKING` | Reported, Investigating, Fixed, Released |
+| `PRODUCT_ROADMAP` | Ideas, Planned, In Progress, Shipped |
+
+Card fields:
+
+| Field | Notes |
+| --- | --- |
+| `id` | Server-generated card id |
+| `boardId` / `listId` | Mandatory board/list placement |
+| `title` | Required, 180 characters or fewer |
+| `description` | Editable in the side panel |
+| `priority` | Optional `LOW`, `MEDIUM`, or `HIGH` |
+| `dueDate` | Optional date shown compactly on cards |
+| `labels` | Small colored tags for scanning |
+| `assignees` | Multiple workspace members |
+| `createdAt` / `updatedAt` | Server-managed audit timestamps |
+
+The board fetch endpoint returns the full board structure in one request:
+board, lists, cards, labels, and assignees. The persistence layer loads these
+with batched queries rather than per-card lookups, leaving room for pagination
+or virtualized lanes later if board sizes grow.
+
+### Board Permission Rules
+
+Board access is always verified through the parent project and workspace:
+
+| Action | Server-side rule |
+| --- | --- |
+| Fetch board | Authenticated workspace member and project in that workspace |
+| Create board | Authenticated workspace member and valid template |
+| Create/update list | Authenticated workspace member |
+| Create/update card | Authenticated workspace member |
+| Move card | Authenticated workspace member and target list in same board |
+| Assign card | Every assignee must be a workspace member |
+| Delete card | Workspace OWNER or project owner |
+| Cross-project access | Hidden behind `404` responses |
+| Non-member access | Hidden behind `404` responses |
+
+Completed projects remain read-only for board mutations, matching the project
+lifecycle rule already enforced by the projects module.
+
+### Future Expansion
+
+The project shell reserves space for future modules. The Docs tab is
+intentionally a placeholder for a Notion-like document system, and Settings is
+intentionally isolated from task board state. Future modules should follow the
+same pattern: project shell for layout/navigation, feature modules for their own
+contracts, API client, state, and UI.
+
+The board contracts are also prepared for future realtime updates, comments,
+attachments, notifications, and activity logs. Those features are intentionally
+not implemented yet; they should attach to board/card identifiers rather than
+changing the project shell.
 
 ## Roadmap Direction
 

@@ -36,6 +36,17 @@ export async function listProjects(
   )
 }
 
+export async function getProject(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string
+) {
+  return request<Project>(
+    `/workspaces/${workspaceId}/projects/${projectId}`,
+    accessToken
+  )
+}
+
 export async function createProject(
   accessToken: string,
   workspaceId: string,
