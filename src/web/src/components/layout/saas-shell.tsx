@@ -33,13 +33,30 @@ export function SaasShell({
 }: SaasShellProps) {
   const { session, signOut } = useAuth()
   const isProjectsPage = currentPath.startsWith("/app/projects")
+  const isProjectDetailPage = /^\/app\/projects\/[^/]+$/.test(currentPath)
   const isSettingsPage = currentPath.startsWith("/app/workspace-settings")
 
   return (
-    <div className="relative h-svh overflow-hidden bg-zinc-50 text-foreground lg:grid lg:grid-cols-[272px_1fr] dark:bg-zinc-950">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_8%,rgba(45,212,191,0.12),transparent_26%),radial-gradient(circle_at_92%_2%,rgba(236,72,153,0.08),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(244,244,245,0.74)_100%)] dark:bg-[radial-gradient(circle_at_14%_8%,rgba(20,184,166,0.09),transparent_26%),radial-gradient(circle_at_92%_2%,rgba(236,72,153,0.07),transparent_22%),linear-gradient(180deg,rgba(9,9,11,1)_0%,rgba(24,24,27,0.92)_100%)]" />
+    <div
+      className={`relative h-svh overflow-hidden bg-zinc-50 text-foreground dark:bg-zinc-950 ${
+        isProjectDetailPage
+          ? "lg:grid lg:grid-cols-[1fr]"
+          : "lg:grid lg:grid-cols-[272px_1fr]"
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isProjectDetailPage
+            ? "bg-zinc-100 dark:bg-zinc-950"
+            : "bg-[radial-gradient(circle_at_14%_8%,rgba(45,212,191,0.12),transparent_26%),radial-gradient(circle_at_92%_2%,rgba(236,72,153,0.08),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(244,244,245,0.74)_100%)] dark:bg-[radial-gradient(circle_at_14%_8%,rgba(20,184,166,0.09),transparent_26%),radial-gradient(circle_at_92%_2%,rgba(236,72,153,0.07),transparent_22%),linear-gradient(180deg,rgba(9,9,11,1)_0%,rgba(24,24,27,0.92)_100%)]"
+        }`}
+      />
 
-      <aside className="relative hidden h-svh min-h-0 border-r border-zinc-950/[0.08] bg-white/72 text-sidebar-foreground shadow-[18px_0_60px_rgba(24,24,27,0.04)] backdrop-blur-2xl lg:flex lg:flex-col dark:border-white/10 dark:bg-white/[0.045]">
+      <aside
+        className={`relative hidden h-svh min-h-0 border-r border-zinc-950/[0.08] bg-white/72 text-sidebar-foreground shadow-[18px_0_60px_rgba(24,24,27,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.045] ${
+          isProjectDetailPage ? "lg:hidden" : "lg:flex lg:flex-col"
+        }`}
+      >
         <button
           type="button"
           className="flex h-20 w-full items-center gap-3 px-5 text-left transition-colors hover:bg-zinc-950/[0.035] dark:hover:bg-white/[0.055]"
@@ -125,9 +142,8 @@ export function SaasShell({
       </aside>
 
       <div className="relative h-svh min-w-0 overflow-y-auto">
-        <header className="sticky top-0 z-30 border-b border-zinc-950/[0.08] bg-white/74 backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/76">
-          <div className="pointer-events-none absolute inset-x-0 top-full h-8 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.62),transparent)] dark:bg-[linear-gradient(to_bottom,rgba(9,9,11,0.46),transparent)]" />
-          <div className="relative flex h-16 items-center justify-between gap-3 px-4 lg:h-20 lg:px-6">
+        <header className="sticky top-0 z-30 border-b border-zinc-950/[0.08] bg-white/84 backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/86">
+          <div className="relative flex h-12 items-center justify-between gap-3 px-3 lg:px-4">
             <Button
               type="button"
               variant="ghost"
@@ -168,7 +184,13 @@ export function SaasShell({
             </DropdownMenu>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main
+          className={
+            isProjectDetailPage
+              ? "w-full px-2 py-2"
+              : "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+          }
+        >
           {children}
         </main>
       </div>

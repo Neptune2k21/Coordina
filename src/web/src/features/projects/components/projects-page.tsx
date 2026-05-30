@@ -51,6 +51,7 @@ import {
 } from "@/features/projects/project-api"
 import { ProjectCreateDialog } from "@/features/projects/components/project-create-dialog"
 import { ProjectEditDialog } from "@/features/projects/components/project-edit-dialog"
+import { ProjectIconMark } from "@/features/projects/components/project-personalization"
 import type {
   Project,
   ProjectInput,
@@ -58,7 +59,11 @@ import type {
 } from "@/features/projects/project-types"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
-export function ProjectsPage() {
+export function ProjectsPage({
+  onOpenProject,
+}: {
+  onOpenProject?: (projectId: string) => void
+}) {
   const { session, signOut } = useAuth()
   const { activeWorkspace, activeWorkspaceId } = useWorkspaces()
   const [projects, setProjects] = useState<Project[]>([])
@@ -220,20 +225,19 @@ export function ProjectsPage() {
   }, [projects.length])
 
   return (
-    <div className="grid gap-5 lg:gap-6">
-      <section className="rounded-[32px] border border-zinc-950/[0.08] bg-white/78 p-5 shadow-[0_32px_110px_rgba(24,24,27,0.12)] backdrop-blur-2xl sm:p-6 lg:p-8 dark:border-white/10 dark:bg-white/[0.055]">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+    <div className="grid gap-4">
+      <section className="rounded-md border border-zinc-950/10 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-white/[0.055]">
+        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-950/10 bg-white/72 px-3 py-1.5 text-[12px] font-semibold text-zinc-700 shadow-[0_12px_34px_rgba(24,24,27,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.08] dark:text-zinc-200">
+            <div className="inline-flex items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-2.5 py-1.5 text-[12px] font-semibold text-zinc-700 dark:border-white/10 dark:bg-white/[0.08] dark:text-zinc-200">
               <Kanban className="size-4" weight="bold" />
               Projects
             </div>
-            <h1 className="mt-5 text-3xl leading-tight font-semibold tracking-normal text-zinc-950 sm:text-4xl dark:text-white">
+            <h1 className="mt-3 text-xl leading-tight font-semibold tracking-normal text-zinc-950 dark:text-white">
               {activeWorkspace?.name}
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-zinc-600 sm:text-base dark:text-zinc-300">
-              Structured work in the active workspace. Every request is scoped
-              by workspace membership on the API.
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Structured work in the active workspace.
             </p>
           </div>
           <ProjectCreateDialog
@@ -244,7 +248,7 @@ export function ProjectsPage() {
         </div>
       </section>
 
-      <Card className="bg-white/82 shadow-[0_24px_70px_rgba(24,24,27,0.08)] backdrop-blur-xl dark:bg-white/[0.055]">
+      <Card className="bg-white shadow-xs dark:bg-white/[0.055]">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -261,7 +265,7 @@ export function ProjectsPage() {
                 type="button"
                 variant={includeArchived ? "default" : "outline"}
                 size="sm"
-                className="rounded-full"
+                className="rounded-md"
                 onClick={() => setIncludeArchived((current) => !current)}
               >
                 Archived
@@ -270,12 +274,12 @@ export function ProjectsPage() {
                 type="button"
                 variant={includeCompleted ? "default" : "outline"}
                 size="sm"
-                className="rounded-full"
+                className="rounded-md"
                 onClick={() => setIncludeCompleted((current) => !current)}
               >
                 Completed
               </Button>
-              <div className="flex items-center gap-2 rounded-full border border-zinc-950/10 bg-white/60 px-3 py-2 text-xs font-medium text-muted-foreground dark:border-white/10 dark:bg-white/[0.06]">
+              <div className="flex items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-3 py-2 text-xs font-medium text-muted-foreground dark:border-white/10 dark:bg-white/[0.06]">
                 <ShieldCheck className="size-4 text-teal-600 dark:text-teal-300" />
                 {activeWorkspace?.role ?? "MEMBER"}
               </div>
@@ -304,6 +308,7 @@ export function ProjectsPage() {
                     setConfirmAction({ type: "archive", project: item })
                   }
                   onEdit={setEditingProject}
+                  onOpen={onOpenProject}
                   onPermanentDelete={(item) =>
                     setConfirmAction({ type: "delete", project: item })
                   }
@@ -372,6 +377,7 @@ function ProjectCard({
   isWorkspaceOwner,
   onArchive,
   onEdit,
+  onOpen,
   onPermanentDelete,
   onRestore,
   project,
@@ -381,6 +387,7 @@ function ProjectCard({
   isWorkspaceOwner: boolean
   onArchive: (project: Project) => void
   onEdit: (project: Project) => void
+  onOpen?: (projectId: string) => void
   onPermanentDelete: (project: Project) => void
   onRestore: (project: Project) => void
   project: Project
@@ -392,14 +399,12 @@ function ProjectCard({
   const canPermanentlyDelete = isWorkspaceOwner
 
   return (
-    <Card className="bg-white/74 transition-transform duration-200 hover:-translate-y-1 dark:bg-white/[0.045]">
+    <Card className="bg-white transition-colors hover:bg-zinc-50 dark:bg-white/[0.045] dark:hover:bg-white/[0.07]">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="grid size-8 place-items-center rounded-2xl bg-zinc-950/[0.06] text-sm dark:bg-white/[0.08]">
-                {project.icon ?? "⌁"}
-              </span>
+              <ProjectIconMark icon={project.icon} color={project.color} />
               <CardTitle className="truncate text-base">
                 {project.name}
               </CardTitle>
@@ -410,7 +415,7 @@ function ProjectCard({
               ) : null}
               <StatusBadge status={project.status} />
               {project.color ? (
-                <span className="rounded-full border border-zinc-950/10 px-2 py-0.5 text-[11px] dark:border-white/10">
+                <span className="rounded-md border border-zinc-950/10 px-2 py-0.5 text-[11px] dark:border-white/10">
                   {project.color}
                 </span>
               ) : null}
@@ -422,7 +427,7 @@ function ProjectCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-9 shrink-0 rounded-full"
+                className="size-9 shrink-0 rounded-md"
                 aria-label={`${project.name} actions`}
               >
                 {isMutating ? (
@@ -480,6 +485,15 @@ function ProjectCard({
           {project.description ?? "No description added."}
         </p>
         <Separator />
+        <Button
+          type="button"
+          variant="outline"
+          className="h-9 rounded-md"
+          onClick={() => onOpen?.(project.id)}
+        >
+          <Kanban className="size-4" weight="bold" />
+          Open board
+        </Button>
         <div className="grid gap-1 text-xs text-muted-foreground">
           <span>Owner: {project.projectOwnerName ?? "Workspace member"}</span>
           <span>
@@ -531,7 +545,7 @@ function ProjectActionDialog({
 
   return (
     <Dialog open={action !== null} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="rounded-[24px] border-zinc-950/10 bg-white/94 p-6 shadow-[0_34px_110px_rgba(24,24,27,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/94">
+      <DialogContent className="rounded-md border-zinc-950/10 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-zinc-950">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -540,7 +554,7 @@ function ProjectActionDialog({
           <Button
             type="button"
             variant="outline"
-            className="h-10 rounded-full px-4"
+            className="h-9 rounded-md px-3"
             onClick={onCancel}
             disabled={isBusy}
           >
@@ -549,7 +563,7 @@ function ProjectActionDialog({
           <Button
             type="button"
             variant={action?.type === "delete" ? "destructive" : "default"}
-            className="h-10 rounded-full px-4"
+            className="h-9 rounded-md px-3"
             onClick={onConfirm}
             disabled={isBusy}
           >
