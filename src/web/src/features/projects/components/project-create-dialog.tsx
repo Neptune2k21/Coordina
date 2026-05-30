@@ -20,6 +20,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError } from "@/features/auth/auth-api"
+import {
+  ProjectColorPicker,
+  ProjectIconMark,
+  ProjectIconPicker,
+} from "@/features/projects/components/project-personalization"
 import type { ProjectInput } from "@/features/projects/project-types"
 
 type ProjectCreateDialogProps = {
@@ -37,8 +42,8 @@ export function ProjectCreateDialog({
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [key, setKey] = useState("")
-  const [icon, setIcon] = useState("")
-  const [color, setColor] = useState("")
+  const [icon, setIcon] = useState("kanban")
+  const [color, setColor] = useState("teal")
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -50,14 +55,17 @@ export function ProjectCreateDialog({
       setName("")
       setDescription("")
       setKey("")
-      setIcon("")
-      setColor("")
+      setIcon("kanban")
+      setColor("teal")
       setOpen(false)
     } catch (submitError) {
       if (submitError instanceof ApiError) {
         setError(
           submitError.errors?.Name?.[0] ??
             submitError.errors?.Description?.[0] ??
+            submitError.errors?.Key?.[0] ??
+            submitError.errors?.Icon?.[0] ??
+            submitError.errors?.Color?.[0] ??
             submitError.message
         )
         return
@@ -73,13 +81,13 @@ export function ProjectCreateDialog({
         <Button
           type="button"
           disabled={disabled}
-          className="h-11 rounded-full px-5 shadow-[0_18px_44px_rgba(9,9,11,0.16)]"
+          className="h-9 rounded-md px-3"
         >
           <Plus className="size-4" weight="bold" />
           New project
         </Button>
       </DialogTrigger>
-      <DialogContent className="rounded-[24px] border-zinc-950/10 bg-white/94 p-6 shadow-[0_34px_110px_rgba(24,24,27,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/94">
+      <DialogContent className="max-w-[560px] rounded-md border-zinc-950/10 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-zinc-950">
         <DialogHeader>
           <DialogTitle>Create project</DialogTitle>
           <DialogDescription>
@@ -96,7 +104,7 @@ export function ProjectCreateDialog({
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Launch plan"
                 autoComplete="off"
-                className="h-11 rounded-2xl bg-white/70 px-4 text-sm dark:bg-white/[0.06]"
+                className="h-9 rounded-md bg-white px-3 text-sm dark:bg-white/[0.06]"
               />
             </Field>
             <Field>
@@ -106,10 +114,10 @@ export function ProjectCreateDialog({
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Optional context for the team"
-                className="rounded-2xl bg-white/70 px-4 text-sm dark:bg-white/[0.06]"
+                className="rounded-md bg-white px-3 text-sm dark:bg-white/[0.06]"
               />
             </Field>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
               <Field>
                 <FieldLabel htmlFor="project-key">Key</FieldLabel>
                 <Input
@@ -118,39 +126,34 @@ export function ProjectCreateDialog({
                   onChange={(event) => setKey(event.target.value)}
                   placeholder="APP"
                   autoComplete="off"
-                  className="h-11 rounded-2xl bg-white/70 px-4 text-sm uppercase dark:bg-white/[0.06]"
+                  className="h-9 rounded-md bg-white px-3 text-sm uppercase dark:bg-white/[0.06]"
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="project-icon">Icon</FieldLabel>
-                <Input
-                  id="project-icon"
-                  value={icon}
-                  onChange={(event) => setIcon(event.target.value)}
-                  placeholder="✨"
-                  autoComplete="off"
-                  className="h-11 rounded-2xl bg-white/70 px-4 text-sm dark:bg-white/[0.06]"
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="project-color">Color</FieldLabel>
-                <Input
-                  id="project-color"
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                  placeholder="teal"
-                  autoComplete="off"
-                  className="h-11 rounded-2xl bg-white/70 px-4 text-sm dark:bg-white/[0.06]"
-                />
+                <FieldLabel>Preview</FieldLabel>
+                <div className="flex h-9 items-center gap-3 rounded-md border border-zinc-950/10 bg-white px-3 dark:border-white/10 dark:bg-white/[0.06]">
+                  <ProjectIconMark icon={icon} color={color} />
+                  <span className="truncate text-sm font-medium">
+                    {name || "Launch plan"}
+                  </span>
+                </div>
               </Field>
             </div>
+            <Field>
+              <FieldLabel>Icon</FieldLabel>
+              <ProjectIconPicker value={icon} onChange={setIcon} />
+            </Field>
+            <Field>
+              <FieldLabel>Color</FieldLabel>
+              <ProjectColorPicker value={color} onChange={setColor} />
+            </Field>
             {error ? <FieldError>{error}</FieldError> : null}
           </FieldGroup>
           <DialogFooter>
             <Button
               type="submit"
               disabled={isCreating}
-              className="h-11 rounded-full px-5"
+              className="h-9 rounded-md px-3"
             >
               {isCreating ? (
                 <CircleNotch className="size-4 animate-spin" />

@@ -1,5 +1,6 @@
 using Coordina.Api.Modules.Auth;
 using Coordina.Api.Modules.Projects;
+using Coordina.Api.Modules.Tasks;
 using Coordina.Api.Modules.Workspaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,6 +18,7 @@ public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>
       services.AddInMemoryAuthStoreForTests();
       services.AddInMemoryWorkspaceStoreForTests();
       services.AddInMemoryProjectStoreForTests();
+      services.AddInMemoryTaskStoreForTests();
     });
   }
 }

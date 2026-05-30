@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { SaasShell } from "@/components/layout/saas-shell"
+import { ProjectShell } from "@/features/projects/components/project-shell"
 import { ProjectsPage } from "@/features/projects/components/projects-page"
 import { WorkspaceDashboard } from "@/features/workspaces/components/workspace-dashboard"
 import { WorkspaceOnboarding } from "@/features/workspaces/components/workspace-onboarding"
@@ -39,6 +40,7 @@ function WorkspaceAppContent() {
 
   const isProjectsPage = currentPath.startsWith("/app/projects")
   const isSettingsPage = currentPath.startsWith("/app/workspace-settings")
+  const projectMatch = currentPath.match(/^\/app\/projects\/([^/]+)$/)
 
   if (isLoading) {
     return (
@@ -71,8 +73,15 @@ function WorkspaceAppContent() {
 
   return (
     <SaasShell currentPath={currentPath} onNavigate={navigate}>
-      {isProjectsPage ? (
-        <ProjectsPage />
+      {projectMatch ? (
+        <ProjectShell
+          projectId={projectMatch[1]}
+          onBack={() => navigate("/app/projects")}
+        />
+      ) : isProjectsPage ? (
+        <ProjectsPage
+          onOpenProject={(projectId) => navigate(`/app/projects/${projectId}`)}
+        />
       ) : isSettingsPage ? (
         <WorkspaceSettingsPage />
       ) : (
