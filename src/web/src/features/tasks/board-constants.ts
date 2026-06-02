@@ -1,36 +1,36 @@
-import type {
-  BoardCardPriority,
-  BoardTemplate,
-} from "@/features/tasks/task-types"
+import type { BoardCardPriority, BoardTemplateDefinition } from "@/types/task"
 
-export const boardTemplates: Array<{
-  id: BoardTemplate
-  name: string
-  lists: string
-  summary: string
-}> = [
+export const boardTemplates: BoardTemplateDefinition[] = [
   {
     id: "BASIC",
     name: "Basic",
-    lists: "To Do, In Progress, Done",
+    listTitles: ["To Do", "In Progress", "Done"],
+    previewCards: ["Clarify scope", "Create first card", "Board created"],
     summary: "Simple workflow for small delivery tracks.",
   },
   {
     id: "AGILE_SCRUM",
     name: "Agile Scrum",
-    lists: "Backlog, Sprint, In Progress, Review, Done",
+    listTitles: ["Backlog", "Sprint", "In Progress", "Review", "Done"],
+    previewCards: [
+      "Define user story",
+      "Plan sprint commitment",
+      "Code review checklist",
+    ],
     summary: "Sprint workflow with backlog and review stages.",
   },
   {
     id: "BUG_TRACKING",
     name: "Bug Tracking",
-    lists: "Reported, Investigating, Fixed, Released",
+    listTitles: ["Reported", "Investigating", "Fixed", "Released"],
+    previewCards: ["Crash on login", "Reproduce issue", "Patch published"],
     summary: "Triage flow for defects and release validation.",
   },
   {
     id: "PRODUCT_ROADMAP",
     name: "Product Roadmap",
-    lists: "Ideas, Planned, In Progress, Shipped",
+    listTitles: ["Ideas", "Planned", "In Progress", "Shipped"],
+    previewCards: ["Collect signal", "Write brief", "Measure adoption"],
     summary: "Roadmap pipeline from discovery to launch.",
   },
 ]

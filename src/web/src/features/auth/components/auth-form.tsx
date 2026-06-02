@@ -5,13 +5,9 @@ import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import { FieldError, FieldGroup } from "@/components/ui/field"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import { loginSchema, registerSchema } from "@/features/auth/auth-schemas"
-import type {
-  AuthFormValues,
-  AuthMode,
-  AuthSession,
-} from "@/features/auth/auth-types"
+import type { AuthFormValues, AuthMode, AuthSession } from "@/types/auth"
 import { AuthTextField } from "@/features/auth/components/auth-text-field"
 
 type AuthFormProps = {

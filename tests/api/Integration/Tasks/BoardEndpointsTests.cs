@@ -215,6 +215,53 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
   }
 
   [Fact]
+  public async Task UpdateCard_WithNewAssignee_AssignsWorkspaceMember()
+  {
+    var owner = await RegisterAsync();
+    var member = await RegisterAsync();
+    var workspace = await CreateWorkspaceAsync(owner.AccessToken, "Assignment Team");
+    var invite = await CreateInviteAsync(owner.AccessToken, workspace.Id);
+    await JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var project = await CreateProjectAsync(
+      owner.AccessToken,
+      workspace.Id,
+      "Board");
+    var board = await CreateBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      "CUSTOM");
+    var list = board.Lists.First();
+    var created = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Needs ownership");
+    var card = created.Lists.Single(item => item.Id == list.Id).Cards.Single();
+
+    Assert.Empty(card.Assignees);
+
+    var updateResponse = await SendAsAsync(
+      HttpMethod.Patch,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{card.Id}",
+      owner.AccessToken,
+      new { assigneeIds = new[] { member.User.Id } });
+
+    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+    var updatedBoard = await updateResponse.Content.ReadFromJsonAsync<BoardResponse>();
+
+    Assert.NotNull(updatedBoard);
+    var updated = updatedBoard.Lists
+      .Single(item => item.Id == list.Id)
+      .Cards
+      .Single();
+    Assert.Equal(member.User.Id, Assert.Single(updated.Assignees).UserId);
+  }
+
+  [Fact]
   public async Task UpdateCard_WithClearDueDate_RemovesExistingDueDate()
   {
     var owner = await RegisterAsync();
@@ -261,6 +308,101 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
 
     Assert.NotNull(updatedBoard);
     Assert.Null(updatedBoard.Lists.Single(item => item.Id == list.Id).Cards.Single().DueDate);
+  }
+
+  [Fact]
+  public async Task CardCollaborationEndpoints_PersistCompletionCommentsSubtasksAndDependencies()
+  {
+    var owner = await RegisterAsync();
+    var workspace = await CreateWorkspaceAsync(owner.AccessToken, "Collab Team");
+    var project = await CreateProjectAsync(
+      owner.AccessToken,
+      workspace.Id,
+      "Board");
+    var board = await CreateBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      "CUSTOM");
+    var list = board.Lists.First();
+    var firstBoard = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Blocked by copy");
+    var firstCard = firstBoard.Lists.First().Cards.First();
+    var secondBoard = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Dependency target");
+    var secondCard = secondBoard.Lists.First().Cards
+      .Single(card => card.Title == "Dependency target");
+
+    var completedResponse = await SendAsAsync(
+      HttpMethod.Patch,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}",
+      owner.AccessToken,
+      new
+      {
+        title = firstCard.Title,
+        isCompleted = true
+      });
+    completedResponse.EnsureSuccessStatusCode();
+
+    var commentResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/comments",
+      owner.AccessToken,
+      new { body = "Ship it after QA signs off." });
+    commentResponse.EnsureSuccessStatusCode();
+
+    var subtaskResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/subtasks",
+      owner.AccessToken,
+      new { title = "QA checklist" });
+    subtaskResponse.EnsureSuccessStatusCode();
+    var withSubtask = await subtaskResponse.Content.ReadFromJsonAsync<BoardResponse>();
+    Assert.NotNull(withSubtask);
+    var subtask = withSubtask.Lists.First().Cards
+      .Single(card => card.Id == firstCard.Id)
+      .Subtasks
+      .Single();
+
+    var updateSubtaskResponse = await SendAsAsync(
+      HttpMethod.Patch,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/subtasks/{subtask.Id}",
+      owner.AccessToken,
+      new { isCompleted = true });
+    updateSubtaskResponse.EnsureSuccessStatusCode();
+
+    var dependencyResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/dependencies",
+      owner.AccessToken,
+      new { dependsOnCardId = secondCard.Id });
+    dependencyResponse.EnsureSuccessStatusCode();
+
+    var loaded = await GetDefaultBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id);
+    var card = loaded.Lists.First().Cards
+      .Single(item => item.Id == firstCard.Id);
+
+    Assert.True(card.IsCompleted);
+    Assert.Equal(owner.User.Id, card.CompletedBy?.UserId);
+    Assert.Equal("Ship it after QA signs off.", Assert.Single(card.Comments).Body);
+    Assert.Equal(owner.User.Id, Assert.Single(card.Comments).Author.UserId);
+    Assert.True(Assert.Single(card.Subtasks).IsCompleted);
+    Assert.Equal(owner.User.Id, Assert.Single(card.Subtasks).CompletedBy?.UserId);
+    Assert.Equal(secondCard.Id, Assert.Single(card.Dependencies).CardId);
+    Assert.Equal("Dependency target", Assert.Single(card.Dependencies).Title);
   }
 
   [Fact]
@@ -732,15 +874,49 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
     string? Priority,
     DateOnly? DueDate,
     IReadOnlyCollection<string> Labels,
+    bool IsCompleted,
+    DateTimeOffset? CompletedAt,
+    BoardCardUserResponse? CompletedBy,
     int Position,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    IReadOnlyCollection<BoardCardAssigneeResponse> Assignees);
+    IReadOnlyCollection<BoardCardAssigneeResponse> Assignees,
+    IReadOnlyCollection<BoardCardCommentResponse> Comments,
+    IReadOnlyCollection<BoardCardSubtaskResponse> Subtasks,
+    IReadOnlyCollection<BoardCardDependencyResponse> Dependencies);
+
+  private sealed record BoardCardUserResponse(
+    string UserId,
+    string? Name,
+    string? Email);
 
   private sealed record BoardCardAssigneeResponse(
     string UserId,
     string? Name,
     string? Email);
+
+  private sealed record BoardCardCommentResponse(
+    string Id,
+    string CardId,
+    BoardCardUserResponse Author,
+    string Body,
+    DateTimeOffset CreatedAt);
+
+  private sealed record BoardCardSubtaskResponse(
+    string Id,
+    string CardId,
+    string Title,
+    bool IsCompleted,
+    DateTimeOffset? CompletedAt,
+    BoardCardUserResponse? CompletedBy,
+    int Position,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+  private sealed record BoardCardDependencyResponse(
+    string CardId,
+    string Title,
+    bool IsCompleted);
 
   private sealed record CreateWorkspaceInviteResponse(
     string Code,

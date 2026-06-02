@@ -1,26 +1,17 @@
-import { ApiError } from "@/features/auth/auth-api"
-import type {
-  Board,
-  BoardCardInput,
-  BoardTemplate,
-} from "@/features/tasks/task-types"
-
-const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5050"
-
-type ApiProblem = {
-  title?: string
-  message?: string
-  errors?: Record<string, string[]>
-}
+import { apiRequest } from "@/lib/api"
+import type { Board, BoardCardInput, BoardTemplate } from "@/types/task"
 
 export async function getDefaultBoard(
   accessToken: string,
   workspaceId: string,
   projectId: string
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/board`,
-    accessToken
+    {
+      accessToken,
+      errorMessage: "Board request failed.",
+    }
   )
 }
 
@@ -30,12 +21,13 @@ export async function createBoard(
   projectId: string,
   input: { name: string; template: BoardTemplate; customListTitles?: string[] }
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards`,
-    accessToken,
     {
+      accessToken,
       method: "POST",
       body: JSON.stringify(input),
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -47,12 +39,13 @@ export async function createList(
   boardId: string,
   title: string
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists`,
-    accessToken,
     {
+      accessToken,
       method: "POST",
       body: JSON.stringify({ title }),
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -65,12 +58,13 @@ export async function updateList(
   listId: string,
   title: string
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists/${listId}`,
-    accessToken,
     {
+      accessToken,
       method: "PATCH",
       body: JSON.stringify({ title }),
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -83,12 +77,13 @@ export async function createCard(
   listId: string,
   input: BoardCardInput
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists/${listId}/cards`,
-    accessToken,
     {
+      accessToken,
       method: "POST",
       body: JSON.stringify(normalizeCardInput(input)),
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -101,12 +96,13 @@ export async function updateCard(
   cardId: string,
   input: BoardCardInput
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}`,
-    accessToken,
     {
+      accessToken,
       method: "PATCH",
       body: JSON.stringify(normalizeCardUpdateInput(input)),
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -119,12 +115,13 @@ export async function moveCard(
   cardId: string,
   listId: string
 ) {
-  return request<Board>(
+  return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/move`,
-    accessToken,
     {
+      accessToken,
       method: "PATCH",
       body: JSON.stringify({ listId }),
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -136,11 +133,125 @@ export async function deleteCard(
   boardId: string,
   cardId: string
 ) {
-  await request<void>(
+  await apiRequest<void>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}`,
-    accessToken,
     {
+      accessToken,
       method: "DELETE",
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function addCardComment(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  body: string
+) {
+  return apiRequest<Board>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/comments`,
+    {
+      accessToken,
+      method: "POST",
+      body: JSON.stringify({ body }),
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function createSubtask(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  title: string
+) {
+  return apiRequest<Board>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/subtasks`,
+    {
+      accessToken,
+      method: "POST",
+      body: JSON.stringify({ title }),
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function updateSubtask(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  subtaskId: string,
+  input: { title?: string; isCompleted?: boolean }
+) {
+  return apiRequest<Board>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/subtasks/${subtaskId}`,
+    {
+      accessToken,
+      method: "PATCH",
+      body: JSON.stringify(input),
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function deleteSubtask(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  subtaskId: string
+) {
+  await apiRequest<void>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/subtasks/${subtaskId}`,
+    {
+      accessToken,
+      method: "DELETE",
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function addCardDependency(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  dependsOnCardId: string
+) {
+  return apiRequest<Board>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/dependencies`,
+    {
+      accessToken,
+      method: "POST",
+      body: JSON.stringify({ dependsOnCardId }),
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function deleteCardDependency(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  dependsOnCardId: string
+) {
+  await apiRequest<void>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/dependencies/${dependsOnCardId}`,
+    {
+      accessToken,
+      method: "DELETE",
+      errorMessage: "Board request failed.",
     }
   )
 }
@@ -152,6 +263,7 @@ function normalizeCardInput(input: BoardCardInput) {
     dueDate: input.dueDate || null,
     labels: input.labels ?? [],
     assigneeIds: input.assigneeIds ?? [],
+    isCompleted: input.isCompleted,
   }
 }
 
@@ -160,48 +272,5 @@ function normalizeCardUpdateInput(input: BoardCardInput) {
     ...normalizeCardInput(input),
     clearDueDate: input.dueDate === null || input.dueDate === "",
     priority: input.priority ?? "",
-  }
-}
-
-async function request<T>(
-  path: string,
-  accessToken: string,
-  init: RequestInit = {}
-): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      ...init.headers,
-    },
-  })
-
-  if (!response.ok) {
-    throw await toApiError(response)
-  }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return response.json() as Promise<T>
-}
-
-async function toApiError(response: Response) {
-  const problem = await readProblem(response)
-
-  return new ApiError(
-    problem.message ?? problem.title ?? "Board request failed.",
-    response.status,
-    problem.errors
-  )
-}
-
-async function readProblem(response: Response): Promise<ApiProblem> {
-  try {
-    return (await response.json()) as ApiProblem
-  } catch {
-    return {}
   }
 }

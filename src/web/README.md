@@ -53,9 +53,15 @@ src
 ├── features
 │   ├── auth         # Auth session, API client, forms
 │   ├── docs         # In-app documentation page
+│   ├── projects     # Project list, create/edit dialogs, project shell
+│   ├── tasks        # Board templates, Kanban board, card detail panel
 │   └── workspaces   # Workspace state, API client, screens
-├── lib              # Shared utilities
+├── lib              # Shared utilities and API client
+├── types            # Shared domain and API types
 └── main.tsx         # App entrypoint
 ```
 
 The root [README.md](../../README.md) contains the full project setup and quality gate documentation.
+
+Project creation stays lightweight. When the user opens a project without a
+board, the board module presents the template/custom-list setup flow in context.

@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/card"
 import { FieldError } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import { useAuth } from "@/features/auth/auth-context"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
-import type { WorkspaceMember } from "@/features/workspaces/workspace-types"
+import type { WorkspaceMember } from "@/types/workspace"
 
 export function WorkspaceMembersPanel() {
   const { session } = useAuth()

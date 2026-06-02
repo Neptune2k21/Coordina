@@ -7,7 +7,7 @@ import {
   StackSimple,
 } from "@phosphor-icons/react"
 
-const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5050"
+import { apiBaseUrl } from "@/lib/api"
 
 export const docsApiBaseUrl = apiBaseUrl
 
@@ -98,6 +98,7 @@ Project rules:
 - project lookup always includes both workspaceId and projectId
 - default list returns ACTIVE projects only
 - ARCHIVED and COMPLETED are included only by query param
+- board workflow setup is handled by the project board endpoints
 - COMPLETED projects are read-only
 - non-members receive 404
 - edit/archive requires workspace OWNER or project owner
@@ -107,6 +108,7 @@ export const workspaceUxCode = `Workspace UI:
 - /login authenticates with the existing JWT flow
 - /app loads the user's workspaces
 - /app/projects loads projects for coordina.activeWorkspaceId
+- project creation stays lightweight; board setup happens after opening a project
 - project filters are backend-backed: active by default, archived/completed on demand
 - no workspace: onboarding cards with create dialog and invite-code join form
 - existing workspace: persistent sidebar/topbar shell

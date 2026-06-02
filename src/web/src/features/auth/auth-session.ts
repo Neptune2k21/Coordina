@@ -1,4 +1,4 @@
-import type { AuthSession } from "@/features/auth/auth-types"
+import type { AuthSession } from "@/types/auth"
 
 export const authStorageKey = "coordina.auth.session"
 

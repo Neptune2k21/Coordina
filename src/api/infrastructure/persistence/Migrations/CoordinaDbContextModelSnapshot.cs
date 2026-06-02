@@ -162,6 +162,71 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("board_card_assignees", (string)null);
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardCommentEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("body");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CardId", "CreatedAt");
+
+                    b.ToTable("board_card_comments", (string)null);
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardDependencyEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DependsOnCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("depends_on_card_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependsOnCardId");
+
+                    b.HasIndex("CardId", "DependsOnCardId")
+                        .IsUnique();
+
+                    b.ToTable("board_card_dependencies", (string)null);
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -172,6 +237,14 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("BoardId")
                         .HasColumnType("uuid")
                         .HasColumnName("board_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("completed_by_user_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -185,6 +258,12 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly?>("DueDate")
                         .HasColumnType("date")
                         .HasColumnName("due_date");
+
+                    b.Property<bool>("IsCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_completed");
 
                     b.PrimitiveCollection<string[]>("Labels")
                         .IsRequired()
@@ -224,6 +303,8 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompletedByUserId");
+
                     b.HasIndex("ListId");
 
                     b.HasIndex("BoardId", "ListId", "Position");
@@ -231,6 +312,58 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("WorkspaceId", "ProjectId", "BoardId");
 
                     b.ToTable("board_cards", (string)null);
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardSubtaskEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("completed_by_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_completed");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedByUserId");
+
+                    b.HasIndex("CardId", "Position");
+
+                    b.ToTable("board_card_subtasks", (string)null);
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardEntity", b =>
@@ -505,6 +638,28 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Card");
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardCommentEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardEntity", "Card")
+                        .WithMany("Comments")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardDependencyEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardEntity", "Card")
+                        .WithMany("Dependencies")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardEntity", b =>
                 {
                     b.HasOne("Coordina.Api.Modules.Tasks.Infrastructure.BoardEntity", "Board")
@@ -522,6 +677,17 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Board");
 
                     b.Navigation("List");
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardSubtaskEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardEntity", "Card")
+                        .WithMany("Subtasks")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardEntity", b =>
@@ -582,6 +748,12 @@ namespace Coordina.Api.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardCardEntity", b =>
                 {
                     b.Navigation("Assignees");
+
+                    b.Navigation("Comments");
+
+                    b.Navigation("Dependencies");
+
+                    b.Navigation("Subtasks");
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Tasks.Infrastructure.BoardEntity", b =>

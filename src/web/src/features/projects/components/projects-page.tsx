@@ -40,7 +40,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/features/auth/auth-context"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import {
   archiveProject,
   createProject,
@@ -52,11 +52,7 @@ import {
 import { ProjectCreateDialog } from "@/features/projects/components/project-create-dialog"
 import { ProjectEditDialog } from "@/features/projects/components/project-edit-dialog"
 import { ProjectIconMark } from "@/features/projects/components/project-personalization"
-import type {
-  Project,
-  ProjectInput,
-  ProjectUpdateInput,
-} from "@/features/projects/project-types"
+import type { Project, ProjectInput, ProjectUpdateInput } from "@/types/project"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
 export function ProjectsPage({
