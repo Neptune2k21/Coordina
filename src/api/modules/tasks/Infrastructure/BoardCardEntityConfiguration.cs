@@ -60,6 +60,17 @@ public sealed class BoardCardEntityConfiguration
       .HasColumnType("text[]")
       .IsRequired();
 
+    builder.Property(card => card.IsCompleted)
+      .HasColumnName("is_completed")
+      .HasDefaultValue(false)
+      .IsRequired();
+
+    builder.Property(card => card.CompletedAt)
+      .HasColumnName("completed_at");
+
+    builder.Property(card => card.CompletedByUserId)
+      .HasColumnName("completed_by_user_id");
+
     builder.Property(card => card.Position)
       .HasColumnName("position")
       .IsRequired();
@@ -74,6 +85,7 @@ public sealed class BoardCardEntityConfiguration
 
     builder.HasIndex(card => new { card.WorkspaceId, card.ProjectId, card.BoardId });
     builder.HasIndex(card => new { card.BoardId, card.ListId, card.Position });
+    builder.HasIndex(card => card.CompletedByUserId);
     builder.HasIndex(card => card.ListId);
 
     builder.HasOne(card => card.Board)

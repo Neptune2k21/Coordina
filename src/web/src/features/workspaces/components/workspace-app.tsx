@@ -1,5 +1,11 @@
 import { CircleNotch } from "@phosphor-icons/react"
-import { useEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { SaasShell } from "@/components/layout/saas-shell"
@@ -22,8 +28,10 @@ export function WorkspaceApp() {
 }
 
 function WorkspaceAppContent() {
-  const { activeWorkspace, error, isLoading, workspaces } = useWorkspaces()
+  const { activeWorkspace, activeWorkspaceId, error, isLoading, workspaces } =
+    useWorkspaces()
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
+  const previousWorkspaceId = useRef<string | null>(null)
 
   useEffect(() => {
     const handlePopState = () => setCurrentPath(window.location.pathname)
@@ -32,15 +40,30 @@ function WorkspaceAppContent() {
     return () => window.removeEventListener("popstate", handlePopState)
   }, [])
 
-  function navigate(path: string) {
+  const navigate = useCallback((path: string) => {
     window.history.pushState({}, "", path)
     window.dispatchEvent(new PopStateEvent("popstate"))
     setCurrentPath(path)
-  }
+  }, [])
 
   const isProjectsPage = currentPath.startsWith("/app/projects")
   const isSettingsPage = currentPath.startsWith("/app/workspace-settings")
   const projectMatch = currentPath.match(/^\/app\/projects\/([^/]+)$/)
+  const isProjectDetailPage = Boolean(projectMatch)
+
+  useLayoutEffect(() => {
+    const previous = previousWorkspaceId.current
+    previousWorkspaceId.current = activeWorkspaceId
+
+    if (
+      previous &&
+      activeWorkspaceId &&
+      previous !== activeWorkspaceId &&
+      isProjectDetailPage
+    ) {
+      navigate("/app/projects")
+    }
+  }, [activeWorkspaceId, isProjectDetailPage, navigate])
 
   if (isLoading) {
     return (

@@ -13,7 +13,7 @@ import {
   readStoredSession,
   storeSession,
 } from "@/features/auth/auth-session"
-import type { AuthSession } from "@/features/auth/auth-types"
+import type { AuthSession } from "@/types/auth"
 
 type AuthContextValue = {
   session: AuthSession | null

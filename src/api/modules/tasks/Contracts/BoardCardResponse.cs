@@ -9,7 +9,41 @@ public sealed record BoardCardResponse(
   string? Priority,
   DateOnly? DueDate,
   IReadOnlyCollection<string> Labels,
+  bool IsCompleted,
+  DateTimeOffset? CompletedAt,
+  BoardCardUserResponse? CompletedBy,
   int Position,
   DateTimeOffset CreatedAt,
   DateTimeOffset UpdatedAt,
-  IReadOnlyCollection<BoardCardAssigneeResponse> Assignees);
+  IReadOnlyCollection<BoardCardAssigneeResponse> Assignees,
+  IReadOnlyCollection<BoardCardCommentResponse> Comments,
+  IReadOnlyCollection<BoardCardSubtaskResponse> Subtasks,
+  IReadOnlyCollection<BoardCardDependencyResponse> Dependencies);
+
+public sealed record BoardCardUserResponse(
+  Guid UserId,
+  string? Name,
+  string? Email);
+
+public sealed record BoardCardCommentResponse(
+  Guid Id,
+  Guid CardId,
+  BoardCardUserResponse Author,
+  string Body,
+  DateTimeOffset CreatedAt);
+
+public sealed record BoardCardSubtaskResponse(
+  Guid Id,
+  Guid CardId,
+  string Title,
+  bool IsCompleted,
+  DateTimeOffset? CompletedAt,
+  BoardCardUserResponse? CompletedBy,
+  int Position,
+  DateTimeOffset CreatedAt,
+  DateTimeOffset UpdatedAt);
+
+public sealed record BoardCardDependencyResponse(
+  Guid CardId,
+  string Title,
+  bool IsCompleted);

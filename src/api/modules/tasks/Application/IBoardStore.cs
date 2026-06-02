@@ -75,6 +75,64 @@ public interface IBoardStore
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken);
 
+  Task<ProjectBoard?> AddCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid userId,
+    string body,
+    DateTimeOffset createdAt,
+    CancellationToken cancellationToken);
+
+  Task<ProjectBoard?> CreateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    string title,
+    DateTimeOffset createdAt,
+    CancellationToken cancellationToken);
+
+  Task<ProjectBoard?> UpdateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    string? title,
+    bool? isCompleted,
+    Guid userId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
+  Task<bool> DeleteCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
+  Task<ProjectBoard?> AddCardDependencyAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid dependsOnCardId,
+    DateTimeOffset createdAt,
+    CancellationToken cancellationToken);
+
+  Task<bool> DeleteCardDependencyAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid dependsOnCardId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
   Task<bool> DeleteCardAsync(
     Guid workspaceId,
     Guid projectId,
@@ -89,7 +147,10 @@ public sealed record BoardCardMutation(
   BoardCardPriority? Priority,
   DateOnly? DueDate,
   IReadOnlyCollection<string> Labels,
-  IReadOnlyCollection<Guid> AssigneeIds);
+  IReadOnlyCollection<Guid> AssigneeIds,
+  bool IsCompleted,
+  DateTimeOffset? CompletedAt,
+  Guid? CompletedByUserId);
 
 public sealed record BoardListSeed(
   string Title,

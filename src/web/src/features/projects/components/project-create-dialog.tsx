@@ -19,13 +19,13 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import {
   ProjectColorPicker,
   ProjectIconMark,
   ProjectIconPicker,
 } from "@/features/projects/components/project-personalization"
-import type { ProjectInput } from "@/features/projects/project-types"
+import type { ProjectInput } from "@/types/project"
 
 type ProjectCreateDialogProps = {
   disabled?: boolean
@@ -91,7 +91,8 @@ export function ProjectCreateDialog({
         <DialogHeader>
           <DialogTitle>Create project</DialogTitle>
           <DialogDescription>
-            Projects are created inside the active workspace only.
+            Name the project first. The board workflow is chosen when the
+            project opens.
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={handleSubmit}>

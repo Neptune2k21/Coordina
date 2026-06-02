@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/card"
 import { FieldError } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
-import type { WorkspaceInvite } from "@/features/workspaces/workspace-types"
+import type { WorkspaceInvite } from "@/types/workspace"
 
 export function WorkspaceInvitePanel() {
   const { activeWorkspace, createInvite, isMutating } = useWorkspaces()

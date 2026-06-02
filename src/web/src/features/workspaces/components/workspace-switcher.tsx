@@ -20,6 +20,14 @@ export function WorkspaceSwitcher() {
     window.dispatchEvent(new PopStateEvent("popstate"))
   }
 
+  function handleWorkspaceSelect(workspaceId: string) {
+    setActiveWorkspaceId(workspaceId)
+
+    if (/^\/app\/projects\/[^/]+$/.test(window.location.pathname)) {
+      navigate("/app/projects")
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -46,7 +54,7 @@ export function WorkspaceSwitcher() {
         {workspaces.map((workspace) => (
           <DropdownMenuItem
             key={workspace.id}
-            onSelect={() => setActiveWorkspaceId(workspace.id)}
+            onSelect={() => handleWorkspaceSelect(workspace.id)}
           >
             <span className="grid size-8 place-items-center rounded-xl bg-zinc-950/[0.055] text-[11px] font-bold dark:bg-white/[0.08]">
               {workspace.name.slice(0, 1).toUpperCase()}

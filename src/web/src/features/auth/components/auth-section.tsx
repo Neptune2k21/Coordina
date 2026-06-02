@@ -9,7 +9,7 @@ import { useState } from "react"
 
 import { login, register } from "@/features/auth/auth-api"
 import { useAuth } from "@/features/auth/auth-context"
-import type { AuthFormValues, AuthMode } from "@/features/auth/auth-types"
+import type { AuthFormValues, AuthMode } from "@/types/auth"
 import { AuthForm } from "@/features/auth/components/auth-form"
 
 const workspaceSignals = [

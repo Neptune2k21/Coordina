@@ -19,7 +19,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
 type WorkspaceCreateDialogProps = {

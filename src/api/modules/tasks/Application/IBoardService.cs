@@ -61,6 +61,61 @@ public interface IBoardService
     Guid userId,
     CancellationToken cancellationToken);
 
+  Task<TaskResult<BoardResponse>> AddCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    CreateBoardCardCommentRequest request,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<TaskResult<BoardResponse>> CreateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    CreateBoardCardSubtaskRequest request,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<TaskResult<BoardResponse>> UpdateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    UpdateBoardCardSubtaskRequest request,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<TaskResult<object>> DeleteCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<TaskResult<BoardResponse>> AddCardDependencyAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    AddBoardCardDependencyRequest request,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<TaskResult<object>> DeleteCardDependencyAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid dependsOnCardId,
+    Guid userId,
+    CancellationToken cancellationToken);
+
   Task<TaskResult<object>> DeleteCardAsync(
     Guid workspaceId,
     Guid projectId,

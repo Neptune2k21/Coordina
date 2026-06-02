@@ -101,15 +101,14 @@ Current modules:
 | `tasks` | Project board system with templates, lists, cards, assignees, and workspace/project access checks |
 | `health` | Runtime health endpoint |
 
-The web application mirrors this direction with feature folders:
+The web application mirrors this direction with feature folders plus shared
+contracts and infrastructure:
 
 ```text
-src/web/src/features
-├── auth          # Session state, auth API client, auth forms
-├── docs          # In-app technical documentation
-├── projects      # Workspace-scoped project API client and SaaS screens
-├── tasks         # Project-scoped board API client, Kanban UI, and card panel
-└── workspaces    # Workspace state, onboarding, shell panels
+src/web/src
+├── features      # Product areas and UI/state owned by those areas
+├── lib           # Shared utilities and the API client
+└── types         # Shared API/domain contracts used across features
 ```
 
 ## Repository Map
@@ -307,6 +306,10 @@ Frontend flow:
 | Create project | Dialog posts name, description, key, icon, and color |
 | Edit project | Dialog updates metadata/status through workspace-scoped API |
 | Archive/delete | Confirmation dialog calls archive or permanent delete endpoint |
+
+Project creation intentionally does not choose the board workflow. When a new
+project is opened for the first time, the board module shows a focused setup
+screen where the user can choose a template or create custom lists.
 
 Manual testing:
 

@@ -7,4 +7,5 @@ public sealed record UpdateBoardCardRequest(
   DateOnly? DueDate,
   bool ClearDueDate,
   string[]? Labels,
-  Guid[]? AssigneeIds);
+  Guid[]? AssigneeIds,
+  bool? IsCompleted);
