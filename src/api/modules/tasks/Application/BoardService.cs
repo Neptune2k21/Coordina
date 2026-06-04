@@ -1,5 +1,6 @@
 using Coordina.Api.Modules.Projects.Application;
 using Coordina.Api.Modules.Projects.Domain;
+using Coordina.Api.Modules.Tasks.Application.Graph;
 using Coordina.Api.Modules.Tasks.Contracts;
 using Coordina.Api.Modules.Tasks.Domain;
 using Coordina.Api.Modules.Workspaces.Application;
@@ -10,7 +11,8 @@ namespace Coordina.Api.Modules.Tasks.Application;
 public sealed class BoardService(
   IBoardStore boards,
   IProjectStore projects,
-  IWorkspaceStore workspaces) : IBoardService
+  IWorkspaceStore workspaces,
+  IGraphEngine<Guid> graphEngine) : IBoardService
 {
   public async Task<TaskResult<BoardResponse>> GetDefaultAsync(
     Guid workspaceId,
@@ -89,6 +91,83 @@ public sealed class BoardService(
     return new TaskResult<BoardResponse>(
       TaskResultStatus.Success,
       BoardResponseMapper.ToResponse(board));
+  }
+
+  public async Task<TaskResult<BoardGraphResponse>> GetGraphAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access is null)
+    {
+      return new TaskResult<BoardGraphResponse>(TaskResultStatus.NotFound);
+    }
+
+    var board = await boards.FindInProjectAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cancellationToken);
+
+    return board is null
+      ? new TaskResult<BoardGraphResponse>(TaskResultStatus.NotFound)
+      : new TaskResult<BoardGraphResponse>(
+        TaskResultStatus.Success,
+        BoardGraphResponseMapper.ToResponse(
+          BoardDependencyGraph.AnalyzeBoard(graphEngine, board)));
+  }
+
+  public async Task<TaskResult<BoardCardDependencyAnalysisResponse>> GetCardDependencyAnalysisAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access is null)
+    {
+      return new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.NotFound);
+    }
+
+    var board = await boards.FindInProjectAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cancellationToken);
+
+    if (board is null)
+    {
+      return new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.NotFound);
+    }
+
+    var analysis = BoardDependencyGraph.AnalyzeCard(
+      graphEngine,
+      board,
+      cardId);
+
+    return analysis is null
+      ? new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.NotFound)
+      : new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.Success,
+        BoardGraphResponseMapper.ToResponse(analysis));
   }
 
   public async Task<TaskResult<BoardResponse>> CreateListAsync(
@@ -198,7 +277,9 @@ public sealed class BoardService(
       request.DueDate,
       request.Labels,
       request.AssigneeIds,
+      false,
       null,
+      DateTimeOffset.UtcNow,
       cancellationToken);
 
     if (mutation.Status != TaskResultStatus.Success)
@@ -256,7 +337,9 @@ public sealed class BoardService(
       request.ClearDueDate ? null : request.DueDate ?? current.DueDate,
       request.Labels ?? current.Labels.ToArray(),
       request.AssigneeIds ?? current.Assignees.Select(assignee => assignee.UserId).ToArray(),
+      request.IsCompleted ?? current.IsCompleted,
       current,
+      DateTimeOffset.UtcNow,
       cancellationToken);
 
     if (mutation.Status != TaskResultStatus.Success)
@@ -329,6 +412,328 @@ public sealed class BoardService(
         BoardResponseMapper.ToResponse(board));
   }
 
+  public async Task<TaskResult<BoardResponse>> AddCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    CreateBoardCardCommentRequest request,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindWritableAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access.Status != TaskResultStatus.Success)
+    {
+      return new TaskResult<BoardResponse>(access.Status, Message: access.Message);
+    }
+
+    var body = BoardRules.NormalizeText(request.Body);
+    if (string.IsNullOrWhiteSpace(body))
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.ValidationError,
+        Errors: new Dictionary<string, string[]>
+        {
+          [nameof(request.Body)] = ["Comment is required."]
+        });
+    }
+
+    if (body.Length > 1000)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.ValidationError,
+        Errors: new Dictionary<string, string[]>
+        {
+          [nameof(request.Body)] = ["Comment must be 1000 characters or fewer."]
+        });
+    }
+
+    var board = await boards.AddCardCommentAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      userId,
+      body,
+      DateTimeOffset.UtcNow,
+      cancellationToken);
+
+    return board is null
+      ? new TaskResult<BoardResponse>(TaskResultStatus.NotFound)
+      : new TaskResult<BoardResponse>(
+        TaskResultStatus.Success,
+        BoardResponseMapper.ToResponse(board));
+  }
+
+  public async Task<TaskResult<BoardResponse>> CreateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    CreateBoardCardSubtaskRequest request,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindWritableAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access.Status != TaskResultStatus.Success)
+    {
+      return new TaskResult<BoardResponse>(access.Status, Message: access.Message);
+    }
+
+    var titleErrors = BoardRules.ValidateCard(
+      request.Title,
+      null,
+      null,
+      [],
+      null);
+
+    if (titleErrors.Count > 0)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.ValidationError,
+        Errors: new Dictionary<string, string[]>
+        {
+          [nameof(request.Title)] = titleErrors["Title"]
+        });
+    }
+
+    var board = await boards.CreateCardSubtaskAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      request.Title!.Trim(),
+      DateTimeOffset.UtcNow,
+      cancellationToken);
+
+    return board is null
+      ? new TaskResult<BoardResponse>(TaskResultStatus.NotFound)
+      : new TaskResult<BoardResponse>(
+        TaskResultStatus.Success,
+        BoardResponseMapper.ToResponse(board));
+  }
+
+  public async Task<TaskResult<BoardResponse>> UpdateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    UpdateBoardCardSubtaskRequest request,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindWritableAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access.Status != TaskResultStatus.Success)
+    {
+      return new TaskResult<BoardResponse>(access.Status, Message: access.Message);
+    }
+
+    if (request.Title is not null)
+    {
+      var errors = BoardRules.ValidateCard(
+        request.Title,
+        null,
+        null,
+        [],
+        null);
+
+      if (errors.Count > 0)
+      {
+        return new TaskResult<BoardResponse>(
+          TaskResultStatus.ValidationError,
+          Errors: new Dictionary<string, string[]>
+          {
+            [nameof(request.Title)] = errors["Title"]
+          });
+      }
+    }
+
+    var board = await boards.UpdateCardSubtaskAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      subtaskId,
+      request.Title?.Trim(),
+      request.IsCompleted,
+      userId,
+      DateTimeOffset.UtcNow,
+      cancellationToken);
+
+    return board is null
+      ? new TaskResult<BoardResponse>(TaskResultStatus.NotFound)
+      : new TaskResult<BoardResponse>(
+        TaskResultStatus.Success,
+        BoardResponseMapper.ToResponse(board));
+  }
+
+  public async Task<TaskResult<object>> DeleteCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindWritableAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access.Status != TaskResultStatus.Success)
+    {
+      return new TaskResult<object>(access.Status, Message: access.Message);
+    }
+
+    var deleted = await boards.DeleteCardSubtaskAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      subtaskId,
+      DateTimeOffset.UtcNow,
+      cancellationToken);
+
+    return deleted
+      ? new TaskResult<object>(TaskResultStatus.Success)
+      : new TaskResult<object>(TaskResultStatus.NotFound);
+  }
+
+  public async Task<TaskResult<BoardResponse>> AddCardDependencyAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    AddBoardCardDependencyRequest request,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindWritableAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access.Status != TaskResultStatus.Success)
+    {
+      return new TaskResult<BoardResponse>(access.Status, Message: access.Message);
+    }
+
+    if (request.DependsOnCardId == Guid.Empty || request.DependsOnCardId == cardId)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.ValidationError,
+        Errors: new Dictionary<string, string[]>
+        {
+          [nameof(request.DependsOnCardId)] = ["Choose another card from this board."]
+        });
+    }
+
+    var boardSnapshot = await boards.FindInProjectAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cancellationToken);
+
+    if (boardSnapshot is null)
+    {
+      return new TaskResult<BoardResponse>(TaskResultStatus.NotFound);
+    }
+
+    var dependencyEvaluation = BoardDependencyGraph.EvaluateDependency(
+      graphEngine,
+      boardSnapshot,
+      cardId,
+      request.DependsOnCardId);
+
+    if (dependencyEvaluation.Status is GraphEdgeStatus.MissingSource
+      or GraphEdgeStatus.MissingTarget)
+    {
+      return new TaskResult<BoardResponse>(TaskResultStatus.NotFound);
+    }
+
+    if (dependencyEvaluation.Status == GraphEdgeStatus.Duplicate)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.Success,
+        BoardResponseMapper.ToResponse(boardSnapshot));
+    }
+
+    if (dependencyEvaluation.Status == GraphEdgeStatus.Cycle)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.Conflict,
+        Message: "Adding this dependency would create a cycle.");
+    }
+
+    var board = await boards.AddCardDependencyAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      request.DependsOnCardId,
+      DateTimeOffset.UtcNow,
+      cancellationToken);
+
+    return board is null
+      ? new TaskResult<BoardResponse>(TaskResultStatus.NotFound)
+      : new TaskResult<BoardResponse>(
+        TaskResultStatus.Success,
+        BoardResponseMapper.ToResponse(board));
+  }
+
+  public async Task<TaskResult<object>> DeleteCardDependencyAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid dependsOnCardId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindWritableAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access.Status != TaskResultStatus.Success)
+    {
+      return new TaskResult<object>(access.Status, Message: access.Message);
+    }
+
+    var deleted = await boards.DeleteCardDependencyAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      dependsOnCardId,
+      DateTimeOffset.UtcNow,
+      cancellationToken);
+
+    return deleted
+      ? new TaskResult<object>(TaskResultStatus.Success)
+      : new TaskResult<object>(TaskResultStatus.NotFound);
+  }
+
   public async Task<TaskResult<object>> DeleteCardAsync(
     Guid workspaceId,
     Guid projectId,
@@ -377,7 +782,9 @@ public sealed class BoardService(
     DateOnly? dueDate,
     string[]? labels,
     Guid[]? assigneeIds,
+    bool isCompleted,
     ProjectBoardCard? current,
+    DateTimeOffset updatedAt,
     CancellationToken cancellationToken)
   {
     var access = await FindWritableAccessAsync(
@@ -441,7 +848,14 @@ public sealed class BoardService(
         parsedPriority,
         dueDate,
         normalizedLabels,
-        normalizedAssignees));
+        normalizedAssignees,
+        isCompleted,
+        isCompleted
+          ? current?.CompletedAt ?? updatedAt
+          : null,
+        isCompleted
+          ? current?.CompletedBy?.UserId ?? userId
+          : null));
   }
 
   private async Task<ProjectAccess?> FindAccessAsync(

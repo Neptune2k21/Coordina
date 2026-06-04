@@ -19,13 +19,13 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import {
   ProjectColorPicker,
   ProjectIconMark,
   ProjectIconPicker,
 } from "@/features/projects/components/project-personalization"
-import type { ProjectInput } from "@/features/projects/project-types"
+import type { ProjectInput } from "@/types/project"
 
 type ProjectCreateDialogProps = {
   disabled?: boolean
@@ -87,11 +87,12 @@ export function ProjectCreateDialog({
           New project
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[560px] rounded-md border-zinc-950/10 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-zinc-950">
+      <DialogContent className="max-w-560px rounded-md border-zinc-950/10 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-zinc-950">
         <DialogHeader>
           <DialogTitle>Create project</DialogTitle>
           <DialogDescription>
-            Projects are created inside the active workspace only.
+            Name the project first. The board workflow is chosen when the
+            project opens.
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={handleSubmit}>
@@ -104,7 +105,7 @@ export function ProjectCreateDialog({
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Launch plan"
                 autoComplete="off"
-                className="h-9 rounded-md bg-white px-3 text-sm dark:bg-white/[0.06]"
+                className="dark:bg-white/0.06 h-9 rounded-md bg-white px-3 text-sm"
               />
             </Field>
             <Field>
@@ -114,7 +115,7 @@ export function ProjectCreateDialog({
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Optional context for the team"
-                className="rounded-md bg-white px-3 text-sm dark:bg-white/[0.06]"
+                className="dark:bg-white/0.06 rounded-md bg-white px-3 text-sm"
               />
             </Field>
             <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
@@ -126,12 +127,12 @@ export function ProjectCreateDialog({
                   onChange={(event) => setKey(event.target.value)}
                   placeholder="APP"
                   autoComplete="off"
-                  className="h-9 rounded-md bg-white px-3 text-sm uppercase dark:bg-white/[0.06]"
+                  className="dark:bg-white/0.06 h-9 rounded-md bg-white px-3 text-sm uppercase"
                 />
               </Field>
               <Field>
                 <FieldLabel>Preview</FieldLabel>
-                <div className="flex h-9 items-center gap-3 rounded-md border border-zinc-950/10 bg-white px-3 dark:border-white/10 dark:bg-white/[0.06]">
+                <div className="dark:bg-white/0.06 flex h-9 items-center gap-3 rounded-md border border-zinc-950/10 bg-white px-3 dark:border-white/10">
                   <ProjectIconMark icon={icon} color={color} />
                   <span className="truncate text-sm font-medium">
                     {name || "Launch plan"}

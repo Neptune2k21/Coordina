@@ -21,7 +21,7 @@ import type {
   Workspace,
   WorkspaceInvite,
   WorkspaceMember,
-} from "@/features/workspaces/workspace-types"
+} from "@/types/workspace"
 
 const activeWorkspaceStorageKey = "coordina.activeWorkspaceId"
 

@@ -14,6 +14,9 @@ public sealed class BoardCardEntity
   public BoardCardPriority? Priority { get; set; }
   public DateOnly? DueDate { get; set; }
   public string[] Labels { get; set; } = [];
+  public bool IsCompleted { get; set; }
+  public DateTimeOffset? CompletedAt { get; set; }
+  public Guid? CompletedByUserId { get; set; }
   public int Position { get; set; }
   public DateTimeOffset CreatedAt { get; set; }
   public DateTimeOffset UpdatedAt { get; set; }
@@ -21,4 +24,7 @@ public sealed class BoardCardEntity
   public BoardEntity? Board { get; set; }
   public BoardListEntity? List { get; set; }
   public ICollection<BoardCardAssigneeEntity> Assignees { get; set; } = [];
+  public ICollection<BoardCardCommentEntity> Comments { get; set; } = [];
+  public ICollection<BoardCardSubtaskEntity> Subtasks { get; set; } = [];
+  public ICollection<BoardCardDependencyEntity> Dependencies { get; set; } = [];
 }

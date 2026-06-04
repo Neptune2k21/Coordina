@@ -215,6 +215,53 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
   }
 
   [Fact]
+  public async Task UpdateCard_WithNewAssignee_AssignsWorkspaceMember()
+  {
+    var owner = await RegisterAsync();
+    var member = await RegisterAsync();
+    var workspace = await CreateWorkspaceAsync(owner.AccessToken, "Assignment Team");
+    var invite = await CreateInviteAsync(owner.AccessToken, workspace.Id);
+    await JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var project = await CreateProjectAsync(
+      owner.AccessToken,
+      workspace.Id,
+      "Board");
+    var board = await CreateBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      "CUSTOM");
+    var list = board.Lists.First();
+    var created = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Needs ownership");
+    var card = created.Lists.Single(item => item.Id == list.Id).Cards.Single();
+
+    Assert.Empty(card.Assignees);
+
+    var updateResponse = await SendAsAsync(
+      HttpMethod.Patch,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{card.Id}",
+      owner.AccessToken,
+      new { assigneeIds = new[] { member.User.Id } });
+
+    Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+    var updatedBoard = await updateResponse.Content.ReadFromJsonAsync<BoardResponse>();
+
+    Assert.NotNull(updatedBoard);
+    var updated = updatedBoard.Lists
+      .Single(item => item.Id == list.Id)
+      .Cards
+      .Single();
+    Assert.Equal(member.User.Id, Assert.Single(updated.Assignees).UserId);
+  }
+
+  [Fact]
   public async Task UpdateCard_WithClearDueDate_RemovesExistingDueDate()
   {
     var owner = await RegisterAsync();
@@ -261,6 +308,238 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
 
     Assert.NotNull(updatedBoard);
     Assert.Null(updatedBoard.Lists.Single(item => item.Id == list.Id).Cards.Single().DueDate);
+  }
+
+  [Fact]
+  public async Task CardCollaborationEndpoints_PersistCompletionCommentsSubtasksAndDependencies()
+  {
+    var owner = await RegisterAsync();
+    var workspace = await CreateWorkspaceAsync(owner.AccessToken, "Collab Team");
+    var project = await CreateProjectAsync(
+      owner.AccessToken,
+      workspace.Id,
+      "Board");
+    var board = await CreateBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      "CUSTOM");
+    var list = board.Lists.First();
+    var firstBoard = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Blocked by copy");
+    var firstCard = firstBoard.Lists.First().Cards.First();
+    var secondBoard = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Dependency target");
+    var secondCard = secondBoard.Lists.First().Cards
+      .Single(card => card.Title == "Dependency target");
+
+    var completedResponse = await SendAsAsync(
+      HttpMethod.Patch,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}",
+      owner.AccessToken,
+      new
+      {
+        title = firstCard.Title,
+        isCompleted = true
+      });
+    completedResponse.EnsureSuccessStatusCode();
+
+    var commentResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/comments",
+      owner.AccessToken,
+      new { body = "Ship it after QA signs off." });
+    commentResponse.EnsureSuccessStatusCode();
+
+    var subtaskResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/subtasks",
+      owner.AccessToken,
+      new { title = "QA checklist" });
+    subtaskResponse.EnsureSuccessStatusCode();
+    var withSubtask = await subtaskResponse.Content.ReadFromJsonAsync<BoardResponse>();
+    Assert.NotNull(withSubtask);
+    var subtask = withSubtask.Lists.First().Cards
+      .Single(card => card.Id == firstCard.Id)
+      .Subtasks
+      .Single();
+
+    var updateSubtaskResponse = await SendAsAsync(
+      HttpMethod.Patch,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/subtasks/{subtask.Id}",
+      owner.AccessToken,
+      new { isCompleted = true });
+    updateSubtaskResponse.EnsureSuccessStatusCode();
+
+    var dependencyResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/dependencies",
+      owner.AccessToken,
+      new { dependsOnCardId = secondCard.Id });
+    dependencyResponse.EnsureSuccessStatusCode();
+
+    var loaded = await GetDefaultBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id);
+    var card = loaded.Lists.First().Cards
+      .Single(item => item.Id == firstCard.Id);
+
+    Assert.True(card.IsCompleted);
+    Assert.Equal(owner.User.Id, card.CompletedBy?.UserId);
+    Assert.Equal("Ship it after QA signs off.", Assert.Single(card.Comments).Body);
+    Assert.Equal(owner.User.Id, Assert.Single(card.Comments).Author.UserId);
+    Assert.True(Assert.Single(card.Subtasks).IsCompleted);
+    Assert.Equal(owner.User.Id, Assert.Single(card.Subtasks).CompletedBy?.UserId);
+    Assert.Equal(secondCard.Id, Assert.Single(card.Dependencies).CardId);
+    Assert.Equal("Dependency target", Assert.Single(card.Dependencies).Title);
+  }
+
+  [Fact]
+  public async Task AddCardDependency_WhenItWouldCreateCycle_ReturnsConflict()
+  {
+    var owner = await RegisterAsync();
+    var workspace = await CreateWorkspaceAsync(owner.AccessToken, "Graph Team");
+    var project = await CreateProjectAsync(
+      owner.AccessToken,
+      workspace.Id,
+      "Graph Board");
+    var board = await CreateBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      "CUSTOM");
+    var list = board.Lists.First();
+    var withFirstCard = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Ship API");
+    var firstCard = withFirstCard.Lists.First().Cards.Single();
+    var withSecondCard = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Prepare database");
+    var secondCard = withSecondCard.Lists.First().Cards
+      .Single(card => card.Title == "Prepare database");
+
+    var dependencyResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{firstCard.Id}/dependencies",
+      owner.AccessToken,
+      new { dependsOnCardId = secondCard.Id });
+    dependencyResponse.EnsureSuccessStatusCode();
+
+    var cycleResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{secondCard.Id}/dependencies",
+      owner.AccessToken,
+      new { dependsOnCardId = firstCard.Id });
+
+    Assert.Equal(HttpStatusCode.Conflict, cycleResponse.StatusCode);
+  }
+
+  [Fact]
+  public async Task DependencyGraphEndpoints_ReturnPlanningSignals()
+  {
+    var owner = await RegisterAsync();
+    var workspace = await CreateWorkspaceAsync(owner.AccessToken, "Signals Team");
+    var project = await CreateProjectAsync(
+      owner.AccessToken,
+      workspace.Id,
+      "Signals Board");
+    var board = await CreateBoardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      "CUSTOM");
+    var list = board.Lists.First();
+    var withDatabase = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Database migration");
+    var database = withDatabase.Lists.First().Cards.Single();
+    var withApi = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "API endpoint");
+    var api = withApi.Lists.First().Cards
+      .Single(card => card.Title == "API endpoint");
+    var withUi = await CreateCardAsync(
+      owner.AccessToken,
+      workspace.Id,
+      project.Id,
+      board.Id,
+      list.Id,
+      "Frontend panel");
+    var ui = withUi.Lists.First().Cards
+      .Single(card => card.Title == "Frontend panel");
+
+    var apiDependencyResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{api.Id}/dependencies",
+      owner.AccessToken,
+      new { dependsOnCardId = database.Id });
+    apiDependencyResponse.EnsureSuccessStatusCode();
+
+    var uiDependencyResponse = await SendAsAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{ui.Id}/dependencies",
+      owner.AccessToken,
+      new { dependsOnCardId = api.Id });
+    uiDependencyResponse.EnsureSuccessStatusCode();
+
+    var graphResponse = await SendAsAsync(
+      HttpMethod.Get,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/graph",
+      owner.AccessToken);
+    graphResponse.EnsureSuccessStatusCode();
+    var graph = await graphResponse.Content.ReadFromJsonAsync<BoardGraphResponse>();
+
+    Assert.NotNull(graph);
+    Assert.True(graph.IsAcyclic);
+    Assert.Equal(database.Id, Assert.Single(graph.ReadyCards).Id);
+    Assert.Equal(
+      [database.Id, api.Id, ui.Id],
+      graph.DependencyOrder.Select(card => card.Id).ToArray());
+
+    var analysisResponse = await SendAsAsync(
+      HttpMethod.Get,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/cards/{api.Id}/dependency-analysis",
+      owner.AccessToken);
+    analysisResponse.EnsureSuccessStatusCode();
+    var analysis = await analysisResponse.Content
+      .ReadFromJsonAsync<BoardCardDependencyAnalysisResponse>();
+
+    Assert.NotNull(analysis);
+    Assert.False(analysis.IsStructurallyReady);
+    Assert.False(analysis.IsUnblocked);
+    Assert.Equal(database.Id, Assert.Single(analysis.BlockingDependencies).Id);
+    Assert.DoesNotContain(
+      analysis.SuggestedDependencies,
+      candidate => candidate.Id == ui.Id);
+    Assert.Equal(ui.Id, Assert.Single(analysis.ImpactedDependents).Id);
   }
 
   [Fact]
@@ -732,15 +1011,70 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
     string? Priority,
     DateOnly? DueDate,
     IReadOnlyCollection<string> Labels,
+    bool IsCompleted,
+    DateTimeOffset? CompletedAt,
+    BoardCardUserResponse? CompletedBy,
     int Position,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    IReadOnlyCollection<BoardCardAssigneeResponse> Assignees);
+    IReadOnlyCollection<BoardCardAssigneeResponse> Assignees,
+    IReadOnlyCollection<BoardCardCommentResponse> Comments,
+    IReadOnlyCollection<BoardCardSubtaskResponse> Subtasks,
+    IReadOnlyCollection<BoardCardDependencyResponse> Dependencies);
+
+  private sealed record BoardCardUserResponse(
+    string UserId,
+    string? Name,
+    string? Email);
 
   private sealed record BoardCardAssigneeResponse(
     string UserId,
     string? Name,
     string? Email);
+
+  private sealed record BoardCardCommentResponse(
+    string Id,
+    string CardId,
+    BoardCardUserResponse Author,
+    string Body,
+    DateTimeOffset CreatedAt);
+
+  private sealed record BoardCardSubtaskResponse(
+    string Id,
+    string CardId,
+    string Title,
+    bool IsCompleted,
+    DateTimeOffset? CompletedAt,
+    BoardCardUserResponse? CompletedBy,
+    int Position,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+  private sealed record BoardCardDependencyResponse(
+    string CardId,
+    string Title,
+    bool IsCompleted);
+
+  private sealed record BoardGraphResponse(
+    string BoardId,
+    bool IsAcyclic,
+    IReadOnlyCollection<BoardGraphCardResponse> ReadyCards,
+    IReadOnlyCollection<BoardGraphCardResponse> UnblockedCards,
+    IReadOnlyCollection<BoardGraphCardResponse> DependencyOrder);
+
+  private sealed record BoardCardDependencyAnalysisResponse(
+    string CardId,
+    bool IsStructurallyReady,
+    bool IsUnblocked,
+    IReadOnlyCollection<BoardGraphCardResponse> BlockingDependencies,
+    IReadOnlyCollection<BoardGraphCardResponse> SuggestedDependencies,
+    IReadOnlyCollection<BoardGraphCardResponse> ImpactedDependents);
+
+  private sealed record BoardGraphCardResponse(
+    string Id,
+    string ListId,
+    string Title,
+    bool IsCompleted);
 
   private sealed record CreateWorkspaceInviteResponse(
     string Code,

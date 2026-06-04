@@ -41,6 +41,9 @@ internal static class BoardResponseMapper
       card.Priority?.ToString().ToUpperInvariant(),
       card.DueDate,
       card.Labels,
+      card.IsCompleted,
+      card.CompletedAt,
+      card.CompletedBy is null ? null : ToUserResponse(card.CompletedBy),
       card.Position,
       card.CreatedAt,
       card.UpdatedAt,
@@ -49,7 +52,38 @@ internal static class BoardResponseMapper
           assignee.UserId,
           assignee.Name,
           assignee.Email))
+        .ToArray(),
+      card.Comments
+        .OrderBy(comment => comment.CreatedAt)
+        .Select(comment => new BoardCardCommentResponse(
+          comment.Id,
+          comment.CardId,
+          ToUserResponse(comment.Author),
+          comment.Body,
+          comment.CreatedAt))
+        .ToArray(),
+      card.Subtasks
+        .OrderBy(subtask => subtask.Position)
+        .Select(subtask => new BoardCardSubtaskResponse(
+          subtask.Id,
+          subtask.CardId,
+          subtask.Title,
+          subtask.IsCompleted,
+          subtask.CompletedAt,
+          subtask.CompletedBy is null ? null : ToUserResponse(subtask.CompletedBy),
+          subtask.Position,
+          subtask.CreatedAt,
+          subtask.UpdatedAt))
+        .ToArray(),
+      card.Dependencies
+        .Select(dependency => new BoardCardDependencyResponse(
+          dependency.CardId,
+          dependency.Title,
+          dependency.IsCompleted))
         .ToArray());
+
+  private static BoardCardUserResponse ToUserResponse(ProjectBoardCardUser user) =>
+    new(user.UserId, user.Name, user.Email);
 
   private static string ToApiTemplate(BoardTemplate template)
   {

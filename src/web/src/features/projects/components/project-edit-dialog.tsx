@@ -18,16 +18,13 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import {
   ProjectColorPicker,
   ProjectIconMark,
   ProjectIconPicker,
 } from "@/features/projects/components/project-personalization"
-import type {
-  Project,
-  ProjectUpdateInput,
-} from "@/features/projects/project-types"
+import type { Project, ProjectUpdateInput } from "@/types/project"
 
 type ProjectEditDialogProps = {
   isSaving: boolean

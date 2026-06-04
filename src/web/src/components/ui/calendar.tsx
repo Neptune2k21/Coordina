@@ -37,7 +37,7 @@ export function Calendar({
   return (
     <div
       className={cn(
-        "rounded-md border border-zinc-950/10 bg-white p-2 text-xs dark:border-white/10 dark:bg-white/[0.055]",
+        "rounded-md border border-zinc-950/10 bg-white p-2 text-xs text-zinc-950 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-50",
         className
       )}
     >
@@ -51,7 +51,7 @@ export function Calendar({
         >
           <CaretLeft className="size-3.5" />
         </Button>
-        <div className="text-xs font-semibold">
+        <div className="min-w-0 flex-1 truncate text-center text-xs font-semibold">
           {visibleMonth.toLocaleDateString(undefined, {
             month: "long",
             year: "numeric",
@@ -71,7 +71,7 @@ export function Calendar({
         {weekdays.map((weekday) => (
           <div
             key={weekday}
-            className="py-1 text-[10px] font-medium text-muted-foreground"
+            className="grid h-6 place-items-center text-[10px] font-medium text-muted-foreground"
           >
             {weekday}
           </div>
@@ -86,7 +86,7 @@ export function Calendar({
               key={key}
               type="button"
               className={cn(
-                "grid aspect-square place-items-center rounded-md text-[11px] transition-colors hover:bg-zinc-950/5 dark:hover:bg-white/10",
+                "grid aspect-square min-h-8 place-items-center rounded-md text-[11px] transition-colors hover:bg-zinc-950/5 dark:hover:bg-white/10",
                 !day.isCurrentMonth && "text-muted-foreground/45",
                 isDisabled &&
                   "cursor-not-allowed text-muted-foreground/25 hover:bg-transparent dark:hover:bg-transparent",

@@ -10,9 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
-import type { Workspace } from "@/features/workspaces/workspace-types"
+import type { Workspace } from "@/types/workspace"
 
 export function WorkspaceList() {
   const {

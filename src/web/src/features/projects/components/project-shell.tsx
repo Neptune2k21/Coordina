@@ -11,11 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ApiError } from "@/features/auth/auth-api"
+import { ApiError } from "@/lib/api"
 import { useAuth } from "@/features/auth/auth-context"
 import { ProjectIconMark } from "@/features/projects/components/project-personalization"
 import { getProject } from "@/features/projects/project-api"
-import type { Project } from "@/features/projects/project-types"
+import type { Project } from "@/types/project"
 import { ProjectBoard } from "@/features/tasks/components/project-board"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 

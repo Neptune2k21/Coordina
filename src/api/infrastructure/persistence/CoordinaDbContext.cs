@@ -20,6 +20,12 @@ public sealed class CoordinaDbContext(DbContextOptions<CoordinaDbContext> option
   public DbSet<BoardCardEntity> BoardCards => Set<BoardCardEntity>();
   public DbSet<BoardCardAssigneeEntity> BoardCardAssignees =>
     Set<BoardCardAssigneeEntity>();
+  public DbSet<BoardCardCommentEntity> BoardCardComments =>
+    Set<BoardCardCommentEntity>();
+  public DbSet<BoardCardSubtaskEntity> BoardCardSubtasks =>
+    Set<BoardCardSubtaskEntity>();
+  public DbSet<BoardCardDependencyEntity> BoardCardDependencies =>
+    Set<BoardCardDependencyEntity>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {

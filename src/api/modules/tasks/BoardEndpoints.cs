@@ -24,6 +24,10 @@ public static class BoardEndpoints
 
     var boardGroup = projectGroup.MapGroup("/boards/{boardId:guid}");
 
+    boardGroup.MapGet("/graph", GetGraph)
+      .WithSummary("Get board dependency graph")
+      .WithDescription("Returns graph-derived planning signals for the board.");
+
     boardGroup.MapPost("/lists", CreateList)
       .WithSummary("Create board list");
 
@@ -38,6 +42,28 @@ public static class BoardEndpoints
 
     boardGroup.MapPatch("/cards/{cardId:guid}/move", MoveCard)
       .WithSummary("Move card");
+
+    boardGroup.MapGet("/cards/{cardId:guid}/dependency-analysis", GetCardDependencyAnalysis)
+      .WithSummary("Get card dependency analysis")
+      .WithDescription("Returns safe dependency suggestions, blockers, and impacted dependents.");
+
+    boardGroup.MapPost("/cards/{cardId:guid}/comments", AddCardComment)
+      .WithSummary("Add card comment");
+
+    boardGroup.MapPost("/cards/{cardId:guid}/subtasks", CreateCardSubtask)
+      .WithSummary("Create card subtask");
+
+    boardGroup.MapPatch("/cards/{cardId:guid}/subtasks/{subtaskId:guid}", UpdateCardSubtask)
+      .WithSummary("Update card subtask");
+
+    boardGroup.MapDelete("/cards/{cardId:guid}/subtasks/{subtaskId:guid}", DeleteCardSubtask)
+      .WithSummary("Delete card subtask");
+
+    boardGroup.MapPost("/cards/{cardId:guid}/dependencies", AddCardDependency)
+      .WithSummary("Add card dependency");
+
+    boardGroup.MapDelete("/cards/{cardId:guid}/dependencies/{dependsOnCardId:guid}", DeleteCardDependency)
+      .WithSummary("Delete card dependency");
 
     boardGroup.MapDelete("/cards/{cardId:guid}", DeleteCard)
       .WithSummary("Delete card");
@@ -93,6 +119,29 @@ public static class BoardEndpoints
         result.Value),
       _ => ToResult(result)
     };
+  }
+
+  private static async Task<IResult> GetGraph(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.GetGraphAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
   }
 
   private static async Task<IResult> CreateList(
@@ -228,6 +277,195 @@ public static class BoardEndpoints
     return ToResult(result);
   }
 
+  private static async Task<IResult> GetCardDependencyAnalysis(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.GetCardDependencyAnalysisAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
+  }
+
+  private static async Task<IResult> AddCardComment(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    CreateBoardCardCommentRequest request,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.AddCardCommentAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      request,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
+  }
+
+  private static async Task<IResult> CreateCardSubtask(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    CreateBoardCardSubtaskRequest request,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.CreateCardSubtaskAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      request,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
+  }
+
+  private static async Task<IResult> UpdateCardSubtask(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    UpdateBoardCardSubtaskRequest request,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.UpdateCardSubtaskAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      subtaskId,
+      request,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
+  }
+
+  private static async Task<IResult> DeleteCardSubtask(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid subtaskId,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.DeleteCardSubtaskAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      subtaskId,
+      userId,
+      cancellationToken);
+
+    return ToEmptyResult(result);
+  }
+
+  private static async Task<IResult> AddCardDependency(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    AddBoardCardDependencyRequest request,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.AddCardDependencyAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      request,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
+  }
+
+  private static async Task<IResult> DeleteCardDependency(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid dependsOnCardId,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.DeleteCardDependencyAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      dependsOnCardId,
+      userId,
+      cancellationToken);
+
+    return ToEmptyResult(result);
+  }
+
   private static async Task<IResult> DeleteCard(
     Guid workspaceId,
     Guid projectId,
@@ -250,6 +488,11 @@ public static class BoardEndpoints
       userId,
       cancellationToken);
 
+    return ToEmptyResult(result);
+  }
+
+  private static IResult ToEmptyResult<T>(TaskResult<T> result)
+  {
     return result.Status switch
     {
       TaskResultStatus.Success => Results.NoContent(),

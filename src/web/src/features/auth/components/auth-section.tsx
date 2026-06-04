@@ -9,7 +9,7 @@ import { useState } from "react"
 
 import { login, register } from "@/features/auth/auth-api"
 import { useAuth } from "@/features/auth/auth-context"
-import type { AuthFormValues, AuthMode } from "@/features/auth/auth-types"
+import type { AuthFormValues, AuthMode } from "@/types/auth"
 import { AuthForm } from "@/features/auth/components/auth-form"
 
 const workspaceSignals = [
@@ -132,7 +132,7 @@ export function AuthSection() {
                 return (
                   <div
                     key={card.title}
-                    className="rounded-md border border-white/10 bg-white/[0.05] p-4"
+                    className="bg-white/0.05 rounded-md border border-white/10 p-4"
                   >
                     <Icon className="size-5 text-teal-200" />
                     <p className="mt-4 text-sm font-semibold">{card.title}</p>
@@ -159,7 +159,7 @@ export function AuthSection() {
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[430px] flex-1 flex-col justify-center py-10">
+          <div className="max-w-430px mx-auto flex w-full flex-1 flex-col justify-center py-10">
             <div className="mb-8">
               <p className="text-sm font-medium text-muted-foreground">
                 {mode === "login"
