@@ -94,6 +94,30 @@ export type BoardCardDependency = {
   isCompleted: boolean
 }
 
+export type BoardGraph = {
+  boardId: string
+  isAcyclic: boolean
+  readyCards: BoardGraphCard[]
+  unblockedCards: BoardGraphCard[]
+  dependencyOrder: BoardGraphCard[]
+}
+
+export type BoardCardDependencyAnalysis = {
+  cardId: string
+  isStructurallyReady: boolean
+  isUnblocked: boolean
+  blockingDependencies: BoardGraphCard[]
+  suggestedDependencies: BoardGraphCard[]
+  impactedDependents: BoardGraphCard[]
+}
+
+export type BoardGraphCard = {
+  id: string
+  listId: string
+  title: string
+  isCompleted: boolean
+}
+
 export type BoardCardInput = {
   title: string
   description?: string

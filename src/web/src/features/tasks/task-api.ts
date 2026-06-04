@@ -1,5 +1,11 @@
 import { apiRequest } from "@/lib/api"
-import type { Board, BoardCardInput, BoardTemplate } from "@/types/task"
+import type {
+  Board,
+  BoardCardDependencyAnalysis,
+  BoardCardInput,
+  BoardGraph,
+  BoardTemplate,
+} from "@/types/task"
 
 export async function getDefaultBoard(
   accessToken: string,
@@ -139,6 +145,37 @@ export async function deleteCard(
       accessToken,
       method: "DELETE",
       errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function getBoardGraph(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string
+) {
+  return apiRequest<BoardGraph>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/graph`,
+    {
+      accessToken,
+      errorMessage: "Board graph request failed.",
+    }
+  )
+}
+
+export async function getCardDependencyAnalysis(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string
+) {
+  return apiRequest<BoardCardDependencyAnalysis>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/dependency-analysis`,
+    {
+      accessToken,
+      errorMessage: "Card dependency analysis request failed.",
     }
   )
 }

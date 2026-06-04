@@ -1,5 +1,6 @@
 using Coordina.Api.Modules.Projects.Application;
 using Coordina.Api.Modules.Projects.Domain;
+using Coordina.Api.Modules.Tasks.Application.Graph;
 using Coordina.Api.Modules.Tasks.Contracts;
 using Coordina.Api.Modules.Tasks.Domain;
 using Coordina.Api.Modules.Workspaces.Application;
@@ -10,7 +11,8 @@ namespace Coordina.Api.Modules.Tasks.Application;
 public sealed class BoardService(
   IBoardStore boards,
   IProjectStore projects,
-  IWorkspaceStore workspaces) : IBoardService
+  IWorkspaceStore workspaces,
+  IGraphEngine<Guid> graphEngine) : IBoardService
 {
   public async Task<TaskResult<BoardResponse>> GetDefaultAsync(
     Guid workspaceId,
@@ -89,6 +91,83 @@ public sealed class BoardService(
     return new TaskResult<BoardResponse>(
       TaskResultStatus.Success,
       BoardResponseMapper.ToResponse(board));
+  }
+
+  public async Task<TaskResult<BoardGraphResponse>> GetGraphAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access is null)
+    {
+      return new TaskResult<BoardGraphResponse>(TaskResultStatus.NotFound);
+    }
+
+    var board = await boards.FindInProjectAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cancellationToken);
+
+    return board is null
+      ? new TaskResult<BoardGraphResponse>(TaskResultStatus.NotFound)
+      : new TaskResult<BoardGraphResponse>(
+        TaskResultStatus.Success,
+        BoardGraphResponseMapper.ToResponse(
+          BoardDependencyGraph.AnalyzeBoard(graphEngine, board)));
+  }
+
+  public async Task<TaskResult<BoardCardDependencyAnalysisResponse>> GetCardDependencyAnalysisAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var access = await FindAccessAsync(
+      workspaceId,
+      projectId,
+      userId,
+      cancellationToken);
+
+    if (access is null)
+    {
+      return new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.NotFound);
+    }
+
+    var board = await boards.FindInProjectAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cancellationToken);
+
+    if (board is null)
+    {
+      return new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.NotFound);
+    }
+
+    var analysis = BoardDependencyGraph.AnalyzeCard(
+      graphEngine,
+      board,
+      cardId);
+
+    return analysis is null
+      ? new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.NotFound)
+      : new TaskResult<BoardCardDependencyAnalysisResponse>(
+        TaskResultStatus.Success,
+        BoardGraphResponseMapper.ToResponse(analysis));
   }
 
   public async Task<TaskResult<BoardResponse>> CreateListAsync(
@@ -568,22 +647,41 @@ public sealed class BoardService(
         });
     }
 
-    var current = await boards.FindCardAsync(
+    var boardSnapshot = await boards.FindInProjectAsync(
       workspaceId,
       projectId,
       boardId,
-      cardId,
-      cancellationToken);
-    var dependency = await boards.FindCardAsync(
-      workspaceId,
-      projectId,
-      boardId,
-      request.DependsOnCardId,
       cancellationToken);
 
-    if (current is null || dependency is null)
+    if (boardSnapshot is null)
     {
       return new TaskResult<BoardResponse>(TaskResultStatus.NotFound);
+    }
+
+    var dependencyEvaluation = BoardDependencyGraph.EvaluateDependency(
+      graphEngine,
+      boardSnapshot,
+      cardId,
+      request.DependsOnCardId);
+
+    if (dependencyEvaluation.Status is GraphEdgeStatus.MissingSource
+      or GraphEdgeStatus.MissingTarget)
+    {
+      return new TaskResult<BoardResponse>(TaskResultStatus.NotFound);
+    }
+
+    if (dependencyEvaluation.Status == GraphEdgeStatus.Duplicate)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.Success,
+        BoardResponseMapper.ToResponse(boardSnapshot));
+    }
+
+    if (dependencyEvaluation.Status == GraphEdgeStatus.Cycle)
+    {
+      return new TaskResult<BoardResponse>(
+        TaskResultStatus.Conflict,
+        Message: "Adding this dependency would create a cycle.");
     }
 
     var board = await boards.AddCardDependencyAsync(
