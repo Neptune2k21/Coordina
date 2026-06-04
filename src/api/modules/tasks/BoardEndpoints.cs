@@ -24,6 +24,10 @@ public static class BoardEndpoints
 
     var boardGroup = projectGroup.MapGroup("/boards/{boardId:guid}");
 
+    boardGroup.MapGet("/graph", GetGraph)
+      .WithSummary("Get board dependency graph")
+      .WithDescription("Returns graph-derived planning signals for the board.");
+
     boardGroup.MapPost("/lists", CreateList)
       .WithSummary("Create board list");
 
@@ -38,6 +42,10 @@ public static class BoardEndpoints
 
     boardGroup.MapPatch("/cards/{cardId:guid}/move", MoveCard)
       .WithSummary("Move card");
+
+    boardGroup.MapGet("/cards/{cardId:guid}/dependency-analysis", GetCardDependencyAnalysis)
+      .WithSummary("Get card dependency analysis")
+      .WithDescription("Returns safe dependency suggestions, blockers, and impacted dependents.");
 
     boardGroup.MapPost("/cards/{cardId:guid}/comments", AddCardComment)
       .WithSummary("Add card comment");
@@ -111,6 +119,29 @@ public static class BoardEndpoints
         result.Value),
       _ => ToResult(result)
     };
+  }
+
+  private static async Task<IResult> GetGraph(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.GetGraphAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
   }
 
   private static async Task<IResult> CreateList(
@@ -240,6 +271,31 @@ public static class BoardEndpoints
       boardId,
       cardId,
       request,
+      userId,
+      cancellationToken);
+
+    return ToResult(result);
+  }
+
+  private static async Task<IResult> GetCardDependencyAnalysis(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    ClaimsPrincipal user,
+    IBoardService boardService,
+    CancellationToken cancellationToken)
+  {
+    if (!TryGetUserId(user, out var userId))
+    {
+      return Results.Unauthorized();
+    }
+
+    var result = await boardService.GetCardDependencyAnalysisAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
       userId,
       cancellationToken);
 

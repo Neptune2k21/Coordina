@@ -17,6 +17,21 @@ public interface IBoardService
     Guid userId,
     CancellationToken cancellationToken);
 
+  Task<TaskResult<BoardGraphResponse>> GetGraphAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<TaskResult<BoardCardDependencyAnalysisResponse>> GetCardDependencyAnalysisAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid userId,
+    CancellationToken cancellationToken);
+
   Task<TaskResult<BoardResponse>> CreateListAsync(
     Guid workspaceId,
     Guid projectId,

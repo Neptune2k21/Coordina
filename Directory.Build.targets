@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <CoordinaGraphEngineSourceRoot>$(MSBuildThisFileDirectory)src/graph-engine/src</CoordinaGraphEngineSourceRoot>
+    <CoordinaGraphEngineSources>$(CoordinaGraphEngineSourceRoot)/coordina_graph_engine.cpp $(CoordinaGraphEngineSourceRoot)/dependency_validator.cpp $(CoordinaGraphEngineSourceRoot)/graph_snapshot.cpp $(CoordinaGraphEngineSourceRoot)/graph_traversal.cpp $(CoordinaGraphEngineSourceRoot)/graph_types.cpp $(CoordinaGraphEngineSourceRoot)/native_bridge.cpp $(CoordinaGraphEngineSourceRoot)/planning_engine.cpp $(CoordinaGraphEngineSourceRoot)/suggestion_engine.cpp</CoordinaGraphEngineSources>
+    <CoordinaGraphEngineInclude>$(MSBuildThisFileDirectory)src/graph-engine/include</CoordinaGraphEngineInclude>
+    <CoordinaGraphEngineOptimization Condition="'$(Configuration)' == 'Debug'">-O0 -g</CoordinaGraphEngineOptimization>
+    <CoordinaGraphEngineOptimization Condition="'$(CoordinaGraphEngineOptimization)' == ''">-O2</CoordinaGraphEngineOptimization>
+  </PropertyGroup>
+
+  <Target
+    Name="BuildCoordinaGraphEngine"
+    BeforeTargets="CopyFilesToOutputDirectory"
+    Condition="$([MSBuild]::IsOSPlatform('Linux')) and Exists('$(CoordinaGraphEngineSourceRoot)/coordina_graph_engine.cpp')">
+    <Exec Command="g++ -std=c++20 $(CoordinaGraphEngineOptimization) -fPIC -shared -Wall -Wextra -Wpedantic -Werror -I&quot;$(CoordinaGraphEngineInclude)&quot; -I&quot;$(CoordinaGraphEngineSourceRoot)&quot; $(CoordinaGraphEngineSources) -o &quot;$(TargetDir)libcoordina_graph_engine.so&quot;" />
+  </Target>
+
+  <Target
+    Name="PublishCoordinaGraphEngine"
+    BeforeTargets="CopyFilesToPublishDirectory"
+    DependsOnTargets="BuildCoordinaGraphEngine"
+    Condition="$([MSBuild]::IsOSPlatform('Linux')) and Exists('$(TargetDir)libcoordina_graph_engine.so')">
+    <Copy
+      SourceFiles="$(TargetDir)libcoordina_graph_engine.so"
+      DestinationFolder="$(PublishDir)" />
+  </Target>
+</Project>

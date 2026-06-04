@@ -62,6 +62,8 @@ import {
   deleteCard,
   deleteCardDependency,
   deleteSubtask,
+  getBoardGraph,
+  getCardDependencyAnalysis,
   getDefaultBoard,
   moveCard,
   updateCard,
@@ -71,8 +73,10 @@ import {
 import type {
   Board,
   BoardCard,
+  BoardCardDependencyAnalysis,
   BoardCardInput,
   BoardCardSubtask,
+  BoardGraph,
   BoardCardPriority,
   BoardList,
   BoardTemplate,
@@ -88,6 +92,9 @@ type ProjectBoardProps = {
 export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
   const { session, signOut } = useAuth()
   const [board, setBoard] = useState<Board | null>(null)
+  const [boardGraph, setBoardGraph] = useState<BoardGraph | null>(null)
+  const [dependencyAnalysis, setDependencyAnalysis] =
+    useState<BoardCardDependencyAnalysis | null>(null)
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -106,6 +113,8 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
   const [isAddingList, setIsAddingList] = useState(false)
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
+  const [isLoadingDependencyAnalysis, setIsLoadingDependencyAnalysis] =
+    useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const isReadOnly = project.status === "COMPLETED"
@@ -210,6 +219,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
       ])
       setBoard(loadedBoard)
       setMembers(loadedMembers)
+      setBoardGraph(null)
     } catch (requestError) {
       handleRequestError(requestError, "Unable to load board.")
     } finally {
@@ -220,6 +230,8 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
   useEffect(() => {
     queueMicrotask(() => {
       setBoard(null)
+      setBoardGraph(null)
+      setDependencyAnalysis(null)
       setSelectedCardId(null)
       setSearch("")
       setFocus("all")
@@ -229,6 +241,92 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
       void loadBoard()
     })
   }, [loadBoard])
+
+  useEffect(() => {
+    if (!session || !board) {
+      queueMicrotask(() => setBoardGraph(null))
+      return
+    }
+
+    let ignore = false
+    const accessToken = session.accessToken
+    const boardId = board.id
+
+    async function loadGraph() {
+      try {
+        const graph = await getBoardGraph(
+          accessToken,
+          workspace.id,
+          project.id,
+          boardId
+        )
+
+        if (!ignore) {
+          setBoardGraph(graph)
+        }
+      } catch {
+        if (!ignore) {
+          setBoardGraph(null)
+        }
+      }
+    }
+
+    void loadGraph()
+
+    return () => {
+      ignore = true
+    }
+  }, [board, project.id, session, workspace.id])
+
+  useEffect(() => {
+    if (!session || !board || !selectedCardId) {
+      queueMicrotask(() => {
+        setDependencyAnalysis(null)
+        setIsLoadingDependencyAnalysis(false)
+      })
+      return
+    }
+
+    let ignore = false
+    const accessToken = session.accessToken
+    const boardId = board.id
+    const cardId = selectedCardId
+    queueMicrotask(() => {
+      if (!ignore) {
+        setIsLoadingDependencyAnalysis(true)
+      }
+    })
+
+    async function loadAnalysis() {
+      try {
+        const analysis = await getCardDependencyAnalysis(
+          accessToken,
+          workspace.id,
+          project.id,
+          boardId,
+          cardId
+        )
+
+        if (!ignore) {
+          setDependencyAnalysis(analysis)
+        }
+      } catch {
+        if (!ignore) {
+          setDependencyAnalysis(null)
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingDependencyAnalysis(false)
+        }
+      }
+    }
+
+    void loadAnalysis()
+
+    return () => {
+      ignore = true
+    }
+  }, [board, project.id, selectedCardId, session, workspace.id])
 
   useEffect(() => {
     if (!notice) {
@@ -684,7 +782,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
   }
 
   return (
-    <div className="flex h-[calc(100svh-5.75rem)] min-h-[480px] flex-col overflow-hidden rounded-md border border-zinc-950/10 bg-zinc-50 shadow-xs dark:border-white/10 dark:bg-zinc-950/70">
+    <div className="min-h-480px flex h-[calc(100svh-5.75rem)] flex-col overflow-hidden rounded-md border border-zinc-950/10 bg-zinc-50 shadow-xs dark:border-white/10 dark:bg-zinc-950/70">
       <div className="grid shrink-0 gap-2 border-b border-zinc-950/10 bg-white px-2 py-2 dark:border-white/10 dark:bg-zinc-950">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -704,7 +802,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">
-            <label className="flex h-8 min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 text-xs md:w-64 dark:border-white/10 dark:bg-white/[0.06]">
+            <label className="dark:bg-white/0.06 flex h-8 min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 text-xs md:w-64 dark:border-white/10">
               <MagnifyingGlass className="size-3.5 text-muted-foreground" />
               <Input
                 value={search}
@@ -748,7 +846,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
               <Plus className="size-3.5" weight="bold" />
               List
             </Button>
-            <div className="hidden h-8 items-center gap-1.5 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 text-[11px] font-medium text-muted-foreground lg:flex dark:border-white/10 dark:bg-white/[0.06]">
+            <div className="dark:bg-white/0.06 hidden h-8 items-center gap-1.5 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 text-[11px] font-medium text-muted-foreground lg:flex dark:border-white/10">
               {cardCount} cards
             </div>
             {notice ? (
@@ -768,7 +866,11 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
           myCardCount={myCardCount}
           onFocusChange={setFocus}
         />
-        <BoardMetricsStrip metrics={metrics} wipAlerts={wipAlerts} />
+        <BoardMetricsStrip
+          graph={boardGraph}
+          metrics={metrics}
+          wipAlerts={wipAlerts}
+        />
         {activeFilterCount > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-sky-500/15 bg-sky-500/5 px-2 py-1.5 text-xs text-sky-800 dark:text-sky-100">
             <FunnelSimple className="size-3.5" weight="bold" />
@@ -863,7 +965,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
         ) : !isReadOnly ? (
           <button
             type="button"
-            className="grid h-12 w-72 shrink-0 place-items-center rounded-md border border-dashed border-zinc-950/15 bg-white/70 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white dark:border-white/15 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
+            className="dark:bg-white/0.04 dark:hover:bg-white/0.07 grid h-12 w-72 shrink-0 place-items-center rounded-md border border-dashed border-zinc-950/15 bg-white/70 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white dark:border-white/15"
             onClick={() => setIsAddingList(true)}
           >
             <span className="inline-flex items-center gap-2">
@@ -877,7 +979,9 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
       <CardSidePanel
         canDelete={canDeleteCards}
         card={selectedCard}
+        dependencyAnalysis={dependencyAnalysis}
         dependencyCandidates={dependencyCandidates}
+        isLoadingDependencyAnalysis={isLoadingDependencyAnalysis}
         isReadOnly={isReadOnly}
         isSaving={isMutating}
         members={members}
@@ -1099,13 +1203,16 @@ function FilterMenuItem({
 }
 
 function BoardMetricsStrip({
+  graph,
   metrics,
   wipAlerts,
 }: {
+  graph: BoardGraph | null
   metrics: BoardMetrics
   wipAlerts: WipAlert[]
 }) {
   const hasSignals =
+    graph?.isAcyclic === false ||
     metrics.overdue > 0 ||
     metrics.blocked > 0 ||
     metrics.unassigned > 0 ||
@@ -1151,9 +1258,12 @@ function BoardMetricsStrip({
           tone="zinc"
         />
       </div>
-      <div className="min-w-0 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-white/[0.05]">
+      <div className="dark:bg-white/0.05 min-w-0 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 py-1.5 text-xs dark:border-white/10">
         {hasSignals ? (
           <div className="flex flex-wrap items-center gap-1.5">
+            {graph?.isAcyclic === false ? (
+              <SignalChip tone="rose">cycle detected</SignalChip>
+            ) : null}
             {metrics.overdue > 0 ? (
               <SignalChip tone="rose">{metrics.overdue} overdue</SignalChip>
             ) : null}
@@ -1175,6 +1285,12 @@ function BoardMetricsStrip({
             Flow stable
           </div>
         )}
+        {graph && graph.isAcyclic ? (
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+            <span>{graph.readyCards.length} structurally ready</span>
+            <span>{graph.unblockedCards.length} unblocked</span>
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -1203,7 +1319,7 @@ function MetricPill({
             : "text-zinc-700 dark:text-zinc-200"
 
   return (
-    <div className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 dark:border-white/10 dark:bg-white/[0.05]">
+    <div className="dark:bg-white/0.05 flex h-9 min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 dark:border-white/10">
       <Icon className={`size-3.5 shrink-0 ${toneClass}`} />
       <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
         {label}
@@ -1252,7 +1368,7 @@ function BoardSetupOnboarding({
 }) {
   return (
     <div className="grid gap-3 rounded-md border border-zinc-950/10 bg-zinc-50 p-3 shadow-xs dark:border-white/10 dark:bg-zinc-950/70">
-      <div className="rounded-md border border-zinc-950/10 bg-white p-4 dark:border-white/10 dark:bg-white/[0.045]">
+      <div className="dark:bg-white/0.045 rounded-md border border-zinc-950/10 bg-white p-4 dark:border-white/10">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-md bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
             <Kanban className="size-5" weight="bold" />

@@ -65,7 +65,7 @@ export function TemplateChooser({
             value={customLists}
             disabled={isDisabled}
             onChange={(event) => setCustomLists(event.target.value)}
-            className="h-8 rounded-md bg-white text-xs dark:bg-white/[0.06]"
+            className="dark:bg-white/0.06 h-8 rounded-md bg-white text-xs"
           />
         </Field>
         <Button

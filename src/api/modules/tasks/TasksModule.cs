@@ -1,4 +1,5 @@
 using Coordina.Api.Modules.Tasks.Application;
+using Coordina.Api.Modules.Tasks.Application.Graph;
 using Coordina.Api.Modules.Tasks.Infrastructure;
 
 namespace Coordina.Api.Modules.Tasks;
@@ -12,6 +13,7 @@ public static class TasksModule
     services.AddScoped<ITaskService, TaskService>();
     services.AddScoped<IBoardStore, PostgresBoardStore>();
     services.AddScoped<IBoardService, BoardService>();
+    services.AddSingleton<IGraphEngine<Guid>, NativeGuidGraphEngine>();
 
     return services;
   }

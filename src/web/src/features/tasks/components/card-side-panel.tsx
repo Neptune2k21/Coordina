@@ -3,9 +3,11 @@ import {
   CheckCircle,
   CircleNotch,
   CopySimple,
+  GitBranch,
   Plus,
   Tag,
   Trash,
+  WarningCircle,
   X,
 } from "@phosphor-icons/react"
 import { useEffect, useMemo, useState } from "react"
@@ -42,8 +44,10 @@ import {
 } from "@/features/tasks/board-utils"
 import type {
   BoardCard,
+  BoardCardDependencyAnalysis,
   BoardCardInput,
   BoardCardPriority,
+  BoardGraphCard,
   BoardCardSubtask,
 } from "@/types/task"
 import type { WorkspaceMember } from "@/types/workspace"
@@ -52,7 +56,9 @@ type CardSidePanelProps = {
   availableLabels: string[]
   canDelete: boolean
   card: BoardCard | null
+  dependencyAnalysis: BoardCardDependencyAnalysis | null
   dependencyCandidates: BoardCard[]
+  isLoadingDependencyAnalysis: boolean
   isReadOnly: boolean
   isSaving: boolean
   members: WorkspaceMember[]
@@ -79,7 +85,9 @@ export function CardSidePanel({
   availableLabels,
   canDelete,
   card,
+  dependencyAnalysis,
   dependencyCandidates,
+  isLoadingDependencyAnalysis,
   isReadOnly,
   isSaving,
   members,
@@ -174,12 +182,33 @@ export function CardSidePanel({
     card && card.subtasks.length > 0
       ? Math.round(((completedSubtasks ?? 0) / card.subtasks.length) * 100)
       : 0
-  const existingDependencyIds = new Set(
-    card?.dependencies.map((dependency) => dependency.cardId) ?? []
+  const existingDependencyIds = useMemo(
+    () =>
+      new Set(card?.dependencies.map((dependency) => dependency.cardId) ?? []),
+    [card]
   )
-  const availableDependencies = dependencyCandidates.filter(
-    (candidate) => !existingDependencyIds.has(candidate.id)
-  )
+  const fallbackDependencies = dependencyCandidates
+    .filter((candidate) => !existingDependencyIds.has(candidate.id))
+    .map(toGraphCard)
+  const availableDependencies =
+    dependencyAnalysis?.suggestedDependencies ?? fallbackDependencies
+  const blockingDependencies =
+    dependencyAnalysis?.blockingDependencies ??
+    (card
+      ? card.dependencies
+          .filter((dependency) => !dependency.isCompleted)
+          .map((dependency) => ({
+            id: dependency.cardId,
+            isCompleted: dependency.isCompleted,
+            listId: card.listId,
+            title: dependency.title,
+          }))
+      : [])
+  const impactedDependents = dependencyAnalysis?.impactedDependents ?? []
+  const isCardUnblocked =
+    dependencyAnalysis?.isUnblocked ??
+    card?.dependencies.every((dependency) => dependency.isCompleted) ??
+    true
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -757,6 +786,47 @@ export function CardSidePanel({
 
             <section className="grid gap-2">
               <h3 className="text-sm font-semibold">Dependencies</h3>
+              <div
+                className={`grid gap-2 rounded-md border px-2.5 py-2 text-xs ${
+                  isCardUnblocked
+                    ? "border-teal-500/20 bg-teal-500/10 text-teal-800 dark:text-teal-100"
+                    : "border-amber-500/25 bg-amber-500/10 text-amber-900 dark:text-amber-100"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isLoadingDependencyAnalysis ? (
+                    <CircleNotch className="size-3.5 animate-spin" />
+                  ) : isCardUnblocked ? (
+                    <CheckCircle className="size-3.5" weight="fill" />
+                  ) : (
+                    <WarningCircle className="size-3.5" weight="fill" />
+                  )}
+                  <span className="font-semibold">
+                    {isLoadingDependencyAnalysis
+                      ? "Analyzing"
+                      : isCardUnblocked
+                        ? "Unblocked"
+                        : `${blockingDependencies.length} blocker${
+                            blockingDependencies.length === 1 ? "" : "s"
+                          }`}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 text-[11px]">
+                  <span>{availableDependencies.length} safe suggestions</span>
+                  <span>{impactedDependents.length} impacted</span>
+                </div>
+              </div>
+              {blockingDependencies.length > 0 ? (
+                <div className="grid gap-1.5">
+                  {blockingDependencies.map((dependency) => (
+                    <DependencyCompactRow
+                      key={dependency.id}
+                      dependency={dependency}
+                      tone="blocked"
+                    />
+                  ))}
+                </div>
+              ) : null}
               {card.dependencies.length > 0 ? (
                 <div className="grid gap-1.5">
                   {card.dependencies.map((dependency) => (
@@ -824,6 +894,21 @@ export function CardSidePanel({
                 </div>
               ) : null}
             </section>
+
+            {impactedDependents.length > 0 ? (
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Impact</h3>
+                <div className="grid gap-1.5">
+                  {impactedDependents.slice(0, 5).map((dependent) => (
+                    <DependencyCompactRow
+                      key={dependent.id}
+                      dependency={dependent}
+                      tone="impact"
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </aside>
         </div>
 
@@ -877,6 +962,34 @@ export function CardSidePanel({
 
 function userLabel(user: { name: string | null; email: string | null }) {
   return user.name ?? user.email ?? "Workspace member"
+}
+
+function toGraphCard(card: BoardCard): BoardGraphCard {
+  return {
+    id: card.id,
+    isCompleted: card.isCompleted,
+    listId: card.listId,
+    title: card.title,
+  }
+}
+
+function DependencyCompactRow({
+  dependency,
+  tone,
+}: {
+  dependency: BoardGraphCard
+  tone: "blocked" | "impact"
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-white p-2 text-xs dark:border-white/10 dark:bg-zinc-950">
+      {tone === "blocked" ? (
+        <WarningCircle className="size-3.5 shrink-0 text-amber-600 dark:text-amber-300" />
+      ) : (
+        <GitBranch className="size-3.5 shrink-0 text-sky-600 dark:text-sky-300" />
+      )}
+      <span className="min-w-0 flex-1 truncate">{dependency.title}</span>
+    </div>
+  )
 }
 
 function formatDateTime(value: string) {

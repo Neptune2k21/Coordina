@@ -1,14 +1,20 @@
-.PHONY: help api api-restore api-tools api-build api-format api-format-check api-test api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
+.PHONY: help graph-engine-build graph-engine-test api api-restore api-tools api-build api-format api-format-check api-test api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
 API_URL := http://localhost:5050
 WEB_DIR := src/web
 DOCKER_COMPOSE := docker compose --env-file .env -f docker/docker-compose.yml -p coordina
+GRAPH_ENGINE_DIR := src/graph-engine
+GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
+GRAPH_ENGINE_TEST_OUT := tests/graph-engine/bin
+GRAPH_ENGINE_SOURCES := $(GRAPH_ENGINE_DIR)/src/coordina_graph_engine.cpp $(GRAPH_ENGINE_DIR)/src/dependency_validator.cpp $(GRAPH_ENGINE_DIR)/src/graph_snapshot.cpp $(GRAPH_ENGINE_DIR)/src/graph_traversal.cpp $(GRAPH_ENGINE_DIR)/src/graph_types.cpp $(GRAPH_ENGINE_DIR)/src/native_bridge.cpp $(GRAPH_ENGINE_DIR)/src/planning_engine.cpp $(GRAPH_ENGINE_DIR)/src/suggestion_engine.cpp
+GRAPH_ENGINE_FLAGS := -std=c++20 -O2 -fPIC -Wall -Wextra -Wpedantic -Werror -I$(GRAPH_ENGINE_DIR)/include -I$(GRAPH_ENGINE_DIR)/src
 
 help:
 	@echo "Commandes disponibles :"
 	@echo "  make dev          Lance l'API C# et le front React"
+	@echo "  make graph-engine-test Lance les tests natifs du moteur de graphe C++"
 	@echo "  make api          Lance l'API C#"
 	@echo "  make api-watch    Lance l'API C# en mode watch"
 	@echo "  make api-restore  Restaure les dependances .NET"
@@ -26,6 +32,15 @@ help:
 	@echo "  make docker-up    Lance les services Docker"
 	@echo "  make docker-down  Stoppe les services Docker"
 	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
+
+graph-engine-build:
+	mkdir -p $(GRAPH_ENGINE_OUT)
+	g++ $(GRAPH_ENGINE_FLAGS) -shared $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_OUT)/libcoordina_graph_engine.so
+
+graph-engine-test:
+	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
+	g++ $(GRAPH_ENGINE_FLAGS) tests/graph-engine/graph_engine_tests.cpp $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_TEST_OUT)/graph_engine_tests
+	$(GRAPH_ENGINE_TEST_OUT)/graph_engine_tests
 
 api: api-migrate
 	dotnet run --project $(API_PROJECT) --urls $(API_URL)
@@ -81,7 +96,7 @@ web-e2e: api-migrate
 web-typecheck:
 	pnpm --dir $(WEB_DIR) typecheck
 
-test: api-test web-test web-e2e
+test: graph-engine-test api-test web-test web-e2e
 
 lint: api-format-check web-lint web-typecheck
 
