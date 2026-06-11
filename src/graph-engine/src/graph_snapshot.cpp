@@ -67,6 +67,11 @@ std::size_t GraphSnapshot::dependency_count(NodeId node) const
   return outgoing(node).size();
 }
 
+std::size_t GraphSnapshot::dependent_count(NodeId node) const
+{
+  return incoming(node).size();
+}
+
 void GraphSnapshot::add_node(NodeId node)
 {
   if (contains(node))

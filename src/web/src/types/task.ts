@@ -100,15 +100,23 @@ export type BoardGraph = {
   readyCards: BoardGraphCard[]
   unblockedCards: BoardGraphCard[]
   dependencyOrder: BoardGraphCard[]
+  criticalPath: BoardGraphCard[]
+  nextCards: BoardGraphCard[]
+  planItems: BoardGraphPlanItem[]
 }
 
 export type BoardCardDependencyAnalysis = {
   cardId: string
   isStructurallyReady: boolean
   isUnblocked: boolean
+  isOnCriticalPath: boolean
+  dependencyDepth: number
+  dependentDepth: number
+  transitiveDependentCount: number
   blockingDependencies: BoardGraphCard[]
   suggestedDependencies: BoardGraphCard[]
   impactedDependents: BoardGraphCard[]
+  directlyUnlockedDependents: BoardGraphCard[]
 }
 
 export type BoardGraphCard = {
@@ -116,6 +124,20 @@ export type BoardGraphCard = {
   listId: string
   title: string
   isCompleted: boolean
+  dependencyCount: number
+  dependentCount: number
+  dependencyDepth: number
+  dependentDepth: number
+  transitiveDependentCount: number
+  isCriticalPath: boolean
+}
+
+export type BoardGraphPlanItem = {
+  card: BoardGraphCard
+  score: number
+  isActionable: boolean
+  blockerCount: number
+  reasons: string[]
 }
 
 export type BoardCardInput = {

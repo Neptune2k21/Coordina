@@ -10,7 +10,7 @@ import {
   Sparkle,
   X,
 } from "@phosphor-icons/react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -46,9 +46,41 @@ const navItems = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target
+
+      if (target instanceof Node && !headerRef.current?.contains(target)) {
+        setIsOpen(false)
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("keydown", handleKeyDown, true)
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [isOpen])
 
   return (
-    <header className="sticky top-0 z-50 border-b border-zinc-950/[0.08] bg-white/82 backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/78">
+    <header
+      ref={headerRef}
+      className="sticky top-0 z-50 border-b border-zinc-950/[0.08] bg-white/82 backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/78"
+    >
       <div className="pointer-events-none absolute inset-x-0 top-full h-8 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.62),transparent)] dark:bg-[linear-gradient(to_bottom,rgba(9,9,11,0.46),transparent)]" />
 
       <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">

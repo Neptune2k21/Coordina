@@ -24,6 +24,7 @@ public:
   bool contains(NodeId node) const;
   bool has_edge(NodeId source, NodeId target) const;
   std::size_t dependency_count(NodeId node) const;
+  std::size_t dependent_count(NodeId node) const;
 
 private:
   void add_node(NodeId node);

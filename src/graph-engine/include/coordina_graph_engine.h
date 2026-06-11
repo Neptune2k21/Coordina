@@ -26,6 +26,39 @@ typedef struct coordina_graph_edge
   coordina_graph_node_id target;
 } coordina_graph_edge;
 
+typedef struct coordina_graph_node_analysis
+{
+  coordina_graph_node_id node;
+  uint32_t dependency_count;
+  uint32_t dependent_count;
+  uint32_t dependency_depth;
+  uint32_t dependent_depth;
+  uint32_t transitive_dependent_count;
+} coordina_graph_node_analysis;
+
+typedef struct coordina_graph_work_item
+{
+  coordina_graph_node_id node;
+  uint32_t is_completed;
+  uint32_t priority;
+  int32_t due_days;
+  uint32_t subtask_total;
+  uint32_t subtask_completed;
+  uint32_t position;
+} coordina_graph_work_item;
+
+typedef struct coordina_graph_work_recommendation
+{
+  coordina_graph_node_id node;
+  uint32_t score;
+  uint32_t blocker_count;
+  uint32_t unlock_score;
+  uint32_t urgency_score;
+  uint32_t priority_score;
+  uint32_t progress_score;
+  uint32_t is_critical_path;
+} coordina_graph_work_recommendation;
+
 typedef enum coordina_graph_edge_status
 {
   COORDINA_GRAPH_EDGE_ALLOWED = 0,
@@ -93,6 +126,32 @@ COORDINA_GRAPH_EXPORT size_t coordina_graph_impacted_dependents(
   size_t edge_count,
   coordina_graph_node_id dependency,
   coordina_graph_node_id* output,
+  size_t output_capacity);
+
+COORDINA_GRAPH_EXPORT size_t coordina_graph_analyze_nodes(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  coordina_graph_node_analysis* output,
+  size_t output_capacity);
+
+COORDINA_GRAPH_EXPORT size_t coordina_graph_critical_path(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  coordina_graph_node_id* output,
+  size_t output_capacity);
+
+COORDINA_GRAPH_EXPORT size_t coordina_graph_plan_work(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  size_t work_item_count,
+  coordina_graph_work_recommendation* output,
   size_t output_capacity);
 
 #ifdef __cplusplus
