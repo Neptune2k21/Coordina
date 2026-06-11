@@ -7,6 +7,7 @@ export type {
   BoardCardPriority,
   BoardGraph,
   BoardGraphCard,
+  BoardGraphPlanItem,
   BoardList,
   BoardTemplate,
   BoardTemplateDefinition,

@@ -11,7 +11,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
   Field,
   FieldError,
@@ -23,16 +22,26 @@ import { ApiError } from "@/lib/api"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 
 type WorkspaceCreateDialogProps = {
-  trigger?: "button" | "menu-item"
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
+  trigger?: "button" | "none"
 }
 
 export function WorkspaceCreateDialog({
+  onOpenChange,
+  open,
   trigger = "button",
 }: WorkspaceCreateDialogProps) {
   const { create, isMutating } = useWorkspaces()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const isOpen = open ?? internalOpen
+
+  function setOpen(nextOpen: boolean) {
+    setInternalOpen(nextOpen)
+    onOpenChange?.(nextOpen)
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -53,14 +62,9 @@ export function WorkspaceCreateDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger === "menu-item" ? (
-          <DropdownMenuItem onSelect={(event) => event.preventDefault()}>
-            <Plus className="size-4" />
-            Create workspace
-          </DropdownMenuItem>
-        ) : (
+    <Dialog open={isOpen} onOpenChange={setOpen}>
+      {trigger === "button" ? (
+        <DialogTrigger asChild>
           <Button
             type="button"
             className="h-11 rounded-full bg-zinc-950 px-5 text-sm text-white shadow-[0_18px_44px_rgba(9,9,11,0.2)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
@@ -68,8 +72,8 @@ export function WorkspaceCreateDialog({
             <Plus className="size-4" weight="bold" />
             New workspace
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="rounded-[24px] border-zinc-950/10 bg-white/94 p-6 shadow-[0_34px_110px_rgba(24,24,27,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-950/94">
         <DialogHeader>
           <DialogTitle>Create workspace</DialogTitle>

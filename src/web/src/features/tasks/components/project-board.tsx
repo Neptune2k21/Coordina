@@ -1,10 +1,10 @@
 import {
-  ChartLineUp,
   Check,
   CheckCircle,
   CircleNotch,
   ClockCountdown,
   FunnelSimple,
+  GitBranch,
   Kanban,
   MagnifyingGlass,
   Plus,
@@ -77,6 +77,7 @@ import type {
   BoardCardInput,
   BoardCardSubtask,
   BoardGraph,
+  BoardGraphPlanItem,
   BoardCardPriority,
   BoardList,
   BoardTemplate,
@@ -116,6 +117,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
   const [isLoadingDependencyAnalysis, setIsLoadingDependencyAnalysis] =
     useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [isPlanningPanelOpen, setIsPlanningPanelOpen] = useState(false)
 
   const isReadOnly = project.status === "COMPLETED"
   const sessionUserId = session?.user.id ?? null
@@ -169,6 +171,8 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
   const canDeleteCards =
     !isReadOnly &&
     (workspace.role === "OWNER" || project.projectOwnerId === session?.user.id)
+  const canShowPlanningPanel = cardCount > 0
+  const isPlanningPanelVisible = canShowPlanningPanel && isPlanningPanelOpen
 
   const handleRequestError = useCallback(
     (requestError: unknown, fallback: string) => {
@@ -823,22 +827,27 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
               onLabelFilterChange={setLabelFilter}
               onPriorityFilterChange={setPriorityFilter}
             />
+            {canShowPlanningPanel ? (
+              <Button
+                type="button"
+                variant={isPlanningPanelOpen ? "default" : "outline"}
+                size="sm"
+                className="h-8 rounded-md px-2 text-xs"
+                aria-pressed={isPlanningPanelOpen}
+                onClick={() => setIsPlanningPanelOpen((isOpen) => !isOpen)}
+              >
+                <Target
+                  className="size-3.5"
+                  weight={isPlanningPanelOpen ? "bold" : "regular"}
+                />
+                Insights
+              </Button>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <Button
               type="button"
               size="sm"
-              className="h-8 rounded-md px-2 text-xs"
-              disabled={isReadOnly || board.lists.length === 0}
-              onClick={() => setQuickAddListId(board.lists[0]?.id ?? null)}
-            >
-              <Plus className="size-3.5" weight="bold" />
-              Card
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
               className="h-8 rounded-md px-2 text-xs"
               disabled={isReadOnly}
               onClick={() => setIsAddingList(true)}
@@ -846,9 +855,6 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
               <Plus className="size-3.5" weight="bold" />
               List
             </Button>
-            <div className="dark:bg-white/0.06 hidden h-8 items-center gap-1.5 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 text-[11px] font-medium text-muted-foreground lg:flex dark:border-white/10">
-              {cardCount} cards
-            </div>
             {notice ? (
               <div className="hidden h-8 items-center gap-1.5 rounded-md border border-teal-500/20 bg-teal-500/10 px-2 text-[11px] font-medium text-teal-700 sm:flex dark:text-teal-200">
                 <CheckCircle className="size-3.5" weight="fill" />
@@ -866,11 +872,14 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
           myCardCount={myCardCount}
           onFocusChange={setFocus}
         />
-        <BoardMetricsStrip
-          graph={boardGraph}
-          metrics={metrics}
-          wipAlerts={wipAlerts}
-        />
+        {isPlanningPanelVisible ? (
+          <BoardPlanningPanel
+            graph={boardGraph}
+            metrics={metrics}
+            onSelectCard={setSelectedCardId}
+            wipAlerts={wipAlerts}
+          />
+        ) : null}
         {activeFilterCount > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-sky-500/15 bg-sky-500/5 px-2 py-1.5 text-xs text-sky-800 dark:text-sky-100">
             <FunnelSimple className="size-3.5" weight="bold" />
@@ -1202,152 +1211,385 @@ function FilterMenuItem({
   )
 }
 
-function BoardMetricsStrip({
+function BoardPlanningPanel({
   graph,
   metrics,
+  onSelectCard,
   wipAlerts,
 }: {
   graph: BoardGraph | null
   metrics: BoardMetrics
+  onSelectCard: (cardId: string) => void
   wipAlerts: WipAlert[]
 }) {
-  const hasSignals =
-    graph?.isAcyclic === false ||
-    metrics.overdue > 0 ||
-    metrics.blocked > 0 ||
-    metrics.unassigned > 0 ||
-    wipAlerts.length > 0
+  const planItems = graph?.planItems ?? []
+  const actionableItems = planItems
+    .filter((item) => item.isActionable)
+    .slice(0, 3)
+  const primaryItem = actionableItems[0] ?? null
+  const queuedItems = actionableItems.slice(1, 3)
+  const blockedPlanCount = planItems.filter((item) => !item.isActionable).length
+  const criticalPath = graph?.criticalPath ?? []
+  const criticalPathStart = criticalPath[0] ?? null
+  const healthStats = [
+    {
+      icon: CheckCircle,
+      label: "Done",
+      tone: "teal",
+      value: `${metrics.completionRate}%`,
+    },
+    {
+      icon: ClockCountdown,
+      label: metrics.overdue > 0 ? "Overdue" : "Due soon",
+      tone: metrics.overdue > 0 ? "rose" : "amber",
+      value:
+        metrics.overdue > 0 ? String(metrics.overdue) : String(metrics.dueSoon),
+    },
+    {
+      icon: WarningCircle,
+      label: "Blocked",
+      tone: metrics.blocked > 0 ? "rose" : "zinc",
+      value: String(metrics.blocked),
+    },
+    {
+      icon: UsersThree,
+      label: "No owner",
+      tone: metrics.unassigned > 0 ? "sky" : "zinc",
+      value: String(metrics.unassigned),
+    },
+  ] satisfies HealthStatProps[]
 
   return (
-    <div className="grid gap-2 xl:grid-cols-[1fr_auto] xl:items-center">
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
-        <MetricPill
-          icon={ChartLineUp}
-          label="Done"
-          value={`${metrics.completionRate}%`}
-          tone="teal"
-        />
-        <MetricPill
-          icon={Kanban}
-          label="Active"
-          value={metrics.active}
-          tone="zinc"
-        />
-        <MetricPill
-          icon={WarningCircle}
-          label="Risk"
-          value={metrics.risk}
-          tone={metrics.risk > 0 ? "rose" : "zinc"}
-        />
-        <MetricPill
-          icon={ClockCountdown}
-          label="Due soon"
-          value={metrics.dueSoon}
-          tone={metrics.dueSoon > 0 ? "amber" : "zinc"}
-        />
-        <MetricPill
-          icon={Target}
-          label="Unowned"
-          value={metrics.unassigned}
-          tone={metrics.unassigned > 0 ? "sky" : "zinc"}
-        />
-        <MetricPill
-          icon={UsersThree}
-          label="Total"
-          value={metrics.total}
-          tone="zinc"
-        />
-      </div>
-      <div className="dark:bg-white/0.05 min-w-0 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 py-1.5 text-xs dark:border-white/10">
-        {hasSignals ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {graph?.isAcyclic === false ? (
-              <SignalChip tone="rose">cycle detected</SignalChip>
+    <div className="grid gap-3 rounded-md border border-zinc-950/10 bg-white p-3 text-xs shadow-xs xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] dark:border-white/10 dark:bg-white/[0.035]">
+      <section className="min-w-0">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Suggested next step</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Picked from dates, blockers, priority, and impact.
+            </p>
+          </div>
+          {graph?.isAcyclic === false ? (
+            <PlanTag tone="rose">Dependency cycle</PlanTag>
+          ) : (
+            <PlanTag tone="teal">Up to date</PlanTag>
+          )}
+        </div>
+        {primaryItem ? (
+          <div className="grid gap-2">
+            <button
+              type="button"
+              className="group flex min-w-0 items-start gap-3 rounded-md border border-teal-500/20 bg-teal-500/[0.07] p-3 text-left transition-colors hover:bg-teal-500/10 dark:border-teal-300/20"
+              onClick={() => onSelectCard(primaryItem.card.id)}
+            >
+              <span className="grid size-9 shrink-0 place-items-center rounded-md bg-teal-600 text-white shadow-xs dark:bg-teal-300 dark:text-teal-950">
+                <Target className="size-4" weight="bold" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">
+                  {primaryItem.card.title}
+                </span>
+                <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">
+                  {getPlanExplanation(primaryItem)}
+                </span>
+                <span className="mt-2 flex flex-wrap gap-1.5">
+                  {getPlanTags(primaryItem).map((tag) => (
+                    <PlanTag key={tag.label} tone={tag.tone}>
+                      {tag.label}
+                    </PlanTag>
+                  ))}
+                </span>
+              </span>
+            </button>
+            {queuedItems.length > 0 ? (
+              <div className="grid gap-1.5 md:grid-cols-2">
+                {queuedItems.map((item, index) => (
+                  <PlanItemButton
+                    key={item.card.id}
+                    item={item}
+                    onSelectCard={onSelectCard}
+                    rank={index + 2}
+                  />
+                ))}
+              </div>
             ) : null}
-            {metrics.overdue > 0 ? (
-              <SignalChip tone="rose">{metrics.overdue} overdue</SignalChip>
-            ) : null}
-            {metrics.blocked > 0 ? (
-              <SignalChip tone="rose">{metrics.blocked} blocked</SignalChip>
-            ) : null}
-            {metrics.unassigned > 0 ? (
-              <SignalChip tone="sky">{metrics.unassigned} unowned</SignalChip>
-            ) : null}
-            {wipAlerts.map((alert) => (
-              <SignalChip key={alert.listId} tone="amber">
-                {alert.title} {alert.count}/{alert.limit}
-              </SignalChip>
-            ))}
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 font-medium text-teal-700 dark:text-teal-200">
-            <CheckCircle className="size-3.5" weight="fill" />
-            Flow stable
+          <div className="rounded-md border border-dashed border-zinc-950/10 bg-zinc-50 px-3 py-4 text-muted-foreground dark:border-white/10 dark:bg-zinc-950">
+            No suggested next step yet. Add dates, priorities, or dependencies
+            to help the planner rank work.
           </div>
         )}
-        {graph && graph.isAcyclic ? (
-          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-            <span>{graph.readyCards.length} structurally ready</span>
-            <span>{graph.unblockedCards.length} unblocked</span>
+      </section>
+
+      <section className="min-w-0 rounded-md border border-zinc-950/[0.06] bg-zinc-50 p-2.5 dark:border-white/10 dark:bg-zinc-950/40">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="font-semibold">Board health</p>
+          {wipAlerts.length > 0 ? (
+            <PlanTag tone="amber">{wipAlerts.length} WIP alert</PlanTag>
+          ) : (
+            <PlanTag tone="teal">Flow stable</PlanTag>
+          )}
+        </div>
+        <div className="mb-3">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{metrics.completed} completed</span>
+            <span>{metrics.active} active</span>
           </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-950/10 dark:bg-white/10">
+            <div
+              className="h-full rounded-full bg-teal-600 dark:bg-teal-300"
+              style={{ width: `${metrics.completionRate}%` }}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {healthStats.map((stat) => (
+            <HealthStat key={stat.label} {...stat} />
+          ))}
+        </div>
+        {criticalPathStart && criticalPath.length > 1 ? (
+          <button
+            type="button"
+            className="mt-2 flex w-full min-w-0 items-center gap-2 rounded-md border border-sky-500/15 bg-sky-500/[0.07] px-2.5 py-2 text-left transition-colors hover:bg-sky-500/10"
+            onClick={() => onSelectCard(criticalPathStart.id)}
+          >
+            <GitBranch className="size-4 shrink-0 text-sky-700 dark:text-sky-200" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">
+                Main path starts here
+              </span>
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {criticalPathStart.title} · {criticalPath.length} cards
+              </span>
+            </span>
+          </button>
         ) : null}
-      </div>
+        {blockedPlanCount > 0 ? (
+          <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+            {blockedPlanCount} planned item{blockedPlanCount === 1 ? "" : "s"}{" "}
+            waiting on another task.
+          </p>
+        ) : null}
+      </section>
     </div>
   )
 }
 
-function MetricPill({
-  icon: Icon,
-  label,
-  tone,
-  value,
+function PlanItemButton({
+  item,
+  onSelectCard,
+  rank,
 }: {
-  icon: Icon
-  label: string
-  tone: "amber" | "rose" | "sky" | "teal" | "zinc"
-  value: number | string
+  item: BoardGraphPlanItem
+  onSelectCard: (cardId: string) => void
+  rank: number
 }) {
-  const toneClass =
-    tone === "teal"
-      ? "text-teal-700 dark:text-teal-200"
-      : tone === "rose"
-        ? "text-rose-700 dark:text-rose-200"
-        : tone === "amber"
-          ? "text-amber-700 dark:text-amber-200"
-          : tone === "sky"
-            ? "text-sky-700 dark:text-sky-200"
-            : "text-zinc-700 dark:text-zinc-200"
-
   return (
-    <div className="dark:bg-white/0.05 flex h-9 min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-zinc-50 px-2 dark:border-white/10">
-      <Icon className={`size-3.5 shrink-0 ${toneClass}`} />
-      <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-        {label}
+    <button
+      type="button"
+      className="flex h-12 min-w-0 items-center gap-2 rounded-md border border-zinc-950/[0.08] bg-zinc-50 px-2.5 text-left transition-colors hover:bg-zinc-100 dark:border-white/10 dark:bg-zinc-950/70 dark:hover:bg-white/[0.06]"
+      onClick={() => onSelectCard(item.card.id)}
+    >
+      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-zinc-950/5 font-mono text-[11px] font-semibold text-muted-foreground dark:bg-white/10">
+        {rank}
       </span>
-      <span className={`text-xs font-semibold ${toneClass}`}>{value}</span>
-    </div>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">{item.card.title}</span>
+        <span className="block truncate text-[11px] text-muted-foreground">
+          {getShortPlanReason(item)}
+        </span>
+      </span>
+    </button>
   )
 }
 
-function SignalChip({
+type PlanTone = "amber" | "rose" | "sky" | "teal" | "zinc"
+
+function PlanTag({
   children,
   tone,
 }: {
   children: React.ReactNode
-  tone: "amber" | "rose" | "sky"
+  tone: PlanTone
 }) {
-  const toneClass =
-    tone === "rose"
-      ? "bg-rose-500/10 text-rose-700 dark:text-rose-200"
-      : tone === "amber"
-        ? "bg-amber-500/10 text-amber-700 dark:text-amber-200"
-        : "bg-sky-500/10 text-sky-700 dark:text-sky-200"
-
   return (
-    <span className={`rounded-sm px-1.5 py-0.5 font-medium ${toneClass}`}>
+    <span
+      className={`inline-flex h-5 items-center rounded-sm px-1.5 text-[11px] font-medium ${getToneClass(
+        tone
+      )}`}
+    >
       {children}
     </span>
   )
+}
+
+type HealthStatProps = {
+  icon: Icon
+  label: string
+  tone: PlanTone
+  value: string
+}
+
+function HealthStat({
+  icon: IconComponent,
+  label,
+  tone,
+  value,
+}: HealthStatProps) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-md border border-zinc-950/[0.06] bg-white px-2 py-2 dark:border-white/10 dark:bg-zinc-950">
+      <span
+        className={`grid size-6 shrink-0 place-items-center rounded-md ${getToneClass(
+          tone
+        )}`}
+      >
+        <IconComponent className="size-3.5" weight="bold" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm leading-none font-semibold">
+          {value}
+        </span>
+        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+          {label}
+        </span>
+      </span>
+    </div>
+  )
+}
+
+function getPlanExplanation(item: BoardGraphPlanItem) {
+  const unlockReason = getUnlockReason(item)
+  const dueReason = getDueReason(item)
+  const isCritical = isCriticalPlanItem(item)
+
+  if (dueReason?.startsWith("Overdue")) {
+    return "Do this first: it is overdue and ready to move without waiting on another task."
+  }
+
+  if (isCritical && unlockReason) {
+    return `Do this first: it keeps the main path moving and ${formatUnlockReason(
+      unlockReason
+    )}.`
+  }
+
+  if (unlockReason) {
+    return `Do this first: it is ready and ${formatUnlockReason(unlockReason)}.`
+  }
+
+  if (isCritical) {
+    return "Do this first: it is the cleanest ready task on the main path."
+  }
+
+  if (dueReason) {
+    return `Do this first: it is ready and ${dueReason.toLowerCase()}.`
+  }
+
+  return "Do this first: it is ready and has the strongest impact right now."
+}
+
+function getPlanTags(item: BoardGraphPlanItem) {
+  const tags: { label: string; tone: PlanTone }[] = [
+    { label: "Ready to start", tone: "teal" },
+  ]
+  const dueReason = getDueReason(item)
+  const unlockReason = getUnlockReason(item)
+
+  if (dueReason) {
+    tags.push({
+      label: dueReason,
+      tone: dueReason.startsWith("Overdue") ? "rose" : "amber",
+    })
+  }
+
+  if (isCriticalPlanItem(item)) {
+    tags.push({ label: "Main path", tone: "sky" })
+  }
+
+  if (unlockReason) {
+    tags.push({ label: toUnlockTag(unlockReason), tone: "teal" })
+  }
+
+  if (item.reasons.includes("High priority")) {
+    tags.push({ label: "High priority", tone: "rose" })
+  }
+
+  return tags.slice(0, 4)
+}
+
+function getShortPlanReason(item: BoardGraphPlanItem) {
+  const unlockReason = getUnlockReason(item)
+  const dueReason = getDueReason(item)
+
+  if (unlockReason) {
+    return toUnlockTag(unlockReason)
+  }
+
+  if (isCriticalPlanItem(item)) {
+    return "Keeps the main path moving"
+  }
+
+  if (dueReason) {
+    return dueReason
+  }
+
+  if (item.reasons.includes("High priority")) {
+    return "High priority"
+  }
+
+  return "Ready to start"
+}
+
+function getUnlockReason(item: BoardGraphPlanItem) {
+  return item.reasons.find((reason) => reason.startsWith("Unlocks"))
+}
+
+function getDueReason(item: BoardGraphPlanItem) {
+  return item.reasons.find(
+    (reason) => reason.startsWith("Due") || reason.startsWith("Overdue")
+  )
+}
+
+function isCriticalPlanItem(item: BoardGraphPlanItem) {
+  return item.card.isCriticalPath || item.reasons.includes("Critical path")
+}
+
+function toUnlockTag(reason: string) {
+  const match = reason.match(/^Unlocks (\d+)/)
+
+  if (!match) {
+    return reason
+  }
+
+  const count = Number(match[1])
+
+  return `Unblocks ${count} task${count === 1 ? "" : "s"}`
+}
+
+function formatUnlockReason(reason: string) {
+  const tag = toUnlockTag(reason)
+
+  return tag.charAt(0).toLowerCase() + tag.slice(1)
+}
+
+function getToneClass(tone: PlanTone) {
+  if (tone === "rose") {
+    return "bg-rose-500/10 text-rose-700 dark:text-rose-200"
+  }
+
+  if (tone === "amber") {
+    return "bg-amber-500/10 text-amber-700 dark:text-amber-200"
+  }
+
+  if (tone === "teal") {
+    return "bg-teal-500/10 text-teal-700 dark:text-teal-200"
+  }
+
+  if (tone === "sky") {
+    return "bg-sky-500/10 text-sky-700 dark:text-sky-200"
+  }
+
+  return "bg-zinc-950/5 text-muted-foreground dark:bg-white/10"
 }
 
 function priorityLabel(priority: BoardCardPriority) {

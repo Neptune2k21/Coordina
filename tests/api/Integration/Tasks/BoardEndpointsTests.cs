@@ -523,6 +523,20 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
     Assert.Equal(
       [database.Id, api.Id, ui.Id],
       graph.DependencyOrder.Select(card => card.Id).ToArray());
+    Assert.Equal(
+      [database.Id, api.Id, ui.Id],
+      graph.CriticalPath.Select(card => card.Id).ToArray());
+    var nextCard = Assert.Single(graph.NextCards);
+    Assert.Equal(database.Id, nextCard.Id);
+    Assert.Equal(2, nextCard.TransitiveDependentCount);
+    Assert.True(nextCard.IsCriticalPath);
+    var firstPlanItem = graph.PlanItems.First();
+    Assert.Equal(database.Id, firstPlanItem.Card.Id);
+    Assert.True(firstPlanItem.IsActionable);
+    Assert.Equal(0, firstPlanItem.BlockerCount);
+    Assert.Contains("Ready now", firstPlanItem.Reasons);
+    Assert.Contains("Critical path", firstPlanItem.Reasons);
+    Assert.Contains("Unlocks 2", firstPlanItem.Reasons);
 
     var analysisResponse = await SendAsAsync(
       HttpMethod.Get,
@@ -535,11 +549,16 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
     Assert.NotNull(analysis);
     Assert.False(analysis.IsStructurallyReady);
     Assert.False(analysis.IsUnblocked);
+    Assert.True(analysis.IsOnCriticalPath);
+    Assert.Equal(1, analysis.DependencyDepth);
+    Assert.Equal(1, analysis.DependentDepth);
+    Assert.Equal(1, analysis.TransitiveDependentCount);
     Assert.Equal(database.Id, Assert.Single(analysis.BlockingDependencies).Id);
     Assert.DoesNotContain(
       analysis.SuggestedDependencies,
       candidate => candidate.Id == ui.Id);
     Assert.Equal(ui.Id, Assert.Single(analysis.ImpactedDependents).Id);
+    Assert.Equal(ui.Id, Assert.Single(analysis.DirectlyUnlockedDependents).Id);
   }
 
   [Fact]
@@ -1060,21 +1079,42 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
     bool IsAcyclic,
     IReadOnlyCollection<BoardGraphCardResponse> ReadyCards,
     IReadOnlyCollection<BoardGraphCardResponse> UnblockedCards,
-    IReadOnlyCollection<BoardGraphCardResponse> DependencyOrder);
+    IReadOnlyCollection<BoardGraphCardResponse> DependencyOrder,
+    IReadOnlyCollection<BoardGraphCardResponse> CriticalPath,
+    IReadOnlyCollection<BoardGraphCardResponse> NextCards,
+    IReadOnlyCollection<BoardGraphPlanItemResponse> PlanItems);
 
   private sealed record BoardCardDependencyAnalysisResponse(
     string CardId,
     bool IsStructurallyReady,
     bool IsUnblocked,
+    bool IsOnCriticalPath,
+    int DependencyDepth,
+    int DependentDepth,
+    int TransitiveDependentCount,
     IReadOnlyCollection<BoardGraphCardResponse> BlockingDependencies,
     IReadOnlyCollection<BoardGraphCardResponse> SuggestedDependencies,
-    IReadOnlyCollection<BoardGraphCardResponse> ImpactedDependents);
+    IReadOnlyCollection<BoardGraphCardResponse> ImpactedDependents,
+    IReadOnlyCollection<BoardGraphCardResponse> DirectlyUnlockedDependents);
 
   private sealed record BoardGraphCardResponse(
     string Id,
     string ListId,
     string Title,
-    bool IsCompleted);
+    bool IsCompleted,
+    int DependencyCount,
+    int DependentCount,
+    int DependencyDepth,
+    int DependentDepth,
+    int TransitiveDependentCount,
+    bool IsCriticalPath);
+
+  private sealed record BoardGraphPlanItemResponse(
+    BoardGraphCardResponse Card,
+    int Score,
+    bool IsActionable,
+    int BlockerCount,
+    IReadOnlyCollection<string> Reasons);
 
   private sealed record CreateWorkspaceInviteResponse(
     string Code,
