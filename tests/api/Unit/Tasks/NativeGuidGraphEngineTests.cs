@@ -134,4 +134,81 @@ public sealed class NativeGuidGraphEngineTests
 
     Assert.Equal([foundation, api, ui], impacted);
   }
+
+  [Fact]
+  public void AnalyzeNodes_ReturnsDependencyPressureMetrics()
+  {
+    var dependency = Guid.NewGuid();
+    var foundation = Guid.NewGuid();
+    var api = Guid.NewGuid();
+    var ui = Guid.NewGuid();
+
+    var analysis = _graphEngine.AnalyzeNodes(
+      [dependency, foundation, api, ui],
+      [
+        new GraphEdge<Guid>(foundation, dependency),
+        new GraphEdge<Guid>(api, foundation),
+        new GraphEdge<Guid>(ui, foundation)
+      ]).ToDictionary(node => node.Node);
+
+    Assert.Equal(0, analysis[dependency].DependencyCount);
+    Assert.Equal(1, analysis[dependency].DependentCount);
+    Assert.Equal(0, analysis[dependency].DependencyDepth);
+    Assert.Equal(2, analysis[dependency].DependentDepth);
+    Assert.Equal(3, analysis[dependency].TransitiveDependentCount);
+    Assert.Equal(1, analysis[api].DependencyCount);
+    Assert.Equal(0, analysis[api].DependentCount);
+    Assert.Equal(2, analysis[api].DependencyDepth);
+    Assert.Equal(0, analysis[api].DependentDepth);
+    Assert.Equal(0, analysis[api].TransitiveDependentCount);
+  }
+
+  [Fact]
+  public void FindCriticalPath_ReturnsLongestDependencyChain()
+  {
+    var dependency = Guid.NewGuid();
+    var foundation = Guid.NewGuid();
+    var api = Guid.NewGuid();
+    var ui = Guid.NewGuid();
+
+    var criticalPath = _graphEngine.FindCriticalPath(
+      [dependency, foundation, api, ui],
+      [
+        new GraphEdge<Guid>(foundation, dependency),
+        new GraphEdge<Guid>(api, foundation),
+        new GraphEdge<Guid>(ui, foundation)
+      ]);
+
+    Assert.Equal([dependency, foundation, api], criticalPath);
+  }
+
+  [Fact]
+  public void PlanWork_RanksActionableCardsByProductImpact()
+  {
+    var dependency = Guid.NewGuid();
+    var api = Guid.NewGuid();
+    var ui = Guid.NewGuid();
+    var urgentStandalone = Guid.NewGuid();
+
+    var recommendations = _graphEngine.PlanWork(
+      [dependency, api, ui, urgentStandalone],
+      [
+        new GraphEdge<Guid>(api, dependency),
+        new GraphEdge<Guid>(ui, api)
+      ],
+      [
+        new GraphWorkItem<Guid>(dependency, false, 1, 7, 0, 0, 0),
+        new GraphWorkItem<Guid>(api, false, 3, 0, 3, 1, 1),
+        new GraphWorkItem<Guid>(ui, false, 3, -1, 2, 0, 2),
+        new GraphWorkItem<Guid>(urgentStandalone, false, 3, 0, 0, 0, 3)
+      ]).ToArray();
+
+    Assert.Equal(dependency, recommendations[0].Node);
+    Assert.Equal(0, recommendations[0].BlockerCount);
+    Assert.True(recommendations[0].IsCriticalPath);
+    Assert.True(recommendations[0].UnlockScore > recommendations[1].UnlockScore);
+    Assert.Equal(urgentStandalone, recommendations[1].Node);
+    Assert.Equal(0, recommendations[1].BlockerCount);
+    Assert.True(recommendations[2].BlockerCount > 0);
+  }
 }

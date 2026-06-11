@@ -31,4 +31,17 @@ public interface IGraphEngine<TNode>
     IReadOnlyCollection<TNode> nodes,
     IReadOnlyCollection<GraphEdge<TNode>> edges,
     TNode dependency);
+
+  IReadOnlyCollection<GraphNodeAnalysis<TNode>> AnalyzeNodes(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges);
+
+  IReadOnlyCollection<TNode> FindCriticalPath(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges);
+
+  IReadOnlyCollection<GraphWorkRecommendation<TNode>> PlanWork(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems);
 }

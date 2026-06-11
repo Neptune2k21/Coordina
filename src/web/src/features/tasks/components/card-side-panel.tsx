@@ -10,7 +10,7 @@ import {
   WarningCircle,
   X,
 } from "@phosphor-icons/react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -119,6 +119,8 @@ export function CardSidePanel({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
     "idle"
   )
+  const calendarContainerRef = useRef<HTMLDivElement>(null)
+  const labelMenuContainerRef = useRef<HTMLDivElement>(null)
 
   const hasChanges = useMemo(() => {
     if (!card) {
@@ -198,13 +200,24 @@ export function CardSidePanel({
       ? card.dependencies
           .filter((dependency) => !dependency.isCompleted)
           .map((dependency) => ({
+            dependencyCount: 0,
+            dependencyDepth: 0,
+            dependentCount: 0,
+            dependentDepth: 0,
             id: dependency.cardId,
             isCompleted: dependency.isCompleted,
+            isCriticalPath: false,
             listId: card.listId,
             title: dependency.title,
+            transitiveDependentCount: 0,
           }))
       : [])
   const impactedDependents = dependencyAnalysis?.impactedDependents ?? []
+  const directlyUnlockedDependents =
+    dependencyAnalysis?.directlyUnlockedDependents ?? []
+  const unlockPotential =
+    dependencyAnalysis?.transitiveDependentCount ?? impactedDependents.length
+  const isOnCriticalPath = dependencyAnalysis?.isOnCriticalPath ?? false
   const isCardUnblocked =
     dependencyAnalysis?.isUnblocked ??
     card?.dependencies.every((dependency) => dependency.isCompleted) ??
@@ -229,6 +242,54 @@ export function CardSidePanel({
       setError(null)
     })
   }, [card])
+
+  useEffect(() => {
+    if (!isCalendarOpen && !isLabelMenuOpen) {
+      return
+    }
+
+    function dismissLayersOutside(target: EventTarget | null) {
+      if (!(target instanceof Node)) {
+        return
+      }
+
+      if (!calendarContainerRef.current?.contains(target)) {
+        setIsCalendarOpen(false)
+      }
+
+      if (!labelMenuContainerRef.current?.contains(target)) {
+        setIsLabelMenuOpen(false)
+      }
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      dismissLayersOutside(event.target)
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+      dismissLayersOutside(event.target)
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return
+      }
+
+      setIsCalendarOpen(false)
+      setIsLabelMenuOpen(false)
+      event.stopPropagation()
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("focusin", handleFocusIn, true)
+    window.addEventListener("keydown", handleKeyDown, true)
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("focusin", handleFocusIn, true)
+      window.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [isCalendarOpen, isLabelMenuOpen])
 
   if (!card) {
     return null
@@ -450,13 +511,16 @@ export function CardSidePanel({
                       </Button>
                     ) : null}
                   </div>
-                  <div className="relative">
+                  <div ref={calendarContainerRef} className="relative">
                     <Button
                       type="button"
                       variant="outline"
                       className="h-9 w-full justify-start rounded-md bg-white px-2 text-sm dark:bg-white/[0.06]"
                       disabled={isReadOnly}
-                      onClick={() => setIsCalendarOpen((current) => !current)}
+                      onClick={() => {
+                        setIsLabelMenuOpen(false)
+                        setIsCalendarOpen((current) => !current)
+                      }}
                     >
                       <CalendarBlank className="size-4" />
                       {dueDate ? shortDate(dueDate) : "Pick a due date"}
@@ -477,13 +541,19 @@ export function CardSidePanel({
               </div>
               <Field>
                 <FieldLabel htmlFor="card-labels">Labels</FieldLabel>
-                <div className="relative flex gap-2">
+                <div
+                  ref={labelMenuContainerRef}
+                  className="relative flex gap-2"
+                >
                   <Input
                     id="card-labels"
                     value={labelInput}
                     disabled={isReadOnly}
                     onChange={(event) => setLabelInput(event.target.value)}
-                    onFocus={() => setIsLabelMenuOpen(true)}
+                    onFocus={() => {
+                      setIsCalendarOpen(false)
+                      setIsLabelMenuOpen(true)
+                    }}
                     placeholder="frontend"
                     className="h-9 rounded-md bg-white text-sm dark:bg-white/[0.06]"
                     onKeyDown={(event) => {
@@ -500,7 +570,10 @@ export function CardSidePanel({
                     className="size-9 rounded-md"
                     aria-label="Show existing labels"
                     disabled={isReadOnly}
-                    onClick={() => setIsLabelMenuOpen((current) => !current)}
+                    onClick={() => {
+                      setIsCalendarOpen(false)
+                      setIsLabelMenuOpen((current) => !current)
+                    }}
                   >
                     <Tag className="size-4" />
                   </Button>
@@ -812,8 +885,14 @@ export function CardSidePanel({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 text-[11px]">
+                  {isOnCriticalPath ? <span>critical path</span> : null}
+                  {unlockPotential > 0 ? (
+                    <span>{unlockPotential} downstream</span>
+                  ) : null}
+                  {directlyUnlockedDependents.length > 0 ? (
+                    <span>{directlyUnlockedDependents.length} unlock next</span>
+                  ) : null}
                   <span>{availableDependencies.length} safe suggestions</span>
-                  <span>{impactedDependents.length} impacted</span>
                 </div>
               </div>
               {blockingDependencies.length > 0 ? (
@@ -895,6 +974,21 @@ export function CardSidePanel({
               ) : null}
             </section>
 
+            {directlyUnlockedDependents.length > 0 ? (
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Unlocks next</h3>
+                <div className="grid gap-1.5">
+                  {directlyUnlockedDependents.slice(0, 5).map((dependent) => (
+                    <DependencyCompactRow
+                      key={dependent.id}
+                      dependency={dependent}
+                      tone="unlock"
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
             {impactedDependents.length > 0 ? (
               <section className="grid gap-2">
                 <h3 className="text-sm font-semibold">Impact</h3>
@@ -966,10 +1060,16 @@ function userLabel(user: { name: string | null; email: string | null }) {
 
 function toGraphCard(card: BoardCard): BoardGraphCard {
   return {
+    dependencyCount: card.dependencies.length,
+    dependencyDepth: card.dependencies.length > 0 ? 1 : 0,
+    dependentCount: 0,
+    dependentDepth: 0,
     id: card.id,
     isCompleted: card.isCompleted,
+    isCriticalPath: false,
     listId: card.listId,
     title: card.title,
+    transitiveDependentCount: 0,
   }
 }
 
@@ -978,12 +1078,14 @@ function DependencyCompactRow({
   tone,
 }: {
   dependency: BoardGraphCard
-  tone: "blocked" | "impact"
+  tone: "blocked" | "impact" | "unlock"
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-md border border-zinc-950/10 bg-white p-2 text-xs dark:border-white/10 dark:bg-zinc-950">
       {tone === "blocked" ? (
         <WarningCircle className="size-3.5 shrink-0 text-amber-600 dark:text-amber-300" />
+      ) : tone === "unlock" ? (
+        <CheckCircle className="size-3.5 shrink-0 text-teal-600 dark:text-teal-300" />
       ) : (
         <GitBranch className="size-3.5 shrink-0 text-sky-600 dark:text-sky-300" />
       )}

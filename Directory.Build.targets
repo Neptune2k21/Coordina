@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <CoordinaGraphEngineSourceRoot>$(MSBuildThisFileDirectory)src/graph-engine/src</CoordinaGraphEngineSourceRoot>
-    <CoordinaGraphEngineSources>$(CoordinaGraphEngineSourceRoot)/coordina_graph_engine.cpp $(CoordinaGraphEngineSourceRoot)/dependency_validator.cpp $(CoordinaGraphEngineSourceRoot)/graph_snapshot.cpp $(CoordinaGraphEngineSourceRoot)/graph_traversal.cpp $(CoordinaGraphEngineSourceRoot)/graph_types.cpp $(CoordinaGraphEngineSourceRoot)/native_bridge.cpp $(CoordinaGraphEngineSourceRoot)/planning_engine.cpp $(CoordinaGraphEngineSourceRoot)/suggestion_engine.cpp</CoordinaGraphEngineSources>
+    <CoordinaGraphEngineSources>$(CoordinaGraphEngineSourceRoot)/coordina_graph_engine.cpp $(CoordinaGraphEngineSourceRoot)/critical_path.cpp $(CoordinaGraphEngineSourceRoot)/dependency_validator.cpp $(CoordinaGraphEngineSourceRoot)/graph_snapshot.cpp $(CoordinaGraphEngineSourceRoot)/graph_traversal.cpp $(CoordinaGraphEngineSourceRoot)/graph_types.cpp $(CoordinaGraphEngineSourceRoot)/native_bridge.cpp $(CoordinaGraphEngineSourceRoot)/node_analysis.cpp $(CoordinaGraphEngineSourceRoot)/planning_engine.cpp $(CoordinaGraphEngineSourceRoot)/suggestion_engine.cpp $(CoordinaGraphEngineSourceRoot)/work_planner.cpp</CoordinaGraphEngineSources>
     <CoordinaGraphEngineInclude>$(MSBuildThisFileDirectory)src/graph-engine/include</CoordinaGraphEngineInclude>
     <CoordinaGraphEngineOptimization Condition="'$(Configuration)' == 'Debug'">-O0 -g</CoordinaGraphEngineOptimization>
     <CoordinaGraphEngineOptimization Condition="'$(CoordinaGraphEngineOptimization)' == ''">-O2</CoordinaGraphEngineOptimization>
