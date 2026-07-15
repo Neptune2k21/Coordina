@@ -10,6 +10,7 @@ public static class ProjectsModule
   {
     services.AddScoped<IProjectStore, PostgresProjectStore>();
     services.AddScoped<IProjectService, ProjectService>();
+    services.AddScoped<IProjectAccessGuard, ProjectAccessGuard>();
 
     return services;
   }

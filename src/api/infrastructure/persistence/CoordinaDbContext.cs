@@ -1,5 +1,6 @@
 using Coordina.Api.Modules.Auth.Infrastructure;
 using Coordina.Api.Modules.Projects.Infrastructure;
+using Coordina.Api.Modules.Boards.Infrastructure;
 using Coordina.Api.Modules.Tasks.Infrastructure;
 using Coordina.Api.Modules.Workspaces.Infrastructure;
 using Microsoft.EntityFrameworkCore;

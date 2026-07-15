@@ -41,18 +41,19 @@ The web app reads the API base URL from:
 
 ```dotenv
 VITE_API_URL=http://localhost:5050
+VITE_DOCS_URL=http://localhost:3000
 ```
 
-If the variable is not set, the app defaults to `http://localhost:5050`.
+If `VITE_API_URL` is not set, the app defaults to `http://localhost:5050`.
+If `VITE_DOCS_URL` is not set, docs links use the production Mintlify domain.
 
 ## Structure
 
 ```text
 src
-├── components       # Shared layout, docs, and UI primitives
+├── components       # Shared layout and UI primitives
 ├── features
 │   ├── auth         # Auth session, API client, forms
-│   ├── docs         # In-app documentation page
 │   ├── projects     # Project list, create/edit dialogs, project shell
 │   ├── tasks        # Board templates, Kanban board, card detail panel
 │   └── workspaces   # Workspace state, API client, screens

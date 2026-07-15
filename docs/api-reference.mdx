@@ -1,0 +1,35 @@
+---
+title: "API reference"
+description: "Where to inspect, test, and consume the Coordina OpenAPI contract."
+---
+
+The API exposes its OpenAPI schema and an interactive Scalar tester at runtime.
+Mintlify owns the long-form docs, while the API continues to own the generated
+contract.
+
+<Columns cols={2}>
+  <Card title="OpenAPI JSON" icon="file-json" href="http://localhost:5050/openapi/v1.json">
+    Inspect the current runtime schema.
+  </Card>
+  <Card title="API tester" icon="square-terminal" href="http://localhost:5050/api-docs">
+    Exercise endpoints through Scalar.
+  </Card>
+</Columns>
+
+## Register example
+
+```bash
+curl -X POST http://localhost:5050/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Maya Chen",
+    "email": "maya@coordina.test",
+    "password": "Password123!"
+  }'
+```
+
+## Production docs
+
+When the API has a public base URL, add that URL to the OpenAPI `servers`
+metadata or publish a generated `openapi.json` inside this docs directory. Then
+Mintlify can render endpoint pages from the same contract.

@@ -1,0 +1,33 @@
+---
+title: "Testing"
+description: "Quality checks for the API, web app, E2E suite, and graph engine."
+---
+
+Run the focused checks while developing:
+
+```bash
+make graph-engine-test
+make api-test
+make web-test
+make web-typecheck
+make web-lint
+```
+
+Run the full quality gate before merging:
+
+```bash
+make quality
+```
+
+## Manual smoke flow
+
+1. Register or sign in at `/login`.
+2. Open `/app`.
+3. Create a workspace and confirm the owner role.
+4. Open `/app/projects` and create a project.
+5. Archive it and confirm it is hidden by default.
+6. Enable archived projects and confirm the status badge appears.
+7. Mark a project completed and confirm edits are blocked.
+8. Generate an invitation code, sign in as another user, and redeem it once.
+9. Confirm only workspace owners or project owners can edit and archive.
+10. Confirm a non-member receives `404` for workspace and project details.

@@ -1,0 +1,35 @@
+---
+title: "Projects"
+description: "Project lifecycle, API routes, and board ownership rules."
+---
+
+Projects are workspace-owned business objects. The API never serves a project by
+ID alone; every read, mutation, and delete is evaluated inside the workspace
+route.
+
+## API surface
+
+```http
+GET    /workspaces/{workspaceId}/projects
+GET    /workspaces/{workspaceId}/projects?includeArchived=true
+GET    /workspaces/{workspaceId}/projects?includeCompleted=true
+POST   /workspaces/{workspaceId}/projects
+       { "name": "Launch plan", "description": "Optional context", "key": "APP" }
+GET    /workspaces/{workspaceId}/projects/{projectId}
+PATCH  /workspaces/{workspaceId}/projects/{projectId}
+       { "status": "COMPLETED", "color": "teal" }
+DELETE /workspaces/{workspaceId}/projects/{projectId}
+DELETE /workspaces/{workspaceId}/projects/{projectId}/permanent
+```
+
+## Rules
+
+- All routes require a bearer token.
+- Every route validates membership against `workspaceId`.
+- Project lookup always includes both `workspaceId` and `projectId`.
+- The default list returns active projects only.
+- Archived and completed projects are included only by query parameter.
+- Completed projects are read-only.
+- Non-members receive `404`.
+- Edit and archive require a workspace owner or project owner.
+- Permanent delete requires workspace ownership.

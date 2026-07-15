@@ -1,0 +1,31 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Coordina",
+  "colors": {
+    "primary": "#18181b"
+  },
+  "description": "Coordina developer documentation.",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Start",
+        "pages": ["index", "quickstart", "environment"]
+      },
+      {
+        "group": "Platform",
+        "pages": [
+          "architecture",
+          "authentication",
+          "workspaces",
+          "projects",
+          "frontend"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": ["api-reference", "testing"]
+      }
+    ]
+  }
+}

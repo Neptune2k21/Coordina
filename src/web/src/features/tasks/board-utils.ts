@@ -477,3 +477,14 @@ function daysUntilDateKey(value: string) {
 
   return Math.ceil((target - today) / 86_400_000)
 }
+
+export function userLabel(user: { name: string | null; email: string | null }) {
+  return user.name ?? user.email ?? "Workspace member"
+}
+
+export function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value))
+}

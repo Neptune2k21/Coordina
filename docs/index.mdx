@@ -1,0 +1,44 @@
+---
+title: "Coordina docs"
+description: "Developer documentation for the Coordina workspace product."
+---
+
+Coordina is a React and .NET workspace product. The app owns authentication,
+workspace tenancy, project boards, and the collaboration surface. This
+documentation lives outside the web bundle so product code stays focused on the
+actual application.
+
+<Columns cols={2}>
+  <Card title="Run locally" icon="terminal" href="/quickstart">
+    Start Postgres, the API, and the web app.
+  </Card>
+  <Card title="API reference" icon="square-terminal" href="/api-reference">
+    Use the runtime OpenAPI document and Scalar tester.
+  </Card>
+  <Card title="Workspace model" icon="layers" href="/workspaces">
+    Understand tenancy, membership, invitations, and owner checks.
+  </Card>
+  <Card title="Testing" icon="check-circle" href="/testing">
+    Run the API, web, E2E, and graph engine checks.
+  </Card>
+</Columns>
+
+## Architecture at a glance
+
+| Area | Stack |
+| --- | --- |
+| Web | React 19, Vite, TypeScript, Tailwind CSS |
+| API | ASP.NET Core 9 minimal APIs, EF Core, PostgreSQL |
+| Native engine | C++20 graph engine loaded by the API |
+| API docs | OpenAPI JSON plus Scalar for local testing |
+| Product docs | Mintlify MDX in this `docs/` directory |
+
+## Runtime URLs
+
+| Service | URL |
+| --- | --- |
+| Web app | `http://localhost:5173` |
+| API | `http://localhost:5050` |
+| API tester | `http://localhost:5050/api-docs` |
+| OpenAPI schema | `http://localhost:5050/openapi/v1.json` |
+| Mintlify preview | `http://localhost:3000` |

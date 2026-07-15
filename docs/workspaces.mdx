@@ -1,0 +1,31 @@
+---
+title: "Workspaces"
+description: "Workspace tenancy, membership, invitations, and server-side access rules."
+---
+
+Workspaces are Coordina's tenant boundary. Projects, boards, tasks, and future
+collaboration modules should scope data through the active workspace ID.
+
+## API surface
+
+```http
+GET    /workspaces
+POST   /workspaces              { "name": "Product Team" }
+GET    /workspaces/{workspaceId}
+POST   /workspaces/join         { "inviteCode": "A1B2C3D4E5F6" }
+POST   /workspaces/{workspaceId}/invites
+GET    /workspaces/{workspaceId}/members
+DELETE /workspaces/{workspaceId}/members/{memberUserId}
+DELETE /workspaces/{workspaceId}
+```
+
+## Security model
+
+- List queries are filtered by current user membership.
+- Details return `404` for non-members.
+- Join requires a valid one-time invitation code.
+- Workspace creation auto-creates an `OWNER` membership.
+- Invite creation requires workspace ownership.
+- Member removal requires workspace ownership.
+- Workspace deletion requires workspace ownership.
+- Frontend state is never trusted for authorization.
