@@ -1,4 +1,4 @@
-namespace Coordina.Api.Modules.Tasks.Domain;
+namespace Coordina.Api.Modules.Boards.Domain;
 
 public sealed record ProjectBoard(
   Guid Id,

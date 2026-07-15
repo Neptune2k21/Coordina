@@ -1,6 +1,7 @@
 using Coordina.Api.Infrastructure.Configuration;
 using Coordina.Api.Infrastructure.Persistence;
 using Coordina.Api.Modules.Auth;
+using Coordina.Api.Modules.Boards;
 using Coordina.Api.Modules.Health;
 using Coordina.Api.Modules.Projects;
 using Coordina.Api.Modules.Tasks;
@@ -35,6 +36,7 @@ builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddWorkspacesModule();
 builder.Services.AddProjectsModule();
 builder.Services.AddTasksModule();
+builder.Services.AddBoardsModule();
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 

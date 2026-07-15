@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { docsBaseUrl } from "@/lib/docs-url"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -35,12 +36,11 @@ const navItems = [
   },
   {
     label: "Resources",
-    href: "/docs",
+    href: docsBaseUrl,
     eyebrow: "Learn",
-    description:
-      "Guides, changelog and patterns for building better workflows.",
+    description: "Mintlify docs, API references, and project conventions.",
     icon: BookOpenText,
-    items: ["Platform docs", "API tester", "OpenAPI schema"],
+    items: ["Developer docs", "API reference", "OpenAPI schema"],
   },
 ] as const
 

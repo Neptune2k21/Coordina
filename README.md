@@ -199,6 +199,7 @@ Local services:
 | API | http://localhost:5050 |
 | API reference | http://localhost:5050/api-docs |
 | OpenAPI schema | http://localhost:5050/openapi/v1.json |
+| Mintlify docs | http://localhost:3000 |
 | Adminer | http://localhost:8080 |
 
 ## Environment
@@ -470,11 +471,20 @@ The next meaningful layers are product layers, not more scaffolding:
 
 | File | Purpose |
 | --- | --- |
+| [docs/](docs/) | Mintlify documentation source |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Local workflow, conventions, pull request expectations |
 | [SECURITY.md](SECURITY.md) | Security policy, reporting, current guarantees and gaps |
 | [src/web/README.md](src/web/README.md) | Web-specific setup and structure |
 
-Runtime documentation is also available at `/docs` in the web app and `/api-docs` on the API when services are running.
+Run the documentation locally with:
+
+```bash
+make docs
+```
+
+Mintlify should be configured as a monorepo deployment with documentation path
+`/docs`. The web app redirects `/docs` to `VITE_DOCS_URL`, while the API still
+serves the local OpenAPI tester at `/api-docs`.
 
 ## License
 

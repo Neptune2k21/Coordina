@@ -1,7 +1,7 @@
 using Coordina.Api.Modules.Projects.Infrastructure;
-using Coordina.Api.Modules.Tasks.Domain;
+using Coordina.Api.Modules.Boards.Domain;
 
-namespace Coordina.Api.Modules.Tasks.Infrastructure;
+namespace Coordina.Api.Modules.Boards.Infrastructure;
 
 public sealed class BoardEntity
 {

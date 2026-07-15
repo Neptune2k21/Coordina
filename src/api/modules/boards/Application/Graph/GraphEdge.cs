@@ -1,4 +1,4 @@
-namespace Coordina.Api.Modules.Tasks.Application.Graph;
+namespace Coordina.Api.Modules.Boards.Application.Graph;
 
 public readonly record struct GraphEdge<TNode>(
   TNode Source,

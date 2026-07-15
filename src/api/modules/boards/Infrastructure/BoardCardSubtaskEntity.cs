@@ -1,4 +1,4 @@
-namespace Coordina.Api.Modules.Tasks.Infrastructure;
+namespace Coordina.Api.Modules.Boards.Infrastructure;
 
 public sealed class BoardCardSubtaskEntity
 {

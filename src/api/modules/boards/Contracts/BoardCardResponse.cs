@@ -1,4 +1,4 @@
-namespace Coordina.Api.Modules.Tasks.Contracts;
+namespace Coordina.Api.Modules.Boards.Contracts;
 
 public sealed record BoardCardResponse(
   Guid Id,

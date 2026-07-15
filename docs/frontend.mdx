@@ -1,0 +1,32 @@
+---
+title: "Frontend"
+description: "How the React application is structured after moving docs out of the app bundle."
+---
+
+The authenticated app uses a compact SaaS shell with onboarding for new
+accounts and active workspace context for returning users.
+
+## Routes
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Marketing landing page |
+| `/login` | Authentication page |
+| `/app` | Authenticated workspace console |
+| `/docs` | Lightweight redirect to `VITE_DOCS_URL` |
+
+## Workspace UX
+
+- `/app` loads the user's workspaces.
+- `/app/projects` loads projects for `coordina.activeWorkspaceId`.
+- Project creation stays lightweight; board setup happens after opening a project.
+- Project filters are backend-backed: active by default, archived and completed on demand.
+- Accounts without a workspace see onboarding cards with create and join flows.
+- Returning users get the persistent sidebar and topbar shell.
+- Workspace switching reloads workspace-scoped project data.
+
+## UI primitives
+
+Workspace screens use shared shadcn-style primitives: `Card`, `Button`,
+`Dialog`, `DropdownMenu`, `Input`, `Textarea`, `Badge`, `Skeleton`, `Field`,
+and `Separator`.

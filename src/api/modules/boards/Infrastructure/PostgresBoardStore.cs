@@ -1,9 +1,9 @@
 using Coordina.Api.Infrastructure.Persistence;
-using Coordina.Api.Modules.Tasks.Application;
-using Coordina.Api.Modules.Tasks.Domain;
+using Coordina.Api.Modules.Boards.Application;
+using Coordina.Api.Modules.Boards.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace Coordina.Api.Modules.Tasks.Infrastructure;
+namespace Coordina.Api.Modules.Boards.Infrastructure;
 
 public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
   : IBoardStore

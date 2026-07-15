@@ -1,3 +1,3 @@
-namespace Coordina.Api.Modules.Tasks.Contracts;
+namespace Coordina.Api.Modules.Boards.Contracts;
 
 public sealed record AddBoardCardDependencyRequest(Guid DependsOnCardId);

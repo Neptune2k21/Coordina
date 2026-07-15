@@ -1,6 +1,6 @@
-using Coordina.Api.Modules.Tasks.Domain;
+using Coordina.Api.Modules.Boards.Domain;
 
-namespace Coordina.Api.Modules.Tasks.Application;
+namespace Coordina.Api.Modules.Boards.Application;
 
 internal static class BoardRules
 {

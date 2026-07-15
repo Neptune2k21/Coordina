@@ -1,9 +1,10 @@
-.PHONY: help graph-engine-build graph-engine-test api api-restore api-tools api-build api-format api-format-check api-test api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
+.PHONY: help graph-engine-build graph-engine-test api api-restore api-tools api-build api-format api-format-check api-test api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
 API_URL := http://localhost:5050
 WEB_DIR := src/web
+DOCS_DIR := docs
 DOCKER_COMPOSE := docker compose --env-file .env -f docker/docker-compose.yml -p coordina
 GRAPH_ENGINE_DIR := src/graph-engine
 GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
@@ -28,6 +29,7 @@ help:
 	@echo "  make web-e2e      Lance les tests end-to-end Playwright"
 	@echo "  make lint         Lance les linters"
 	@echo "  make test         Lance tous les tests"
+	@echo "  make docs         Lance la documentation Mintlify"
 	@echo "  make quality      Lance format-check, lint, tests et builds"
 	@echo "  make docker-up    Lance les services Docker"
 	@echo "  make docker-down  Stoppe les services Docker"
@@ -95,6 +97,9 @@ web-e2e: api-migrate
 
 web-typecheck:
 	pnpm --dir $(WEB_DIR) typecheck
+
+docs:
+	cd $(DOCS_DIR) && mint dev
 
 test: graph-engine-test api-test web-test web-e2e
 

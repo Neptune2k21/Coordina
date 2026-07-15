@@ -1,6 +1,6 @@
-using Coordina.Api.Modules.Tasks.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Graph;
 
-namespace Coordina.Api.Tests.Unit.Tasks;
+namespace Coordina.Api.Tests.Unit.Boards;
 
 public sealed class NativeGuidGraphEngineTests
 {

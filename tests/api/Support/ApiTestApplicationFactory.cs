@@ -1,4 +1,5 @@
 using Coordina.Api.Modules.Auth;
+using Coordina.Api.Modules.Boards;
 using Coordina.Api.Modules.Projects;
 using Coordina.Api.Modules.Tasks;
 using Coordina.Api.Modules.Workspaces;
@@ -19,6 +20,7 @@ public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>
       services.AddInMemoryWorkspaceStoreForTests();
       services.AddInMemoryProjectStoreForTests();
       services.AddInMemoryTaskStoreForTests();
+      services.AddInMemoryBoardStoreForTests();
     });
   }
 }
