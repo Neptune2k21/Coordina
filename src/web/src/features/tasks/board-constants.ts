@@ -44,3 +44,10 @@ export const boardCardPriorities: Array<{
   { value: "MEDIUM", label: "Medium" },
   { value: "HIGH", label: "High" },
 ]
+
+export function priorityLabel(priority: BoardCardPriority) {
+  return (
+    boardCardPriorities.find((item) => item.value === priority)?.label ??
+    priority
+  )
+}

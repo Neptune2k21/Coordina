@@ -1,0 +1,33 @@
+---
+title: "Authentication"
+description: "How the web app signs in and calls protected API routes."
+---
+
+The login page calls the API and stores the returned session under
+`coordina.auth.session`. Protected API calls send the access token as a bearer
+token.
+
+```ts
+const response = await fetch("http://localhost:5050/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    email: "you@company.com",
+    password: "Password123!",
+  }),
+})
+
+const session = await response.json()
+localStorage.setItem("coordina.auth.session", JSON.stringify(session))
+```
+
+## Useful routes
+
+| Route | Purpose |
+| --- | --- |
+| `POST /auth/register` | Create an account and return a session |
+| `POST /auth/login` | Sign in and return a session |
+| `GET /auth/me` | Read the current authenticated user |
+
+All workspace, project, task, and board routes require
+`Authorization: Bearer <accessToken>`.

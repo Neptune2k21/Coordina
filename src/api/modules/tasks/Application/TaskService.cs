@@ -1,17 +1,13 @@
 using Coordina.Api.Modules.Projects.Application;
-using Coordina.Api.Modules.Projects.Domain;
 using Coordina.Api.Modules.Tasks.Contracts;
 using Coordina.Api.Modules.Tasks.Domain;
-using Coordina.Api.Modules.Workspaces.Application;
-using Coordina.Api.Modules.Workspaces.Domain;
 using TaskStatus = Coordina.Api.Modules.Tasks.Domain.TaskStatus;
 
 namespace Coordina.Api.Modules.Tasks.Application;
 
 public sealed class TaskService(
   ITaskStore tasks,
-  IProjectStore projects,
-  IWorkspaceStore workspaces) : ITaskService
+  IProjectAccessGuard projectAccess) : ITaskService
 {
   public async Task<TaskResult<TaskResponse>> CreateAsync(
     Guid workspaceId,
@@ -20,22 +16,15 @@ public sealed class TaskService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var access = await FindAccessAsync(
+    var access = await projectAccess.FindWritableAccessAsync(
       workspaceId,
       projectId,
       userId,
       cancellationToken);
 
-    if (access is null)
+    if (access.Status != ProjectAccessStatus.Granted)
     {
-      return new TaskResult<TaskResponse>(TaskResultStatus.NotFound);
-    }
-
-    if (access.Project.Status == ProjectStatus.Completed)
-    {
-      return new TaskResult<TaskResponse>(
-        TaskResultStatus.Conflict,
-        Message: "Completed projects are read-only.");
+      return ToAccessFailure<TaskResponse>(access.Status);
     }
 
     var priority = ParsePriority(request.Priority, out var priorityError);
@@ -72,7 +61,7 @@ public sealed class TaskService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var access = await FindAccessAsync(
+    var access = await projectAccess.FindAccessAsync(
       workspaceId,
       projectId,
       userId,
@@ -102,22 +91,15 @@ public sealed class TaskService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var access = await FindAccessAsync(
+    var access = await projectAccess.FindWritableAccessAsync(
       workspaceId,
       projectId,
       userId,
       cancellationToken);
 
-    if (access is null)
+    if (access.Status != ProjectAccessStatus.Granted)
     {
-      return new TaskResult<TaskResponse>(TaskResultStatus.NotFound);
-    }
-
-    if (access.Project.Status == ProjectStatus.Completed)
-    {
-      return new TaskResult<TaskResponse>(
-        TaskResultStatus.Conflict,
-        Message: "Completed projects are read-only.");
+      return ToAccessFailure<TaskResponse>(access.Status);
     }
 
     var task = await tasks.FindInProjectAsync(
@@ -177,22 +159,15 @@ public sealed class TaskService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var access = await FindAccessAsync(
+    var access = await projectAccess.FindWritableAccessAsync(
       workspaceId,
       projectId,
       userId,
       cancellationToken);
 
-    if (access is null)
+    if (access.Status != ProjectAccessStatus.Granted)
     {
-      return new TaskResult<TaskResponse>(TaskResultStatus.NotFound);
-    }
-
-    if (access.Project.Status == ProjectStatus.Completed)
-    {
-      return new TaskResult<TaskResponse>(
-        TaskResultStatus.Conflict,
-        Message: "Completed projects are read-only.");
+      return ToAccessFailure<TaskResponse>(access.Status);
     }
 
     var status = ParseStatus(request.Status, out var statusError);
@@ -240,25 +215,18 @@ public sealed class TaskService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var access = await FindAccessAsync(
+    var access = await projectAccess.FindWritableAccessAsync(
       workspaceId,
       projectId,
       userId,
       cancellationToken);
 
-    if (access is null)
+    if (access.Status != ProjectAccessStatus.Granted)
     {
-      return new TaskResult<object>(TaskResultStatus.NotFound);
+      return ToAccessFailure<object>(access.Status);
     }
 
-    if (access.Project.Status == ProjectStatus.Completed)
-    {
-      return new TaskResult<object>(
-        TaskResultStatus.Conflict,
-        Message: "Completed projects are read-only.");
-    }
-
-    if (!CanDeleteTask(access.Role, access.Project, userId))
+    if (!access.Access!.CanManageDestructiveActions(userId))
     {
       return new TaskResult<object>(
         TaskResultStatus.Forbidden,
@@ -276,35 +244,12 @@ public sealed class TaskService(
       : new TaskResult<object>(TaskResultStatus.NotFound);
   }
 
-  private async Task<ProjectAccess?> FindAccessAsync(
-    Guid workspaceId,
-    Guid projectId,
-    Guid userId,
-    CancellationToken cancellationToken)
-  {
-    var role = await workspaces.FindUserRoleAsync(
-      workspaceId,
-      userId,
-      cancellationToken);
-
-    if (role is null)
-    {
-      return null;
-    }
-
-    var project = await projects.FindInWorkspaceAsync(
-      workspaceId,
-      projectId,
-      cancellationToken);
-
-    return project is null ? null : new ProjectAccess(role.Value, project);
-  }
-
-  private static bool CanDeleteTask(
-    WorkspaceRole role,
-    Project project,
-    Guid userId) =>
-    role == WorkspaceRole.Owner || project.ProjectOwnerId == userId;
+  private static TaskResult<T> ToAccessFailure<T>(ProjectAccessStatus status) =>
+    status == ProjectAccessStatus.ProjectReadOnly
+      ? new TaskResult<T>(
+        TaskResultStatus.Conflict,
+        Message: ProjectAccessCheck.ReadOnlyMessage)
+      : new TaskResult<T>(TaskResultStatus.NotFound);
 
   private static TaskPriority? ParsePriority(
     string? priority,
@@ -401,6 +346,4 @@ public sealed class TaskService(
       task.Priority?.ToString().ToUpperInvariant(),
       task.CreatedAt,
       task.UpdatedAt);
-
-  private sealed record ProjectAccess(WorkspaceRole Role, Project Project);
 }

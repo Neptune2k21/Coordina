@@ -3,15 +3,11 @@ import { lazy, Suspense, useEffect, useState } from "react"
 import { Header } from "@/components/layout/header"
 import { Hero } from "@/components/sections/hero"
 import { AuthProvider, useAuth } from "@/features/auth/auth-context"
+import { docsBaseUrl } from "@/lib/docs-url"
 
 const AuthSection = lazy(() =>
   import("@/features/auth/components/auth-section").then((module) => ({
     default: module.AuthSection,
-  }))
-)
-const PlatformDocsPage = lazy(() =>
-  import("@/features/docs/components/platform-docs-page").then((module) => ({
-    default: module.PlatformDocsPage,
   }))
 )
 const WorkspaceApp = lazy(() =>
@@ -67,7 +63,7 @@ function AppRoutes() {
     <div className="min-h-svh bg-background text-foreground">
       <Suspense fallback={<RouteFallback />}>
         {isDocsPage ? (
-          <PlatformDocsPage />
+          <DocsRedirect />
         ) : isAppPage && session ? (
           <WorkspaceApp />
         ) : isLoginPage ? (
@@ -84,6 +80,14 @@ function AppRoutes() {
 }
 
 function RouteFallback() {
+  return <div className="min-h-svh bg-background" />
+}
+
+function DocsRedirect() {
+  useEffect(() => {
+    window.location.replace(docsBaseUrl)
+  }, [])
+
   return <div className="min-h-svh bg-background" />
 }
 

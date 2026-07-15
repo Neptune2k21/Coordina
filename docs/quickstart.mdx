@@ -1,0 +1,46 @@
+---
+title: "Quickstart"
+description: "Run Coordina locally with Docker, the .NET API, the React app, and Mintlify docs."
+---
+
+## Prerequisites
+
+- .NET SDK 9
+- Node.js 20.17.0 or newer
+- pnpm
+- Docker and Docker Compose
+- Mintlify CLI, installed with `npm i -g mint`
+
+## Start the application
+
+```bash
+make docker-up
+make api
+make web
+```
+
+`make api` applies EF Core migrations before starting the API. The web app uses
+`VITE_API_URL` when it is set, and otherwise falls back to
+`http://localhost:5050`.
+
+## Preview the documentation
+
+Run Mintlify from the documentation directory:
+
+```bash
+cd docs
+mint dev
+```
+
+The local Mintlify preview runs at `http://localhost:3000`.
+
+## Point the web app at the docs
+
+Set `VITE_DOCS_URL` when you want the landing page Resources link and `/docs`
+redirect to use a local or deployed Mintlify site:
+
+```bash
+VITE_DOCS_URL=http://localhost:3000 make web
+```
+
+In production, set `VITE_DOCS_URL` to the deployed Mintlify domain.
