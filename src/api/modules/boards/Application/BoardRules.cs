@@ -1,5 +1,4 @@
 using Coordina.Api.Modules.Boards.Domain;
-using Coordina.Api.Shared.Enums;
 using Coordina.Api.Shared.Text;
 using Coordina.Api.Shared.Validation;
 
@@ -14,48 +13,7 @@ internal static class BoardRules
   private const int MaxListTitleLength = 80;
   private const int MaxCardTitleLength = 180;
 
-  public static BoardTemplate? ParseTemplate(
-    string? template,
-    out string? error)
-  {
-    error = null;
-
-    if (string.IsNullOrWhiteSpace(template))
-    {
-      error = "Board template is required.";
-      return null;
-    }
-
-    if (EnumCode.TryParse<BoardTemplate>(template, out var parsed))
-    {
-      return parsed;
-    }
-
-    error = "Board template must be BASIC, AGILE_SCRUM, BUG_TRACKING, PRODUCT_ROADMAP, or CUSTOM.";
-    return null;
-  }
-
-  public static BoardCardPriority? ParsePriority(
-    string? priority,
-    out string? error)
-  {
-    error = null;
-
-    if (string.IsNullOrWhiteSpace(priority))
-    {
-      return null;
-    }
-
-    if (EnumCode.TryParse<BoardCardPriority>(priority, out var parsed))
-    {
-      return parsed;
-    }
-
-    error = "Card priority must be LOW, MEDIUM, or HIGH.";
-    return null;
-  }
-
-  public static BoardListSeed[] BuildListSeeds(
+  private static BoardListSeed[] BuildListSeeds(
     BoardTemplate template,
     string[]? customListTitles)
   {
@@ -85,26 +43,6 @@ internal static class BoardRules
       .ToArray();
   }
 
-  public static BoardTaskStatus ParseListStatus(
-    string? taskStatus,
-    out string? error)
-  {
-    error = null;
-
-    if (string.IsNullOrWhiteSpace(taskStatus))
-    {
-      return BoardTaskStatus.Todo;
-    }
-
-    if (EnumCode.TryParse<BoardTaskStatus>(taskStatus, out var parsed))
-    {
-      return parsed;
-    }
-
-    error = "List task status must be TODO, IN_PROGRESS, or DONE.";
-    return BoardTaskStatus.Todo;
-  }
-
   private static BoardTaskStatus CustomListStatus(int index, int count)
   {
     if (index == 0)
@@ -117,19 +55,24 @@ internal static class BoardRules
       : BoardTaskStatus.InProgress;
   }
 
+  /// <summary>
+  /// Validates a new board and, when the template is valid, returns the lists
+  /// it generates.
+  /// </summary>
   public static ValidationErrors ValidateBoard(
     string? name,
-    BoardTemplate? template,
-    string? templateError,
-    BoardListSeed[] listSeeds)
+    string? templateCode,
+    string[]? customListTitles,
+    out BoardTemplate? template,
+    out BoardListSeed[] listSeeds)
   {
     var errors = new ValidationErrors()
-      .Required("Name", name, "Board name", maxLength: 120);
+      .Required("Name", name, "Board name", maxLength: 120)
+      .RequiredCode("Template", templateCode, "Board template", out template);
 
-    if (templateError is not null)
-    {
-      errors.Add("Template", templateError);
-    }
+    listSeeds = template is null
+      ? []
+      : BuildListSeeds(template.Value, customListTitles);
 
     if (template == BoardTemplate.Custom && listSeeds.Length == 0)
     {
@@ -157,14 +100,15 @@ internal static class BoardRules
   public static ValidationErrors ValidateCard(
     string? title,
     string? description,
-    string? priorityError,
+    string? priorityCode,
     IReadOnlyCollection<string> labels,
     DateOnly? dueDate,
     int? estimatedMinutes,
-    DateOnly today)
-  {
-    var errors = ValidateCardTitle(title)
+    DateOnly today,
+    out BoardCardPriority? priority) =>
+    ValidateCardTitle(title)
       .MaxLength("Description", description, "Card description", 2000)
+      .Code("Priority", priorityCode, "Card priority", out priority)
       .AddIf(
         labels.Any(label => label.Length > 32),
         "Labels",
@@ -177,14 +121,6 @@ internal static class BoardRules
         estimatedMinutes is < MinEstimatedMinutes or > MaxEstimatedMinutes,
         "EstimatedMinutes",
         $"Effort must be between {MinEstimatedMinutes} and {MaxEstimatedMinutes} minutes.");
-
-    if (priorityError is not null)
-    {
-      errors.Add("Priority", priorityError);
-    }
-
-    return errors;
-  }
 
   public static string[] NormalizeLabels(string[]? labels) =>
     TextNormalizer.DistinctNonBlank(labels, MaxLabels);

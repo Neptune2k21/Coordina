@@ -4,6 +4,7 @@ using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Modules.Projects.Application;
 using Coordina.Api.Modules.Workspaces.Application;
+using Coordina.Api.Shared.Enums;
 using Coordina.Api.Shared.Text;
 
 namespace Coordina.Api.Modules.Boards.Application;
@@ -106,7 +107,7 @@ public sealed class BoardCardService(
       userId,
       request.Title ?? current.Title,
       request.Description ?? current.Description,
-      request.Priority is null ? current.Priority?.ToString() : request.Priority,
+      request.Priority ?? (current.Priority is null ? null : EnumCode.Format(current.Priority.Value)),
       request.ClearDueDate ? null : request.DueDate ?? current.DueDate,
       request.ClearEstimatedMinutes
         ? null
@@ -276,7 +277,6 @@ public sealed class BoardCardService(
       return access.Error;
     }
 
-    var parsedPriority = BoardRules.ParsePriority(priority, out var priorityError);
     var normalizedLabels = BoardRules.NormalizeLabels(labels);
     var normalizedAssignees = (assigneeIds ?? [])
       .Where(id => id != Guid.Empty)
@@ -285,11 +285,12 @@ public sealed class BoardCardService(
     var errors = BoardRules.ValidateCard(
       title,
       description,
-      priorityError,
+      priority,
       normalizedLabels,
       dueDate,
       estimatedMinutes,
-      clock.GetUtcToday());
+      clock.GetUtcToday(),
+      out var parsedPriority);
 
     if (normalizedAssignees.Length > 0)
     {

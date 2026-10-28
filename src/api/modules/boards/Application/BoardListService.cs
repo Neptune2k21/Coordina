@@ -1,5 +1,6 @@
 using Coordina.Api.Core.Results;
 using Coordina.Api.Modules.Boards.Contracts;
+using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Modules.Projects.Application;
 
 namespace Coordina.Api.Modules.Boards.Application;
@@ -28,15 +29,8 @@ public sealed class BoardListService(
       return access.Error;
     }
 
-    var errors = BoardRules.ValidateList(request.Title);
-    var taskStatus = BoardRules.ParseListStatus(
-      request.TaskStatus,
-      out var statusError);
-
-    if (statusError is not null)
-    {
-      errors.Add("TaskStatus", statusError);
-    }
+    var errors = BoardRules.ValidateList(request.Title)
+      .Code<BoardTaskStatus>("TaskStatus", request.TaskStatus, "List task status", out var taskStatus);
 
     if (errors.HasErrors)
     {
@@ -48,7 +42,7 @@ public sealed class BoardListService(
       projectId,
       boardId,
       request.Title!.Trim(),
-      taskStatus,
+      taskStatus ?? BoardTaskStatus.Todo,
       clock.GetUtcNow(),
       cancellationToken);
 
