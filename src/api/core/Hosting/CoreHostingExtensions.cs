@@ -26,6 +26,7 @@ public static class CoreHostingExtensions
     ArgumentNullException.ThrowIfNull(environment);
 
     services.TryAddSingleton(TimeProvider.System);
+    services.AddProblemDetails();
     services.AddCors(options =>
     {
       options.AddPolicy(WebAppCorsPolicy, policy =>
@@ -51,6 +52,13 @@ public static class CoreHostingExtensions
   public static WebApplication UseCore(this WebApplication app)
   {
     ArgumentNullException.ThrowIfNull(app);
+
+    // Development keeps the detailed exception page; elsewhere unhandled
+    // exceptions become a ProblemDetails 500 with a trace id and no internals.
+    if (!app.Environment.IsDevelopment())
+    {
+      app.UseExceptionHandler();
+    }
 
     app.UseCors(WebAppCorsPolicy);
     app.UseAuthentication();
