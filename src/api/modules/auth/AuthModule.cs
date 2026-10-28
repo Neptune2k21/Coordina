@@ -1,5 +1,6 @@
 using System.Text;
 using Coordina.Api.Core.Modules;
+using Coordina.Api.Core.Security;
 using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -42,6 +43,20 @@ public sealed class AuthModule : IModule
           IssuerSigningKey = signingKey,
           ValidateLifetime = true,
           ClockSkew = TimeSpan.FromSeconds(30)
+        };
+        options.Events = new JwtBearerEvents
+        {
+          // Endpoints bind CurrentUser from the token, so reject tokens that
+          // do not carry a usable user id at authentication time (401).
+          OnTokenValidated = context =>
+          {
+            if (context.Principal?.TryGetUserId(out _) != true)
+            {
+              context.Fail("Access token has no valid user identifier.");
+            }
+
+            return Task.CompletedTask;
+          }
         };
       });
   }

@@ -1,7 +1,13 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using Coordina.Api.Modules.Auth;
 using Coordina.Api.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Coordina.Api.Tests;
 
@@ -76,6 +82,26 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   public async Task Me_WithoutBearerToken_ReturnsUnauthorized()
   {
     var response = await _client.GetAsync("/auth/me");
+
+    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task ProtectedEndpoint_WithTokenWithoutUserId_ReturnsUnauthorized()
+  {
+    var options = factory.Services.GetRequiredService<AuthOptions>();
+    var token = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+      issuer: options.Issuer,
+      audience: options.Audience,
+      claims: [new Claim(ClaimTypes.NameIdentifier, "not-a-guid")],
+      expires: DateTime.UtcNow.AddMinutes(5),
+      signingCredentials: new SigningCredentials(
+        new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey)),
+        SecurityAlgorithms.HmacSha256)));
+    using var request = new HttpRequestMessage(HttpMethod.Get, "/workspaces");
+    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+    var response = await _client.SendAsync(request);
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }
