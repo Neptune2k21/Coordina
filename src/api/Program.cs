@@ -1,5 +1,5 @@
-using Coordina.Api.Infrastructure.Configuration;
-using Coordina.Api.Infrastructure.Persistence;
+using Coordina.Api.Core.Configuration;
+using Coordina.Api.Core.Persistence;
 using Coordina.Api.Modules.Auth;
 using Coordina.Api.Modules.Boards;
 using Coordina.Api.Modules.Health;

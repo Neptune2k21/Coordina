@@ -1,4 +1,4 @@
-using Coordina.Api.Infrastructure.Persistence;
+using Coordina.Api.Core.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
