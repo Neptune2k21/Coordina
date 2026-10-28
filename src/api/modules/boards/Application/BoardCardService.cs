@@ -233,7 +233,7 @@ public sealed class BoardCardService(
       return access.Error;
     }
 
-    if (!access.Value.CanManageDestructiveActions(userId))
+    if (!access.Value.CanManage(userId))
     {
       return Error.Forbidden(
         "Only workspace owners or project owners can delete cards.");
