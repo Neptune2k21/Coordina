@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Coordina.Api.Infrastructure.Persistence.Migrations
+namespace Coordina.Api.Core.Persistence.Migrations
 {
   /// <inheritdoc />
   public partial class AddProjectLifecycle : Migration

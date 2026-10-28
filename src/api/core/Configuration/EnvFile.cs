@@ -1,4 +1,4 @@
-namespace Coordina.Api.Infrastructure.Configuration;
+namespace Coordina.Api.Core.Configuration;
 
 public static class EnvFile
 {

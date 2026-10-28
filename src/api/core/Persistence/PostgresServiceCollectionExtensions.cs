@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Coordina.Api.Infrastructure.Persistence;
+namespace Coordina.Api.Core.Persistence;
 
-public static class PostgresModule
+public static class PostgresServiceCollectionExtensions
 {
   public static IServiceCollection AddPostgres(
     this IServiceCollection services,

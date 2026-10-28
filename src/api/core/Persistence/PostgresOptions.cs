@@ -1,6 +1,6 @@
 using Npgsql;
 
-namespace Coordina.Api.Infrastructure.Persistence;
+namespace Coordina.Api.Core.Persistence;
 
 public sealed class PostgresOptions
 {
