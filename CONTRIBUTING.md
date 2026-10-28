@@ -69,17 +69,30 @@ src/api/modules/<feature>
 ├── Contracts
 ├── Domain
 ├── Infrastructure
+├── <Feature>Module.cs
 └── <Feature>Endpoints.cs
 ```
+
+Modules build on two foundation layers instead of re-implementing plumbing:
+`src/api/core` (module contract, results, HTTP mapping, current user,
+persistence) and `src/api/shared` (validation, text and enum helpers). See
+`docs/architecture.mdx` for the full list.
 
 When adding backend behavior:
 
 1. Put business rules in `Application`.
 2. Keep HTTP request and response shapes in `Contracts`.
-3. Keep EF entities and database queries in `Infrastructure`.
-4. Return explicit result statuses from services instead of throwing for normal user-facing outcomes.
-5. Add integration tests for endpoint behavior.
-6. Add migrations when persistence changes.
+3. Keep EF entities, their `IEntityTypeConfiguration`, and database queries in `Infrastructure`.
+4. Return `Result`/`Result<T>` from services (`return Error.NotFound();`) instead of throwing for normal user-facing outcomes.
+5. Build field errors with `ValidationErrors`, normalize input with `TextNormalizer`, and format enums with `EnumCode`.
+6. In endpoints, take `CurrentUser` and map results with `ToOkResult`, `ToCreatedResult`, or `ToNoContentResult`.
+7. Inject `TimeProvider` instead of reading `DateTimeOffset.UtcNow`.
+8. Register a new module by implementing `IModule` and adding it to `AddModules` in `Program.cs`.
+9. Add integration tests for endpoint behavior.
+10. Add migrations when persistence changes.
+
+Never reference `shared` or a module from `core`, or a module from `shared`;
+`LayerDependencyTests` enforces it.
 
 Authorization rules must be enforced by the API. Frontend checks may improve UX, but they are not security boundaries.
 
