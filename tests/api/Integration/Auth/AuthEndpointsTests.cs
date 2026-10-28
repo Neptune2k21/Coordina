@@ -12,16 +12,14 @@ using Microsoft.IdentityModel.Tokens;
 namespace Coordina.Api.Tests;
 
 public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
-    : IClassFixture<ApiTestApplicationFactory>
+  : ApiTest(factory)
 {
-  private readonly HttpClient _client = factory.CreateClient();
-
   [Fact]
   public async Task Register_ReturnsTokenAndCurrentUser()
   {
-    var email = UniqueEmail();
+    var email = ApiTestClient.UniqueEmail("ada");
 
-    var response = await _client.PostAsJsonAsync("/auth/register", new
+    var response = await Api.Http.PostAsJsonAsync("/auth/register", new
     {
       name = "Ada Lovelace",
       email,
@@ -40,10 +38,10 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   [Fact]
   public async Task Login_WithValidCredentials_ReturnsToken()
   {
-    var email = UniqueEmail();
+    var email = ApiTestClient.UniqueEmail("ada");
     await RegisterAsync(email);
 
-    var response = await _client.PostAsJsonAsync("/auth/login", new
+    var response = await Api.Http.PostAsJsonAsync("/auth/login", new
     {
       email,
       password = "Password123!"
@@ -60,7 +58,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   [Fact]
   public async Task Me_WithBearerToken_ReturnsCurrentUser()
   {
-    var email = UniqueEmail();
+    var email = ApiTestClient.UniqueEmail("ada");
     var auth = await RegisterAsync(email);
 
     using var request = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
@@ -68,7 +66,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
       "Bearer",
       auth.AccessToken);
 
-    var response = await _client.SendAsync(request);
+    var response = await Api.Http.SendAsync(request);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -81,7 +79,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   [Fact]
   public async Task Me_WithoutBearerToken_ReturnsUnauthorized()
   {
-    var response = await _client.GetAsync("/auth/me");
+    var response = await Api.Http.GetAsync("/auth/me");
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }
@@ -89,7 +87,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   [Fact]
   public async Task ProtectedEndpoint_WithTokenWithoutUserId_ReturnsUnauthorized()
   {
-    var options = factory.Services.GetRequiredService<AuthOptions>();
+    var options = Factory.Services.GetRequiredService<AuthOptions>();
     var token = new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
       issuer: options.Issuer,
       audience: options.Audience,
@@ -101,7 +99,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
     using var request = new HttpRequestMessage(HttpMethod.Get, "/workspaces");
     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-    var response = await _client.SendAsync(request);
+    var response = await Api.Http.SendAsync(request);
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }
@@ -109,10 +107,10 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   [Fact]
   public async Task Register_WithDuplicateEmail_ReturnsConflict()
   {
-    var email = UniqueEmail();
+    var email = ApiTestClient.UniqueEmail("ada");
     await RegisterAsync(email);
 
-    var response = await _client.PostAsJsonAsync("/auth/register", new
+    var response = await Api.Http.PostAsJsonAsync("/auth/register", new
     {
       name = "Ada Lovelace",
       email,
@@ -125,7 +123,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   [Fact]
   public async Task Register_WithInvalidPayload_ReturnsValidationProblem()
   {
-    var response = await _client.PostAsJsonAsync("/auth/register", new
+    var response = await Api.Http.PostAsJsonAsync("/auth/register", new
     {
       name = "",
       email = "not-an-email",
@@ -137,7 +135,7 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
 
   private async Task<AuthResponse> RegisterAsync(string email)
   {
-    var response = await _client.PostAsJsonAsync("/auth/register", new
+    var response = await Api.Http.PostAsJsonAsync("/auth/register", new
     {
       name = "Ada Lovelace",
       email,
@@ -151,17 +149,4 @@ public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
     Assert.NotNull(payload);
     return payload;
   }
-
-  private static string UniqueEmail() =>
-    $"ada-{Guid.NewGuid():N}@coordina.test";
-
-  private sealed record AuthResponse(
-    string AccessToken,
-    DateTimeOffset ExpiresAt,
-    CurrentUserResponse User);
-
-  private sealed record CurrentUserResponse(
-    string Id,
-    string Email,
-    string Name);
 }

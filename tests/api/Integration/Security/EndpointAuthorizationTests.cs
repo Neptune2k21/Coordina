@@ -11,7 +11,7 @@ namespace Coordina.Api.Tests.Integration.Security;
 /// listed here, so a new anonymous route is visible in review.
 /// </summary>
 public sealed class EndpointAuthorizationTests(ApiTestApplicationFactory factory)
-  : IClassFixture<ApiTestApplicationFactory>
+  : ApiTest(factory)
 {
   private static readonly string[] AnonymousEndpoints =
   [
@@ -56,7 +56,7 @@ public sealed class EndpointAuthorizationTests(ApiTestApplicationFactory factory
     Assert.Equal(AnonymousEndpoints.Order(StringComparer.Ordinal), anonymous);
   }
 
-  private RouteEndpoint[] Endpoints() => factory.Services
+  private RouteEndpoint[] Endpoints() => Factory.Services
     .GetRequiredService<EndpointDataSource>()
     .Endpoints
     .OfType<RouteEndpoint>()
