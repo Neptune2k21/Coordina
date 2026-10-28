@@ -1,15 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Coordina.Api.Core.Results;
 
 /// <summary>
 /// Expected failure of a use case. Modules return it instead of throwing so
 /// endpoints can translate it into a consistent HTTP response.
 /// </summary>
-[SuppressMessage(
-  "Naming",
-  "CA1716:Identifiers should not match keywords",
-  Justification = "C#-only codebase; Error is the conventional name for a result failure.")]
 public sealed class Error
 {
   private static readonly IReadOnlyDictionary<string, string[]> NoFields =
