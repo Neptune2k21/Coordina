@@ -1,4 +1,5 @@
 using System.Text;
+using Coordina.Api.Core.Modules;
 using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -6,10 +7,10 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Coordina.Api.Modules.Auth;
 
-public static class AuthModule
+public sealed class AuthModule : IModule
 {
-  public static IServiceCollection AddAuthModule(
-    this IServiceCollection services,
+  public void AddServices(
+    IServiceCollection services,
     IConfiguration configuration)
   {
     var authOptions = configuration
@@ -43,23 +44,8 @@ public static class AuthModule
           ClockSkew = TimeSpan.FromSeconds(30)
         };
       });
-
-    return services;
   }
 
-  public static IServiceCollection AddInMemoryAuthStoreForTests(
-    this IServiceCollection services)
-  {
-    var userStoreDescriptor = services.SingleOrDefault(
-      descriptor => descriptor.ServiceType == typeof(IUserStore));
-
-    if (userStoreDescriptor is not null)
-    {
-      services.Remove(userStoreDescriptor);
-    }
-
-    services.AddSingleton<IUserStore, InMemoryUserStore>();
-
-    return services;
-  }
+  public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
+    endpoints.MapAuthEndpoints();
 }
