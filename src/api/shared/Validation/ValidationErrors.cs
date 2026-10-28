@@ -1,4 +1,5 @@
 using Coordina.Api.Core.Results;
+using Coordina.Api.Shared.Enums;
 
 namespace Coordina.Api.Shared.Validation;
 
@@ -69,6 +70,50 @@ public sealed class ValidationErrors
     value?.Trim().Length > maxLength
       ? Add(field, $"{label} must be {maxLength} characters or fewer.")
       : this;
+
+  /// <summary>
+  /// Parses an optional enum code. Blank input is accepted and yields
+  /// <c>null</c>; an unknown code reports the list of accepted codes.
+  /// </summary>
+  public ValidationErrors Code<TEnum>(
+    string field,
+    string? value,
+    string label,
+    out TEnum? parsed)
+    where TEnum : struct, Enum
+  {
+    parsed = null;
+
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      return this;
+    }
+
+    if (EnumCode.TryParse<TEnum>(value, out var code))
+    {
+      parsed = code;
+      return this;
+    }
+
+    return Add(field, $"{label} must be {EnumCode.Describe<TEnum>()}.");
+  }
+
+  /// <summary>Same as <see cref="Code{TEnum}"/>, but blank input is an error.</summary>
+  public ValidationErrors RequiredCode<TEnum>(
+    string field,
+    string? value,
+    string label,
+    out TEnum? parsed)
+    where TEnum : struct, Enum
+  {
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      parsed = null;
+      return Add(field, $"{label} is required.");
+    }
+
+    return Code(field, value, label, out parsed);
+  }
 
   public IReadOnlyDictionary<string, string[]> ToDictionary() =>
     errors.ToDictionary(

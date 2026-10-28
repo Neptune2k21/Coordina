@@ -49,6 +49,12 @@ public sealed class EnumCodeTests
   }
 
   [Fact]
+  public void Describe_ListsCodesInDeclarationOrder()
+  {
+    Assert.Equal("TODO, IN_PROGRESS, or AGILE_SCRUM", EnumCode.Describe<SampleStatus>());
+  }
+
+  [Fact]
   public void Parse_WithUnknownCode_Throws()
   {
     Assert.Throws<FormatException>(() => EnumCode.Parse<SampleStatus>("NOPE"));

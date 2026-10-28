@@ -38,6 +38,13 @@ public static class EnumCode
       ? value
       : throw new FormatException($"Unknown {typeof(TEnum).Name} code '{code}'.");
 
+  /// <summary>
+  /// Lists the accepted codes in declaration order for error messages, for
+  /// example <c>LOW, MEDIUM, or HIGH</c>.
+  /// </summary>
+  public static string Describe<TEnum>()
+    where TEnum : struct, Enum => Codes<TEnum>.Description;
+
   private static string ToKey(string code) =>
     code.Trim().Replace("_", string.Empty, StringComparison.Ordinal)
       .ToUpperInvariant();
@@ -71,5 +78,19 @@ public static class EnumCode
 
     public static readonly FrozenDictionary<string, TEnum> ByKey = ByValue
       .ToFrozenDictionary(entry => ToKey(entry.Value), entry => entry.Key);
+
+    public static readonly string Description = JoinAlternatives(Enum
+      .GetValues<TEnum>()
+      .Distinct()
+      .Select(value => ByValue[value])
+      .ToArray());
   }
+
+  private static string JoinAlternatives(string[] codes) => codes.Length switch
+  {
+    0 => string.Empty,
+    1 => codes[0],
+    2 => $"{codes[0]} or {codes[1]}",
+    _ => $"{string.Join(", ", codes[..^1])}, or {codes[^1]}"
+  };
 }
