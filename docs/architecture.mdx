@@ -39,16 +39,17 @@ and the primitives every endpoint relies on:
 | Folder | Provides |
 | --- | --- |
 | `Modules` | `IModule` (`AddServices`, `MapEndpoints`) and `AddModules`/`MapModules` |
-| `Hosting` | `AddCore`/`UseCore`: CORS, persistence, authorization, OpenAPI, `TimeProvider` |
+| `Hosting` | `AddCore`/`UseCore`: CORS, persistence, authorization, OpenAPI, `TimeProvider`, ProblemDetails for unhandled exceptions |
 | `Results` | `Result`, `Result<T>` and `Error` (validation, unauthorized, forbidden, not found, conflict) |
-| `Http` | `ToOkResult`, `ToCreatedResult`, `ToNoContentResult`: the only result-to-HTTP mapping |
+| `Http` | `MapApiGroup` (authenticated by default) and `ToOkResult`, `ToCreatedResult`, `ToNoContentResult`: the only result-to-HTTP mapping |
 | `Security` | `CurrentUser`, bound straight from the validated JWT as an endpoint parameter |
 | `Time` | `GetUtcToday` for date rules on top of the injected `TimeProvider` |
 | `Persistence` | `CoordinaDbContext`, Postgres options and the EF migrations |
 | `Configuration` | `.env` loading |
 
 **`src/api/shared` is the toolbox.** Helpers with no infrastructure dependency:
-`ValidationErrors` (field errors with the API's standard wording),
+`ValidationErrors` (field errors with the API's standard wording, including
+enum fields whose "must be A, B, or C" message is generated from the enum),
 `TextNormalizer` (trim-to-null, distinct non-blank lists) and `EnumCode`
 (UPPER_SNAKE_CASE codes such as `IN_PROGRESS`, used for API payloads and
 database columns alike).
@@ -81,10 +82,24 @@ public async Task<Result<WorkspaceResponse>> CreateAsync(...)
 }
 ```
 
+Errors always take one of these shapes:
+
+| Case | Status | Body |
+| --- | --- | --- |
+| Validation | 400 | `ValidationProblemDetails` with field `errors` |
+| Missing or invalid token | 401 | empty |
+| Forbidden | 403 | empty |
+| Not found / conflict | 404 / 409 | `{ "message": "..." }` when a message is set |
+| Unhandled exception | 500 | `ProblemDetails` with `traceId`, no exception details |
+
 What belongs where: something every module needs to plug in or answer HTTP
 goes to `core`; a reusable, side-effect-free helper goes to `shared`; anything
 that knows about a business concept (workspaces, projects, boards) stays in its
 module. Promote code to `shared` once a second module needs it, not before.
+
+The conventions above are enforced by tests (`LayerDependencyTests`,
+`ModuleConventionTests`, `EndpointAuthorizationTests`,
+`ModuleRegistrationTests`); `CONTRIBUTING.md` lists what each one checks.
 
 ## Backend rules
 
