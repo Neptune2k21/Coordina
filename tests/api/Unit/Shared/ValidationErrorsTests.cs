@@ -68,4 +68,48 @@ public sealed class ValidationErrorsTests
     Assert.Equal(ErrorKind.Validation, error.Kind);
     Assert.Equal(["Title is required."], error.Fields["Title"]);
   }
+
+  public enum Priority
+  {
+    Low,
+    High
+  }
+
+  [Fact]
+  public void Code_WithBlankValue_IsAcceptedAsMissing()
+  {
+    var errors = new ValidationErrors()
+      .Code<Priority>("Priority", " ", "Priority", out var parsed);
+
+    Assert.False(errors.HasErrors);
+    Assert.Null(parsed);
+  }
+
+  [Fact]
+  public void Code_WithKnownValue_ReturnsParsedEnum()
+  {
+    new ValidationErrors().Code<Priority>("Priority", "high", "Priority", out var parsed);
+
+    Assert.Equal(Priority.High, parsed);
+  }
+
+  [Fact]
+  public void Code_WithUnknownValue_ListsAcceptedCodes()
+  {
+    var errors = new ValidationErrors()
+      .Code<Priority>("Priority", "urgent", "Priority", out _);
+
+    Assert.Equal(
+      ["Priority must be LOW or HIGH."],
+      errors.ToDictionary()["Priority"]);
+  }
+
+  [Fact]
+  public void RequiredCode_WithBlankValue_ReportsRequired()
+  {
+    var errors = new ValidationErrors()
+      .RequiredCode<Priority>("Priority", null, "Priority", out _);
+
+    Assert.Equal(["Priority is required."], errors.ToDictionary()["Priority"]);
+  }
 }
