@@ -54,15 +54,12 @@ public sealed class BoardCatalogService(
       return access.Error;
     }
 
-    var template = BoardRules.ParseTemplate(request.Template, out var templateError);
-    var listSeeds = template is null
-      ? []
-      : BoardRules.BuildListSeeds(template.Value, request.CustomListTitles);
     var errors = BoardRules.ValidateBoard(
       request.Name,
-      template,
-      templateError,
-      listSeeds);
+      request.Template,
+      request.CustomListTitles,
+      out var template,
+      out var listSeeds);
 
     if (errors.HasErrors)
     {

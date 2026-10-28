@@ -134,14 +134,12 @@ public sealed class ProjectService(
 
     var project = access.Value.Project;
 
-    var status = project.Status;
+    var statusErrors = new ValidationErrors()
+      .Code<ProjectStatus>(nameof(request.Status), request.Status, "Project status", out var status);
 
-    if (!string.IsNullOrWhiteSpace(request.Status)
-      && !EnumCode.TryParse(request.Status, out status))
+    if (statusErrors.HasErrors)
     {
-      return Error.Validation(
-        nameof(request.Status),
-        "Project status must be ACTIVE, ARCHIVED, or COMPLETED.");
+      return statusErrors.ToError();
     }
 
     var ownerId = request.ProjectOwnerId ?? project.ProjectOwnerId;
@@ -163,7 +161,7 @@ public sealed class ProjectService(
       request.Icon is null ? project.Icon : TextNormalizer.TrimToNull(request.Icon),
       request.Color is null ? project.Color : TextNormalizer.TrimToNull(request.Color),
       ownerId,
-      status);
+      status ?? project.Status);
 
     var errors = ValidateFields(
       update.Name,
