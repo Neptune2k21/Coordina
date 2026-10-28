@@ -10,10 +10,9 @@ public static class BoardEndpoints
   public static IEndpointRouteBuilder MapBoardEndpoints(
     this IEndpointRouteBuilder app)
   {
-    var projectGroup = app
-      .MapGroup("/workspaces/{workspaceId:guid}/projects/{projectId:guid}")
-      .RequireAuthorization()
-      .WithTags("Boards");
+    var projectGroup = app.MapApiGroup(
+      "/workspaces/{workspaceId:guid}/projects/{projectId:guid}",
+      "Boards");
 
     projectGroup.MapGet("/board", GetDefault)
       .WithSummary("Get default project board")

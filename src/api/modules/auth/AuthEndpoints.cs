@@ -10,18 +10,17 @@ public static class AuthEndpoints
   public static IEndpointRouteBuilder MapAuthEndpoints(
     this IEndpointRouteBuilder app)
   {
-    var group = app
-      .MapGroup("/auth")
-      .WithTags("Auth");
+    var group = app.MapApiGroup("/auth", "Auth");
 
     group.MapPost("/register", Register)
+      .AllowAnonymous()
       .WithSummary("Create a workspace account")
       .WithDescription("Creates a user account and returns an access token.");
     group.MapPost("/login", Login)
+      .AllowAnonymous()
       .WithSummary("Sign in")
       .WithDescription("Authenticates a user and returns an access token.");
     group.MapGet("/me", GetCurrentUser)
-      .RequireAuthorization()
       .WithSummary("Get current user")
       .WithDescription("Returns the user attached to the bearer token.");
 

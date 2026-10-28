@@ -8,6 +8,7 @@ public static class HealthEndpoints
     {
       message = "Welcome to the Coordina API."
     }))
+    .AllowAnonymous()
     .WithTags("System")
     .WithSummary("API welcome message");
 
@@ -17,6 +18,7 @@ public static class HealthEndpoints
       service = "Coordina API",
       time = clock.GetUtcNow().UtcDateTime
     }))
+    .AllowAnonymous()
     .WithTags("System")
     .WithSummary("Health check");
 

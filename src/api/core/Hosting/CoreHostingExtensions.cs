@@ -55,11 +55,12 @@ public static class CoreHostingExtensions
     app.UseCors(WebAppCorsPolicy);
     app.UseAuthentication();
     app.UseAuthorization();
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference("/api-docs", options =>
     {
       options.Title = "Coordina API";
-    });
+    })
+    .AllowAnonymous();
 
     return app;
   }

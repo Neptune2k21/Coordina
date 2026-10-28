@@ -10,10 +10,7 @@ public static class WorkspacesEndpoints
   public static IEndpointRouteBuilder MapWorkspacesEndpoints(
     this IEndpointRouteBuilder app)
   {
-    var group = app
-      .MapGroup("/workspaces")
-      .RequireAuthorization()
-      .WithTags("Workspaces");
+    var group = app.MapApiGroup("/workspaces", "Workspaces");
 
     group.MapPost("/", Create)
       .WithSummary("Create workspace")
