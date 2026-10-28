@@ -139,7 +139,7 @@ public sealed class ProjectService(
 
     if (project.Status == ProjectStatus.Completed)
     {
-      return Error.Conflict(ProjectAccessCheck.ReadOnlyMessage);
+      return Error.Conflict(ProjectAccess.ReadOnlyMessage);
     }
 
     if (!CanManageProject(role.Value, project, userId))
@@ -228,7 +228,7 @@ public sealed class ProjectService(
 
     if (project.Status == ProjectStatus.Completed)
     {
-      return Error.Conflict(ProjectAccessCheck.ReadOnlyMessage);
+      return Error.Conflict(ProjectAccess.ReadOnlyMessage);
     }
 
     if (!CanManageProject(role.Value, project, userId))
