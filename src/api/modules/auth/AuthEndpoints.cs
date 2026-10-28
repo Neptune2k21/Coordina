@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Coordina.Api.Core.Http;
 using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Contracts;
 
@@ -34,17 +35,7 @@ public static class AuthEndpoints
   {
     var result = await authService.RegisterAsync(request, cancellationToken);
 
-    return result.Status switch
-    {
-      AuthResultStatus.Success => Results.Created("/auth/me", result.Value),
-      AuthResultStatus.ValidationError => Results.ValidationProblem(
-        result.Errors ?? new Dictionary<string, string[]>()),
-      AuthResultStatus.Conflict => Results.Conflict(new
-      {
-        message = result.Message
-      }),
-      _ => Results.BadRequest()
-    };
+    return result.ToCreatedResult(_ => "/auth/me");
   }
 
   private static async Task<IResult> Login(
@@ -54,14 +45,7 @@ public static class AuthEndpoints
   {
     var result = await authService.LoginAsync(request, cancellationToken);
 
-    return result.Status switch
-    {
-      AuthResultStatus.Success => Results.Ok(result.Value),
-      AuthResultStatus.ValidationError => Results.ValidationProblem(
-        result.Errors ?? new Dictionary<string, string[]>()),
-      AuthResultStatus.Unauthorized => Results.Unauthorized(),
-      _ => Results.BadRequest()
-    };
+    return result.ToOkResult();
   }
 
   private static IResult GetCurrentUser(ClaimsPrincipal user)
