@@ -8,7 +8,7 @@ public sealed record ProjectAccess(WorkspaceRole Role, Project Project)
 {
   public const string ReadOnlyMessage = "Completed projects are read-only.";
 
-  public bool CanManageDestructiveActions(Guid userId) =>
+  public bool CanManage(Guid userId) =>
     Role == WorkspaceRole.Owner || Project.ProjectOwnerId == userId;
 }
 

@@ -12,6 +12,7 @@ namespace Coordina.Api.Modules.Projects.Application;
 public sealed class ProjectService(
   IProjectStore projects,
   IWorkspaceStore workspaces,
+  IProjectAccessGuard projectAccess,
   TimeProvider clock) : IProjectService
 {
   private const string OwnerOutsideWorkspaceMessage =
@@ -96,21 +97,15 @@ public sealed class ProjectService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var role = await FindRoleAsync(workspaceId, userId, cancellationToken);
-
-    if (role is null)
-    {
-      return Error.NotFound();
-    }
-
-    var project = await projects.FindInWorkspaceAsync(
+    var access = await projectAccess.AuthorizeReadAsync(
       workspaceId,
       projectId,
+      userId,
       cancellationToken);
 
-    return project is null
-      ? Error.NotFound()
-      : Result.Success(ToResponse(project));
+    return access.IsSuccess
+      ? Result.Success(ToResponse(access.Value.Project))
+      : access.Error;
   }
 
   public async Task<Result<ProjectResponse>> UpdateAsync(
@@ -120,33 +115,24 @@ public sealed class ProjectService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var role = await FindRoleAsync(workspaceId, userId, cancellationToken);
-
-    if (role is null)
-    {
-      return Error.NotFound();
-    }
-
-    var project = await projects.FindInWorkspaceAsync(
+    var access = await projectAccess.AuthorizeWriteAsync(
       workspaceId,
       projectId,
+      userId,
       cancellationToken);
 
-    if (project is null)
+    if (!access.IsSuccess)
     {
-      return Error.NotFound();
+      return access.Error;
     }
 
-    if (project.Status == ProjectStatus.Completed)
-    {
-      return Error.Conflict(ProjectAccess.ReadOnlyMessage);
-    }
-
-    if (!CanManageProject(role.Value, project, userId))
+    if (!access.Value.CanManage(userId))
     {
       return Error.Forbidden(
         "Only workspace owners or project owners can update projects.");
     }
+
+    var project = access.Value.Project;
 
     var status = project.Status;
 
@@ -209,33 +195,24 @@ public sealed class ProjectService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var role = await FindRoleAsync(workspaceId, userId, cancellationToken);
-
-    if (role is null)
-    {
-      return Error.NotFound();
-    }
-
-    var project = await projects.FindInWorkspaceAsync(
+    var access = await projectAccess.AuthorizeWriteAsync(
       workspaceId,
       projectId,
+      userId,
       cancellationToken);
 
-    if (project is null)
+    if (!access.IsSuccess)
     {
-      return Error.NotFound();
+      return access.Error;
     }
 
-    if (project.Status == ProjectStatus.Completed)
-    {
-      return Error.Conflict(ProjectAccess.ReadOnlyMessage);
-    }
-
-    if (!CanManageProject(role.Value, project, userId))
+    if (!access.Value.CanManage(userId))
     {
       return Error.Forbidden(
         "Only workspace owners or project owners can archive projects.");
     }
+
+    var project = access.Value.Project;
 
     var archived = await projects.ArchiveInWorkspaceAsync(
       workspaceId,
@@ -278,12 +255,6 @@ public sealed class ProjectService(
     Guid userId,
     CancellationToken cancellationToken) =>
     workspaces.FindUserRoleAsync(workspaceId, userId, cancellationToken);
-
-  private static bool CanManageProject(
-    WorkspaceRole role,
-    Project project,
-    Guid userId) =>
-    role == WorkspaceRole.Owner || project.ProjectOwnerId == userId;
 
   private static ValidationErrors ValidateFields(
     string? name,
