@@ -13,14 +13,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Coordina.Api.Tests.Integration.Health;
 
 public sealed class UnhandledExceptionTests(ApiTestApplicationFactory factory)
-  : IClassFixture<ApiTestApplicationFactory>
+  : ApiTest(factory)
 {
   private const string SecretMessage = "database password leaked";
 
   [Fact]
   public async Task UnhandledException_ReturnsProblemDetailsWithoutInternals()
   {
-    using var client = factory
+    using var client = Factory
       .WithWebHostBuilder(builder => builder.ConfigureTestServices(
         services => services.AddSingleton<IModule>(new ThrowingModule())))
       .CreateClient();
