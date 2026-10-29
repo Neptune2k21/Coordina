@@ -265,7 +265,7 @@ The Makefile is the main local interface.
 
 ## Quality Gate
 
-The CI workflow runs on pushes and pull requests targeting `master` and `develop`.
+The CI workflow runs on pushes and pull requests targeting `master`.
 
 ```bash
 make quality
