@@ -1,9 +1,5 @@
 export type BoardTemplate =
-  | "BASIC"
-  | "AGILE_SCRUM"
-  | "BUG_TRACKING"
-  | "PRODUCT_ROADMAP"
-  | "CUSTOM"
+  "BASIC" | "AGILE_SCRUM" | "BUG_TRACKING" | "PRODUCT_ROADMAP" | "CUSTOM"
 
 export type BoardTemplateDefinition = {
   id: BoardTemplate
