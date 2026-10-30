@@ -7,7 +7,7 @@
       <img src="https://github.com/Neptune2k21/Coordina/actions/workflows/quality.yml/badge.svg?branch=master" alt="Quality workflow status" />
     </a>
     <img src="https://img.shields.io/badge/status-pre--MVP-111827?style=flat-square" alt="Project status: pre-MVP" />
-    <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="MIT License" />
+    <img src="https://img.shields.io/badge/license-AGPL--3.0-111827?style=flat-square" alt="AGPL-3.0 License" />
   </p>
 </div>
 
@@ -130,4 +130,10 @@ Run the documentation workflow locally with `make docs`. Mintlify uses the repos
 
 ## License
 
-Coordina is released under the [MIT License](LICENSE).
+Copyright (C) 2026 Neptune2k21 and contributors.
+
+Coordina is free software released under the [GNU Affero General Public License v3.0](LICENSE)
+(`AGPL-3.0-only`). You can use, modify and self-host it. If you run a modified
+version as a network service, you must make your source code available to its users.
+
+Versions published before the switch to AGPL-3.0 remain available under the MIT License.
