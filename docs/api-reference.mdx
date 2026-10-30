@@ -31,6 +31,20 @@ curl -X POST http://localhost:5050/auth/register \
   }'
 ```
 
+## Health checks
+
+Both endpoints are anonymous and answer `text/plain` (`Healthy` or `Unhealthy`).
+They are not part of the OpenAPI contract.
+
+| Endpoint | Checks | Use it for |
+| --- | --- | --- |
+| `GET /health/live` | Nothing: the process answers requests | Liveness probes. A failure means the process should be restarted |
+| `GET /health/ready` | PostgreSQL connectivity | Readiness probes, load balancers, uptime monitors, container healthchecks. Answers `503` while the database is unreachable |
+
+```bash
+curl -i http://localhost:5050/health/ready
+```
+
 ## Production docs
 
 When the API has a public base URL, add that URL to the OpenAPI `servers`
@@ -67,7 +81,7 @@ Current modules:
 | `workspaces` | Workspace lifecycle, invitations, membership, and authorization rules |
 | `projects` | Workspace-owned projects with tenant-scoped reads and owner-only deletion |
 | `boards` | Project boards: templates, lists with explicit workflow status, cards, assignees, collaboration, and dependencies. Board cards are the single source of truth for project work |
-| `health` | Runtime health endpoint |
+| `health` | Liveness (`/health/live`) and readiness (`/health/ready`, checks PostgreSQL) endpoints |
 
 
 ### API endpoints

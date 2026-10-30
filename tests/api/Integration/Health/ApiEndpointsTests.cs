@@ -20,19 +20,13 @@ public sealed class ApiEndpointsTests(ApiTestApplicationFactory factory)
   }
 
   [Fact]
-  public async Task Health_ReturnsServiceStatus()
+  public async Task HealthLive_ReturnsHealthy()
   {
-    var response = await Api.Http.GetAsync("/health");
+    var response = await Api.Http.GetAsync("/health/live");
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-    var payload = await response.Content.ReadFromJsonAsync<HealthResponse>();
-    Assert.NotNull(payload);
-    Assert.Equal("ok", payload.Status);
-    Assert.Equal("Coordina API", payload.Service);
+    Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
   }
 
   private sealed record WelcomeResponse(string Message);
-
-  private sealed record HealthResponse(string Status, string Service, DateTime Time);
 }

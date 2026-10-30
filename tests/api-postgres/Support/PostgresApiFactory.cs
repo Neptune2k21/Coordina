@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Coordina.Api.Postgres.Tests.Support;
 
-public sealed class PostgresApiFactory(PostgresDatabase database)
+public sealed class PostgresApiFactory(string connectionString)
   : WebApplicationFactory<Program>
 {
   protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -17,7 +17,7 @@ public sealed class PostgresApiFactory(PostgresDatabase database)
     builder.ConfigureTestServices(services =>
     {
       services.AddDbContext<CoordinaDbContext>(options =>
-        options.UseNpgsql(database.ConnectionString));
+        options.UseNpgsql(connectionString));
     });
   }
 }
