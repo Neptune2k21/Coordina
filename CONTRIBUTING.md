@@ -326,6 +326,11 @@ Reviews should focus on correctness first:
 
 Keep feedback specific and actionable.
 
+## License
+
+Coordina is licensed under [AGPL-3.0-only](LICENSE). By submitting a pull
+request, you agree that your contribution is licensed under the same terms.
+
 ## Releases
 
 Maintainers release from `master` by pushing a `vX.Y.Z` tag and drafting a
