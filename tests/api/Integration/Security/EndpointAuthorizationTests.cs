@@ -16,7 +16,8 @@ public sealed class EndpointAuthorizationTests(ApiTestApplicationFactory factory
   private static readonly string[] AnonymousEndpoints =
   [
     "GET /",
-    "GET /health",
+    "GET /health/live",
+    "GET /health/ready",
     "POST /auth/register",
     "POST /auth/login",
     "GET /api-docs/*",

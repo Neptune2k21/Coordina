@@ -28,7 +28,7 @@ public abstract class PostgresApiTest(PostgresContainerFixture postgres)
   public async Task InitializeAsync()
   {
     _database = await Postgres.CreateMigratedDatabaseAsync();
-    _factory = new PostgresApiFactory(_database);
+    _factory = new PostgresApiFactory(_database.ConnectionString);
     _api = new ApiClient(_factory.CreateClient());
   }
 

@@ -18,7 +18,7 @@ export default defineConfig({
     {
       command:
         "dotnet run --project ../api/Coordina.Api.csproj --urls http://127.0.0.1:5051",
-      url: "http://127.0.0.1:5051/health",
+      url: "http://127.0.0.1:5051/health/live",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
