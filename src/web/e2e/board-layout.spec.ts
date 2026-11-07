@@ -1,49 +1,9 @@
 import { expect, test, type Page } from "@playwright/test"
 
-const apiUrl = "http://127.0.0.1:5051"
-const password = "Password123!"
+import { openSeededProject, seedBoard } from "./support/seeded-board"
 
 async function openAgileBoard(page: Page) {
-  const email = `layout-${Date.now()}@coordina.test`
-  const post = async (path: string, data: object, token?: string) => {
-    const response = await page.request.post(`${apiUrl}${path}`, {
-      data,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    expect(response.ok()).toBe(true)
-
-    return response.json()
-  }
-  const { accessToken } = await post("/auth/register", {
-    name: "Layout Tester",
-    email,
-    password,
-  })
-  const workspace = await post(
-    "/workspaces",
-    { name: "Layout team" },
-    accessToken
-  )
-  const project = await post(
-    `/workspaces/${workspace.id}/projects`,
-    { name: "Layout", description: "Board layout" },
-    accessToken
-  )
-  await post(
-    `/workspaces/${workspace.id}/projects/${project.id}/boards`,
-    { name: "Layout board", template: "AGILE_SCRUM" },
-    accessToken
-  )
-
-  await page.goto("/login")
-  await page.getByLabel("Email").fill(email)
-  await page.getByLabel("Password").fill(password)
-  await page
-    .locator("form")
-    .getByRole("button", { name: /sign in to coordina/i })
-    .click()
-  await page.waitForURL(/\/app/)
-  await page.goto(`/app/projects/${project.id}`)
+  await openSeededProject(page, await seedBoard(page, "AGILE_SCRUM"))
   await expect(page.getByRole("button", { name: "Insights" })).toBeVisible()
 }
 

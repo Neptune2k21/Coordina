@@ -11,7 +11,9 @@ internal static class RepositoryPaths
     "/bin/",
     "/obj/",
     "/node_modules/",
-    "/dist/"
+    "/dist/",
+    // Generated from contracts/openapi.json by 'make contract'.
+    "src/web/src/types/api-contract.ts"
   ];
 
   public static bool IsGenerated(string path) =>

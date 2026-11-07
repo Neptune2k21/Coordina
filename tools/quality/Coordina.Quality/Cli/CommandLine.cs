@@ -1,6 +1,7 @@
 using Coordina.Quality.Baselines;
 using Coordina.Quality.Checks;
 using Coordina.Quality.Commits;
+using Coordina.Quality.Duplication;
 using Coordina.Quality.Git;
 using Coordina.Quality.Impact;
 using Coordina.Quality.Reporting;
@@ -74,6 +75,21 @@ internal static class CommandLine
         options.Staged ? repository.ReadStaged(path) : repository.ReadWorkingCopy(path)))
       .ToArray();
     var violations = checker.Check(files);
+
+    // Duplicates are found in the working tree, so the pre-commit hook, which
+    // checks the staged version, leaves them to make check and CI.
+    if (!options.Staged)
+    {
+      var duplicates = FindDuplicates(repository, files, output);
+
+      if (duplicates is null)
+      {
+        return Failure;
+      }
+
+      violations = QualityChecker.Order(violations.Concat(duplicates));
+    }
+
     var baseline = Baseline.Load(repository.Root);
     var result = new CheckResult(
       scope,
@@ -159,8 +175,16 @@ internal static class CommandLine
     var checker = CreateChecker(repository);
     var files = repository.AllFiles()
       .Where(QualityChecker.Covers)
-      .Select(path => new SourceFile(path, repository.ReadWorkingCopy(path)));
-    var baseline = Baseline.From(checker.Check(files));
+      .Select(path => new SourceFile(path, repository.ReadWorkingCopy(path)))
+      .ToArray();
+    var duplicates = FindDuplicates(repository, files, output);
+
+    if (duplicates is null)
+    {
+      return Failure;
+    }
+
+    var baseline = Baseline.From(checker.Check(files).Concat(duplicates));
 
     baseline.Save(repository.Root);
 
@@ -222,6 +246,34 @@ internal static class CommandLine
     }
 
     return new[] { DefaultBase, "master", "HEAD" }.First(repository.RefExists);
+  }
+
+  /// <summary>
+  /// Duplicates touching the checked files, with suppressions applied. Returns
+  /// <c>null</c> when jscpd is missing in CI, where skipping would hide problems.
+  /// </summary>
+  private static Violation[]? FindDuplicates(
+    GitRepository repository,
+    IReadOnlyCollection<SourceFile> files,
+    TextWriter output)
+  {
+    var detector = new DuplicationDetector(repository.Root);
+
+    if (!detector.IsAvailable)
+    {
+      var message = $"Duplicated code was not checked: {DuplicationDetector.RelativeBinaryPath} is missing. Run 'pnpm --dir src/web install'.";
+      output.WriteLine(message);
+
+      return Environment.GetEnvironmentVariable("CI") == "true" ? null : [];
+    }
+
+    var filesByPath = files.ToDictionary(file => file.Path, StringComparer.Ordinal);
+
+    return DuplicationRule
+      .ToViolations(detector.FindClones(), filesByPath.Keys.ToHashSet(StringComparer.Ordinal))
+      .GroupBy(violation => violation.Path)
+      .SelectMany(group => Suppressions.Filter(filesByPath[group.Key], group))
+      .ToArray();
   }
 
   private static QualityChecker CreateChecker(GitRepository repository) =>

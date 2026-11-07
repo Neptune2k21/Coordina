@@ -2,7 +2,7 @@ using Coordina.Quality.Checks;
 
 namespace Coordina.Quality.Rules.CSharp;
 
-internal sealed class TypePlacementRule : CSharpRule
+internal sealed class TypePlacementRule : ModuleRule
 {
   private static readonly (Func<string, bool> Matches, string Layer, string Kind)[] Placements =
   [
@@ -22,16 +22,9 @@ internal sealed class TypePlacementRule : CSharpRule
     Severity.Error,
     "A *Request or *Response is an HTTP shape, an *Entity is persistence, a *Service is application logic. Putting them elsewhere breaks the layering that the architecture tests rely on.");
 
-  public override bool AppliesTo(SourceFile file) =>
-    base.AppliesTo(file) && RepositoryPaths.ModuleOf(file.Path) is not null;
-
   public override IEnumerable<Violation> Check(SourceFile file)
   {
-    var module = RepositoryPaths.ModuleOf(file.Path)!;
-    var inModule = RepositoryPaths.PathInModule(file.Path, module);
-    var layer = inModule.Contains('/', StringComparison.Ordinal)
-      ? inModule[..inModule.IndexOf('/', StringComparison.Ordinal)]
-      : string.Empty;
+    var (_, _, layer) = Locate(file);
 
     foreach (var type in TopLevelTypes(file.Root))
     {
