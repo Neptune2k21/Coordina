@@ -3,6 +3,7 @@ import { type Dispatch, type SetStateAction, useEffect, useState } from "react"
 import * as boardApi from "@/features/board/api/board-api"
 import { isNotFound } from "@/features/board/hooks/use-board-resource"
 import { findCard } from "@/features/board/model/board-selectors"
+import { ApiError } from "@/lib/api"
 import {
   moveCardInBoard,
   removeCardFromBoard,
@@ -144,6 +145,13 @@ export function useBoardMutations({
       )
       setNotice("Board created")
     } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 409) {
+        // Someone else created this project's board first: show theirs.
+        await reload()
+        setNotice("This project already had a board")
+        return
+      }
+
       fail(requestError, "Board could not be created.")
     } finally {
       setIsCreatingBoard(false)

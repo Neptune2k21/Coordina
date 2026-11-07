@@ -11,6 +11,8 @@ public sealed class BoardCatalogService(
   IProjectAccessGuard projectAccess,
   TimeProvider clock) : IBoardCatalogService
 {
+  private const string ProjectAlreadyHasBoard = "This project already has a board.";
+
   public IReadOnlyCollection<BoardTemplateResponse> ListTemplates() =>
     BoardTemplateCatalog.All
       .Select(BoardResponseMapper.ToResponse)
@@ -75,6 +77,16 @@ public sealed class BoardCatalogService(
       return errors.ToError();
     }
 
+    var existing = await boards.FindDefaultForProjectAsync(
+      workspaceId,
+      projectId,
+      cancellationToken);
+
+    if (existing is not null)
+    {
+      return Error.Conflict(ProjectAlreadyHasBoard);
+    }
+
     var board = await boards.CreateAsync(
       workspaceId,
       projectId,
@@ -84,6 +96,8 @@ public sealed class BoardCatalogService(
       clock.GetUtcNow(),
       cancellationToken);
 
-    return Result.Success(BoardResponseMapper.ToResponse(board));
+    return board is null
+      ? Error.Conflict(ProjectAlreadyHasBoard)
+      : Result.Success(BoardResponseMapper.ToResponse(board));
   }
 }

@@ -47,6 +47,25 @@ describe("useBoardMutations", () => {
     vi.resetAllMocks()
   })
 
+  it("shows the existing board when another one was created first", async () => {
+    vi.mocked(boardApi.createBoard).mockRejectedValue(
+      new ApiError("This project already has a board.", 409)
+    )
+    const { result, onError, reload } = renderMutations()
+
+    await act(async () => {
+      await result.current.mutations.createBoard("Board", {
+        template: "BASIC",
+      })
+    })
+
+    expect(reload).toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+    expect(result.current.mutations.notice).toBe(
+      "This project already had a board"
+    )
+  })
+
   it("creates a list with the chosen status", async () => {
     vi.mocked(boardApi.createList).mockResolvedValue(initialBoard)
     const { result } = renderMutations()

@@ -3,6 +3,7 @@ using Coordina.Api.Modules.Auth.Infrastructure;
 using Coordina.Api.Modules.Boards.Application;
 using Coordina.Api.Modules.Boards.Domain;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Coordina.Api.Modules.Boards.Infrastructure;
 
@@ -265,7 +266,7 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
         .ToArray());
   }
 
-  public async Task<ProjectBoard> CreateAsync(
+  public async Task<ProjectBoard?> CreateAsync(
     Guid workspaceId,
     Guid projectId,
     string name,
@@ -354,7 +355,21 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
     }
 
     Boards.Add(board);
-    await dbContext.SaveChangesAsync(cancellationToken);
+
+    try
+    {
+      await dbContext.SaveChangesAsync(cancellationToken);
+    }
+    catch (DbUpdateException exception)
+      when (exception.InnerException is PostgresException
+      {
+        SqlState: PostgresErrorCodes.UniqueViolation
+      })
+    {
+      // Another request created this project's board first.
+      dbContext.ChangeTracker.Clear();
+      return null;
+    }
 
     return await FindInProjectAsync(
         workspaceId,
