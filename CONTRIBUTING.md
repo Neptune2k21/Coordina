@@ -157,15 +157,29 @@ When adding backend behavior:
 10. Add integration tests for endpoint behavior.
 11. Add migrations when persistence changes.
 
-### Automated rules
+### Architecture rules
 
-These conventions are tests, so `make api-test` reports a violation before a
-reviewer has to:
+The layering and module conventions are Roslyn analyzers
+(`tools/analyzers/Coordina.Analyzers`). They run inside the compiler, so your
+editor underlines a violation as you type, and `dotnet build` fails on it:
+
+| Rule | What it enforces |
+| --- | --- |
+| `CQ6001` | `core` never uses `shared` or modules; `shared` never uses modules |
+| `CQ6002` | Modules read the time from `TimeProvider`, not `DateTime.UtcNow` or `DateTimeOffset.Now` |
+| `CQ6003` | Only the auth module reads claims; the others bind `CurrentUser` |
+| `CQ6004` | Only a module's `Infrastructure` uses `CoordinaDbContext` |
+| `CQ6005` | Modules return core's `Result` types instead of declaring their own `*Result` |
+
+They check symbols, not text, so a type reached through a `global using` or an
+alias is caught too. EF migrations are exempt. Their tests are in
+`tests/analyzers`.
+
+Two more conventions need the running app, so they stay tests that `make
+api-test` runs:
 
 | Test | Rule |
 | --- | --- |
-| `LayerDependencyTests` | `core` never references `shared` or modules; `shared` never references modules |
-| `ModuleConventionTests` | Modules use `TimeProvider`, `CurrentUser`, core results, and touch `CoordinaDbContext` only in `Infrastructure` |
 | `EndpointAuthorizationTests` | Every endpoint requires authorization or is explicitly anonymous, and anonymous routes are allow-listed |
 | `ModuleRegistrationTests` | Every `IModule` implementation is registered in `Program.cs` |
 

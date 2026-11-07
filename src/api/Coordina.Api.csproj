@@ -21,4 +21,11 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.18.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Architecture rules (CQ6xxx): reported in the IDE and fail the build. -->
+    <ProjectReference Include="..\..\tools\analyzers\Coordina.Analyzers\Coordina.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 </Project>

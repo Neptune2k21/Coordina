@@ -31,8 +31,9 @@ src/
 ## Core and shared
 
 The API has two foundation layers below the feature modules. Layering is
-one-way, `modules → shared → core`, and `LayerDependencyTests` fails the build
-when core references shared or a module, or when shared references a module.
+one-way, `modules → shared → core`. The `CQ6001` analyzer fails the build, and
+underlines the code in the editor, when core uses shared or a module, or when
+shared uses a module.
 
 **`src/api/core` is the kernel.** It defines how a module plugs into the host
 and the primitives every endpoint relies on:
@@ -120,9 +121,9 @@ goes to `core`; a reusable, side-effect-free helper goes to `shared`; anything
 that knows about a business concept (workspaces, projects, boards) stays in its
 module. Promote code to `shared` once a second module needs it, not before.
 
-The conventions above are enforced by tests (`LayerDependencyTests`,
-`ModuleConventionTests`, `EndpointAuthorizationTests`,
-`ModuleRegistrationTests`); `CONTRIBUTING.md` lists what each one checks.
+The conventions above are enforced by Roslyn analyzers (`CQ6001` to `CQ6005`
+in `tools/analyzers`) and by `EndpointAuthorizationTests` and
+`ModuleRegistrationTests`; `CONTRIBUTING.md` lists what each one checks.
 
 ## Backend rules
 
