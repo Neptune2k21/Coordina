@@ -297,6 +297,8 @@ commit on `master`. CI checks that it follows
 [Conventional Commits](https://www.conventionalcommits.org/): a type, an
 optional scope, and a lowercase imperative summary without a final period, in
 72 characters or fewer. Mark breaking changes with `!` (`feat(api)!: ...`).
+Dependabot pull requests are renamed automatically to follow this style, and
+only they may go over the length limit.
 
 Allowed types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`,
 `ci`, `chore`, `revert`. Use the same style for the commits inside your branch:
