@@ -33,6 +33,10 @@ internal static class ImpactAnalysis
       [Suite.GraphEngine, Suite.Api, Suite.EndToEnd],
       "graph engine, which the API calls through native interop"),
     new(
+      path => path.StartsWith("contracts/", StringComparison.Ordinal),
+      [Suite.Api, Suite.Web, Suite.EndToEnd],
+      "API contract, which the web app depends on"),
+    new(
       path => path.StartsWith("src/api/", StringComparison.Ordinal)
         || path.StartsWith("tests/api/", StringComparison.Ordinal)
         || path.StartsWith("tests/api-postgres/", StringComparison.Ordinal)

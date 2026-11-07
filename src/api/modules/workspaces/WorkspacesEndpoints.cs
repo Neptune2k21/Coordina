@@ -13,34 +13,42 @@ public static class WorkspacesEndpoints
     var group = app.MapApiGroup("/workspaces", "Workspaces");
 
     group.MapPost("/", Create)
+      .Produces<WorkspaceResponse>(StatusCodes.Status201Created)
       .WithSummary("Create workspace")
       .WithDescription("Creates a workspace and adds the authenticated user as OWNER.");
 
     group.MapGet("/", List)
+      .Produces<IReadOnlyCollection<WorkspaceResponse>>(StatusCodes.Status200OK)
       .WithSummary("List workspaces")
       .WithDescription("Lists only workspaces where the authenticated user is a member.");
 
     group.MapGet("/{workspaceId:guid}", Get)
+      .Produces<WorkspaceResponse>(StatusCodes.Status200OK)
       .WithSummary("Get workspace")
       .WithDescription("Returns a workspace only when the user belongs to it.");
 
     group.MapPost("/join", Join)
+      .Produces<WorkspaceResponse>(StatusCodes.Status200OK)
       .WithSummary("Join workspace")
       .WithDescription("Adds the authenticated user as MEMBER using a one-time invitation code.");
 
     group.MapPost("/{workspaceId:guid}/invites", CreateInvite)
+      .Produces<CreateWorkspaceInviteResponse>(StatusCodes.Status201Created)
       .WithSummary("Create invitation code")
       .WithDescription("Creates a one-time invitation code. Only OWNER members can invite.");
 
     group.MapGet("/{workspaceId:guid}/members", ListMembers)
+      .Produces<IReadOnlyCollection<WorkspaceMemberResponse>>(StatusCodes.Status200OK)
       .WithSummary("List workspace members")
       .WithDescription("Lists members only when the authenticated user belongs to the workspace.");
 
     group.MapDelete("/{workspaceId:guid}/members/{memberUserId:guid}", RemoveMember)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Remove workspace member")
       .WithDescription("Removes a MEMBER from the workspace. Only OWNER members can remove members.");
 
     group.MapDelete("/{workspaceId:guid}", Delete)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Delete workspace")
       .WithDescription("Deletes a workspace. Only OWNER members can delete.");
 

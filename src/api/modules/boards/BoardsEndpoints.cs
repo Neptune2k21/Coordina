@@ -12,6 +12,7 @@ public static class BoardsEndpoints
   {
     app.MapApiGroup("/board-templates", "Boards")
       .MapGet("/", ListTemplates)
+      .Produces<IReadOnlyCollection<BoardTemplateResponse>>(StatusCodes.Status200OK)
       .WithSummary("List board templates")
       .WithDescription("Returns every template with its lists and example cards.");
 
@@ -20,57 +21,73 @@ public static class BoardsEndpoints
       "Boards");
 
     projectGroup.MapGet("/board", GetDefault)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Get default project board")
       .WithDescription("Returns a full board with lists, cards, labels, and assignees.");
 
     projectGroup.MapPost("/boards", CreateBoard)
+      .Produces<BoardResponse>(StatusCodes.Status201Created)
       .WithSummary("Create board")
       .WithDescription("Creates a project board and generates lists from the selected template.");
 
     var boardGroup = projectGroup.MapGroup("/boards/{boardId:guid}");
 
     boardGroup.MapGet("/graph", GetGraph)
+      .Produces<BoardGraphResponse>(StatusCodes.Status200OK)
       .WithSummary("Get board dependency graph")
       .WithDescription("Returns graph-derived planning signals for the board.");
 
     boardGroup.MapPost("/lists", CreateList)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Create board list");
 
     boardGroup.MapPatch("/lists/{listId:guid}", UpdateList)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Update board list title");
 
     boardGroup.MapPost("/lists/{listId:guid}/cards", CreateCard)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Create card");
 
     boardGroup.MapPatch("/cards/{cardId:guid}", UpdateCard)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Update card");
 
     boardGroup.MapPatch("/cards/{cardId:guid}/move", MoveCard)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Move card");
 
     boardGroup.MapGet("/cards/{cardId:guid}/dependency-analysis", GetCardDependencyAnalysis)
+      .Produces<BoardCardDependencyAnalysisResponse>(StatusCodes.Status200OK)
       .WithSummary("Get card dependency analysis")
       .WithDescription("Returns safe dependency suggestions, blockers, and impacted dependents.");
 
     boardGroup.MapPost("/cards/{cardId:guid}/comments", AddCardComment)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Add card comment");
 
     boardGroup.MapPost("/cards/{cardId:guid}/subtasks", CreateCardSubtask)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Create card subtask");
 
     boardGroup.MapPatch("/cards/{cardId:guid}/subtasks/{subtaskId:guid}", UpdateCardSubtask)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Update card subtask");
 
     boardGroup.MapDelete("/cards/{cardId:guid}/subtasks/{subtaskId:guid}", DeleteCardSubtask)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Delete card subtask");
 
     boardGroup.MapPost("/cards/{cardId:guid}/dependencies", AddCardDependency)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Add card dependency");
 
     boardGroup.MapDelete("/cards/{cardId:guid}/dependencies/{dependsOnCardId:guid}", DeleteCardDependency)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Delete card dependency");
 
     boardGroup.MapDelete("/cards/{cardId:guid}", DeleteCard)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Delete card");
 
     return app;

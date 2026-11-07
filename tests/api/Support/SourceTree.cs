@@ -5,9 +5,11 @@ namespace Coordina.Api.Tests.Support;
 /// <summary>Scans API source files for architecture and convention tests.</summary>
 internal static class SourceTree
 {
-  private static readonly Lazy<string> ApiRootPath = new(FindApiRoot);
+  private static readonly Lazy<string> RepositoryRootPath = new(FindRepositoryRoot);
 
-  public static string ApiRoot => ApiRootPath.Value;
+  public static string RepositoryRoot => RepositoryRootPath.Value;
+
+  public static string ApiRoot => Path.Combine(RepositoryRoot, "src", "api");
 
   /// <summary>
   /// Returns <c>path:line: code</c> for every line under <paramref name="folder"/>
@@ -38,7 +40,7 @@ internal static class SourceTree
   public static string Describe(string rule, string[] violations) =>
     rule + Environment.NewLine + string.Join(Environment.NewLine, violations);
 
-  private static string FindApiRoot()
+  private static string FindRepositoryRoot()
   {
     var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
@@ -49,6 +51,6 @@ internal static class SourceTree
     }
 
     Assert.NotNull(directory);
-    return Path.Combine(directory.FullName, "src", "api");
+    return directory.FullName;
   }
 }

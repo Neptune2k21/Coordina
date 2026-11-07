@@ -15,26 +15,32 @@ public static class ProjectsEndpoints
       "Projects");
 
     group.MapPost("/", Create)
+      .Produces<ProjectResponse>(StatusCodes.Status201Created)
       .WithSummary("Create project")
       .WithDescription("Creates a project inside a workspace where the user is a member.");
 
     group.MapGet("/", List)
+      .Produces<IReadOnlyCollection<ProjectResponse>>(StatusCodes.Status200OK)
       .WithSummary("List projects")
       .WithDescription("Lists projects only within the requested workspace membership scope.");
 
     group.MapGet("/{projectId:guid}", Get)
+      .Produces<ProjectResponse>(StatusCodes.Status200OK)
       .WithSummary("Get project")
       .WithDescription("Returns a project only when it belongs to the requested workspace and user membership scope.");
 
     group.MapPatch("/{projectId:guid}", Update)
+      .Produces<ProjectResponse>(StatusCodes.Status200OK)
       .WithSummary("Update project")
       .WithDescription("Updates project metadata, owner, or lifecycle status when the user is allowed to manage the project.");
 
     group.MapDelete("/{projectId:guid}", Delete)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Delete project")
       .WithDescription("Archives a project in workspace scope. Workspace owners or project owners can archive.");
 
     group.MapDelete("/{projectId:guid}/permanent", PermanentlyDelete)
+      .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Permanently delete project")
       .WithDescription("Permanently deletes a project in workspace scope. Only workspace OWNER members can delete permanently.");
 

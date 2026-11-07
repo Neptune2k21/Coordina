@@ -1,4 +1,4 @@
-.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks
+.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks contract
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -46,6 +46,7 @@ help:
 	@echo "  make quality-rules Liste les regles qualite et leur raison d'etre"
 	@echo "  make quality-baseline Reecrit la baseline des erreurs connues"
 	@echo "  make hooks        Active les hooks git (pre-commit et commit-msg)"
+	@echo "  make contract     Regenere contracts/openapi.json apres un changement d'API"
 	@echo "  make docker-up    Lance les services Docker"
 	@echo "  make docker-down  Stoppe les services Docker"
 	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
@@ -163,6 +164,9 @@ quality-rules:
 
 quality-test:
 	dotnet test $(QUALITY_TEST_PROJECT) --configuration Release -m:1
+
+contract:
+	UPDATE_API_CONTRACT=1 dotnet test $(API_TEST_PROJECT) --configuration Release -m:1 --filter "FullyQualifiedName~ApiContractTests"
 
 hooks:
 	git config core.hooksPath .githooks

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Coordina.Api.Core.Persistence;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Scalar.AspNetCore;
@@ -27,6 +28,11 @@ public static class CoreHostingExtensions
 
     services.TryAddSingleton(TimeProvider.System);
     services.AddProblemDetails();
+
+    // Numbers are JSON numbers. The web defaults also accept "5" for 5, which
+    // the contract then has to describe as "number or string" everywhere.
+    services.ConfigureHttpJsonOptions(options =>
+      options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
     services.AddCors(options =>
     {
       options.AddPolicy(WebAppCorsPolicy, policy =>

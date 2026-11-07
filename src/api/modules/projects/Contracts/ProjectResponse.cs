@@ -1,3 +1,6 @@
+using Coordina.Api.Modules.Projects.Domain;
+using Coordina.Api.Shared.OpenApi;
+
 namespace Coordina.Api.Modules.Projects.Contracts;
 
 public sealed record ProjectResponse(
@@ -10,7 +13,7 @@ public sealed record ProjectResponse(
   Guid WorkspaceId,
   Guid ProjectOwnerId,
   string? ProjectOwnerName,
-  string Status,
+  [property: EnumCodes<ProjectStatus>] string Status,
   DateTimeOffset CreatedAt,
   DateTimeOffset UpdatedAt,
   DateTimeOffset? ArchivedAt);
