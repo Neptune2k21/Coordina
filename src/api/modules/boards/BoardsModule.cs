@@ -21,5 +21,5 @@ public sealed class BoardsModule : IModule
   }
 
   public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
-    endpoints.MapBoardEndpoints();
+    endpoints.MapBoardsEndpoints();
 }

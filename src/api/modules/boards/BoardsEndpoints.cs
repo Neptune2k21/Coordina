@@ -5,9 +5,9 @@ using Coordina.Api.Modules.Boards.Contracts;
 
 namespace Coordina.Api.Modules.Boards;
 
-public static class BoardEndpoints
+public static class BoardsEndpoints
 {
-  public static IEndpointRouteBuilder MapBoardEndpoints(
+  public static IEndpointRouteBuilder MapBoardsEndpoints(
     this IEndpointRouteBuilder app)
   {
     app.MapApiGroup("/board-templates", "Boards")

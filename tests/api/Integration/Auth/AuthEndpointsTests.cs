@@ -8,8 +8,9 @@ using Coordina.Api.Modules.Auth;
 using Coordina.Api.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Coordina.Api.Modules.Auth.Infrastructure;
 
-namespace Coordina.Api.Tests;
+namespace Coordina.Api.Tests.Integration.Auth;
 
 public sealed class AuthEndpointsTests(ApiTestApplicationFactory factory)
   : ApiTest(factory)

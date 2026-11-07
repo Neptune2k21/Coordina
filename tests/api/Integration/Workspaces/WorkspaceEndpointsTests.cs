@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Coordina.Api.Tests.Support;
 
-namespace Coordina.Api.Tests;
+namespace Coordina.Api.Tests.Integration.Workspaces;
 
 public sealed class WorkspaceEndpointsTests(ApiTestApplicationFactory factory)
   : ApiTest(factory)
