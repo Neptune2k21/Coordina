@@ -13,6 +13,18 @@ public sealed class InMemoryBoardStore : IBoardStore
   private readonly ConcurrentDictionary<Guid, SubtaskRecord> _subtasks = new();
   private readonly ConcurrentDictionary<Guid, DependencyRecord> _dependencies = new();
 
+  // Only the fast tests use this store, and they do not race on a board.
+  // Concurrency is covered against PostgreSQL in tests/api-postgres.
+  public Task<T> RunExclusiveAsync<T>(
+    Guid boardId,
+    Func<CancellationToken, Task<T>> action,
+    CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(action);
+
+    return action(cancellationToken);
+  }
+
   public Task<ProjectBoard?> FindDefaultForProjectAsync(
     Guid workspaceId,
     Guid projectId,

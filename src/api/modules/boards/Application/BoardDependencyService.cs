@@ -121,45 +121,51 @@ public sealed class BoardDependencyService(
         "Choose another card from this board.");
     }
 
-    var boardSnapshot = await boards.FindInProjectAsync(
-      workspaceId,
-      projectId,
+    return await boards.RunExclusiveAsync<Result<BoardResponse>>(
       boardId,
+      async exclusiveToken =>
+      {
+        var boardSnapshot = await boards.FindInProjectAsync(
+          workspaceId,
+          projectId,
+          boardId,
+          exclusiveToken);
+
+        if (boardSnapshot is null)
+        {
+          return Error.NotFound();
+        }
+
+        var dependencyEvaluation = BoardDependencyGraph.EvaluateDependency(
+          graphEngine,
+          boardSnapshot,
+          cardId,
+          request.DependsOnCardId);
+
+        switch (dependencyEvaluation.Status)
+        {
+          case GraphEdgeStatus.MissingSource or GraphEdgeStatus.MissingTarget:
+            return Error.NotFound();
+          case GraphEdgeStatus.Duplicate:
+            return Result.Success(BoardResponseMapper.ToResponse(boardSnapshot));
+          case GraphEdgeStatus.Cycle:
+            return Error.Conflict("Adding this dependency would create a cycle.");
+        }
+
+        var board = await boards.AddCardDependencyAsync(
+          workspaceId,
+          projectId,
+          boardId,
+          cardId,
+          request.DependsOnCardId,
+          clock.GetUtcNow(),
+          exclusiveToken);
+
+        return board is null
+          ? Error.NotFound()
+          : Result.Success(BoardResponseMapper.ToResponse(board));
+      },
       cancellationToken);
-
-    if (boardSnapshot is null)
-    {
-      return Error.NotFound();
-    }
-
-    var dependencyEvaluation = BoardDependencyGraph.EvaluateDependency(
-      graphEngine,
-      boardSnapshot,
-      cardId,
-      request.DependsOnCardId);
-
-    switch (dependencyEvaluation.Status)
-    {
-      case GraphEdgeStatus.MissingSource or GraphEdgeStatus.MissingTarget:
-        return Error.NotFound();
-      case GraphEdgeStatus.Duplicate:
-        return Result.Success(BoardResponseMapper.ToResponse(boardSnapshot));
-      case GraphEdgeStatus.Cycle:
-        return Error.Conflict("Adding this dependency would create a cycle.");
-    }
-
-    var board = await boards.AddCardDependencyAsync(
-      workspaceId,
-      projectId,
-      boardId,
-      cardId,
-      request.DependsOnCardId,
-      clock.GetUtcNow(),
-      cancellationToken);
-
-    return board is null
-      ? Error.NotFound()
-      : Result.Success(BoardResponseMapper.ToResponse(board));
   }
 
   public async Task<Result> DeleteCardDependencyAsync(

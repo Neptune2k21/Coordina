@@ -84,6 +84,10 @@ fields: `estimatedMinutes`, `fitsAvailableTime`, `isAssignedToMe`,
 fits the focus time, the ready card with the smallest known estimate is flagged
 `isShortestAlternative`.
 
+## Concurrent changes
+
+Adding a dependency runs under a per-board lock (`IBoardStore.RunExclusiveAsync`), so the cycle check and the write cannot interleave with another request. When two requests would close a cycle together, one succeeds and the other gets `409`. Sending the same dependency several times stores it once, and every request succeeds.
+
 ## API surface
 
 ```http

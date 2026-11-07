@@ -4,6 +4,16 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 public interface IBoardStore
 {
+  /// <summary>
+  /// Runs <paramref name="action"/> as one transaction while no other caller
+  /// holds this lock for the board, so a check and the write that depends on
+  /// it cannot interleave with another request.
+  /// </summary>
+  Task<T> RunExclusiveAsync<T>(
+    Guid boardId,
+    Func<CancellationToken, Task<T>> action,
+    CancellationToken cancellationToken);
+
   Task<ProjectBoard?> FindDefaultForProjectAsync(
     Guid workspaceId,
     Guid projectId,
