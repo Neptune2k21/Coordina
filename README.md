@@ -53,7 +53,7 @@ Current API modules include authentication, workspaces, projects, boards, and he
 
 ## Quickstart
 
-Requirements: .NET SDK 9.x, Node.js 24.x, pnpm 10.17.x, and Docker.
+Requirements: .NET SDK 10.x, Node.js 24.x, pnpm 10.17.x, and Docker.
 
 ```bash
 cp .env.example .env
