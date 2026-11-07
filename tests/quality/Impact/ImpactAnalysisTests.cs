@@ -8,8 +8,8 @@ public sealed class ImpactAnalysisTests
   [InlineData("docs/boards.mdx", "")]
   [InlineData("README.md", "")]
   [InlineData("src/web/src/features/board/board-api.ts", "web,e2e")]
-  [InlineData("src/api/modules/boards/Application/BoardRules.cs", "api,web,e2e")]
-  [InlineData("tests/api-postgres/Integration/Boards/BoardTests.cs", "api,web,e2e")]
+  [InlineData("src/api/modules/boards/Application/BoardRules.cs", "api,e2e")]
+  [InlineData("tests/api-postgres/Integration/Boards/BoardTests.cs", "api,e2e")]
   [InlineData("src/graph-engine/src/core/graph_types.cpp", "graph-engine,api,e2e")]
   [InlineData("tools/quality/Coordina.Quality/Program.cs", "quality")]
   [InlineData(".githooks/pre-commit", "quality")]
@@ -39,12 +39,20 @@ public sealed class ImpactAnalysisTests
   }
 
   [Fact]
-  public void ApiChanges_ExplainWhyTheWebAppRuns()
+  public void ApiChange_ThatAltersTheContract_ChecksTheWebApp()
   {
-    var plan = ImpactAnalysis.Analyze(["src/api/Program.cs"]);
+    var internalOnly = ImpactAnalysis.Analyze(["src/api/modules/boards/Application/BoardRules.cs"]);
+    var withContract = ImpactAnalysis.Analyze(
+    [
+      "src/api/modules/boards/Contracts/BoardResponse.cs",
+      "contracts/openapi.json",
+      "src/web/src/types/api-contract.ts"
+    ]);
 
+    Assert.False(internalOnly.Includes(Suite.Web));
+    Assert.True(withContract.Includes(Suite.Web));
     Assert.Contains(
-      plan.Reasons[Suite.Web],
+      withContract.Reasons[Suite.Web],
       reason => reason.Contains("contract", StringComparison.Ordinal));
   }
 }

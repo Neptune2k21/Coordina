@@ -8,9 +8,6 @@ namespace Coordina.Quality.Impact;
 /// </summary>
 internal static class ImpactAnalysis
 {
-  private const string ContractNote =
-    "the API contract is not generated yet, so an API change can break the web app without a type error";
-
   private static readonly ImpactRule[] Rules =
   [
     new(
@@ -41,8 +38,8 @@ internal static class ImpactAnalysis
         || path.StartsWith("tests/api/", StringComparison.Ordinal)
         || path.StartsWith("tests/api-postgres/", StringComparison.Ordinal)
         || path.StartsWith(".config/", StringComparison.Ordinal),
-      [Suite.Api, Suite.Web, Suite.EndToEnd],
-      $"API; {ContractNote}"),
+      [Suite.Api, Suite.EndToEnd],
+      "API; the web app only needs checking when contracts/openapi.json changes too"),
     new(
       path => path.StartsWith("src/web/", StringComparison.Ordinal),
       [Suite.Web, Suite.EndToEnd],
