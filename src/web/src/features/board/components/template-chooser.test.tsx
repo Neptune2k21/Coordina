@@ -103,6 +103,16 @@ describe("TemplateChooser", () => {
     })
   })
 
+  it("creates a blank board with no lists or cards", async () => {
+    const onCreate = vi.fn()
+    render(<TemplateChooser isCreating={false} onCreate={onCreate} />)
+    await screen.findByText("Bug Tracking")
+
+    fireEvent.click(screen.getByRole("button", { name: /^Blank/ }))
+
+    expect(onCreate).toHaveBeenCalledWith({ template: "BLANK" })
+  })
+
   it("offers a retry and keeps custom boards available on failure", async () => {
     const onCreate = vi.fn()
     vi.mocked(boardApi.getBoardTemplates).mockRejectedValueOnce(
@@ -113,6 +123,8 @@ describe("TemplateChooser", () => {
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Templates could not be loaded."
     )
+
+    expect(screen.getByRole("button", { name: /^Blank/ })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Create custom" }))
     expect(onCreate).toHaveBeenCalledWith({

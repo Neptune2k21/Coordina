@@ -1,4 +1,13 @@
-import type { BoardCardPriority } from "@/types/task"
+import type { BoardCardPriority, BoardTaskStatus } from "@/types/task"
+
+export const boardTaskStatuses: Array<{
+  value: BoardTaskStatus
+  label: string
+}> = [
+  { value: "TODO", label: "To do" },
+  { value: "IN_PROGRESS", label: "In progress" },
+  { value: "DONE", label: "Done" },
+]
 
 export const boardCardPriorities: Array<{
   value: BoardCardPriority | ""

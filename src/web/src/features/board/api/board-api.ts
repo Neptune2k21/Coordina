@@ -10,6 +10,7 @@ import type {
   BoardCardInput,
   BoardCreationInput,
   BoardGraph,
+  BoardTaskStatus,
   BoardTemplateDefinition,
 } from "@/types/task"
 
@@ -56,14 +57,15 @@ export async function createList(
   workspaceId: string,
   projectId: string,
   boardId: string,
-  title: string
+  title: string,
+  taskStatus: BoardTaskStatus
 ) {
   return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists`,
     {
       accessToken,
       method: "POST",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, taskStatus }),
       errorMessage: "Board request failed.",
     }
   )

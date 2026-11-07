@@ -144,6 +144,49 @@ public sealed class BoardTemplateEndpointsTests(ApiTestApplicationFactory factor
     Assert.All(board.Lists, list => Assert.Empty(list.Cards));
   }
 
+  [Fact]
+  public async Task CreateBoard_Blank_StartsEmptyAndGrowsWithItsOwnLists()
+  {
+    var scope = await CreateScopeAsync();
+
+    var board = await CreateBoardAsync(scope, new { name = "Board", template = "BLANK" });
+
+    Assert.Equal("BLANK", board.Template);
+    Assert.Empty(board.Lists);
+
+    var boardPath = $"/workspaces/{scope.WorkspaceId}/projects/{scope.ProjectId}/boards/{board.Id}";
+    var graph = await GetGraphAsync(scope, board);
+    Assert.True(graph.IsAcyclic);
+    Assert.Empty(graph.NextCards);
+
+    await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Post,
+      $"{boardPath}/lists",
+      scope.AccessToken,
+      new { title = "Doing" });
+    var withLists = await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Post,
+      $"{boardPath}/lists",
+      scope.AccessToken,
+      new { title = "Closed", taskStatus = "DONE" });
+    var doing = withLists.Lists.Single(list => list.Title == "Doing");
+    var withCard = await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Post,
+      $"{boardPath}/lists/{doing.Id}/cards",
+      scope.AccessToken,
+      new { title = "Ship it" });
+    var card = withCard.Lists.SelectMany(list => list.Cards).Single();
+
+    var completed = await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Patch,
+      $"{boardPath}/cards/{card.Id}",
+      scope.AccessToken,
+      new { isCompleted = true });
+
+    var closed = completed.Lists.Single(list => list.Title == "Closed");
+    Assert.True(Assert.Single(closed.Cards).IsCompleted);
+  }
+
   private Task<BoardTemplateResponse[]> ListTemplatesAsync(string accessToken) =>
     Api.SendForAsync<BoardTemplateResponse[]>(
       HttpMethod.Get,

@@ -65,6 +65,24 @@ public sealed class BoardTemplatePostgresTests(PostgresContainerFixture postgres
       $"SELECT count(*) FROM board_cards WHERE board_id = '{flow.BoardId}'"));
   }
 
+  [Fact]
+  public async Task CreateBoard_Blank_PersistsAndReloadsWithNoLists()
+  {
+    var flow = await CreateFlowAsync(new { name = "Board", template = "BLANK" });
+
+    Assert.Equal("BLANK", await Database.ScalarAsync<string>(
+      $"SELECT template FROM boards WHERE id = '{flow.BoardId}'"));
+    Assert.Equal(0, await CountAsync(
+      $"SELECT count(*) FROM board_lists WHERE board_id = '{flow.BoardId}'"));
+
+    var reloaded = await Api.SendForAsync<IdResponse>(
+      HttpMethod.Get,
+      $"/workspaces/{flow.WorkspaceId}/projects/{flow.ProjectId}/board",
+      flow.AccessToken);
+
+    Assert.Equal(flow.BoardId, reloaded.Id);
+  }
+
   private async Task<int> CountAsync(string sql) =>
     (int)await Database.ScalarAsync<long>(sql);
 

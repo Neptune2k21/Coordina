@@ -15,6 +15,7 @@ import type {
   BoardCardSubtask,
   BoardCreationInput,
   BoardList,
+  BoardTaskStatus,
 } from "@/types/task"
 
 type UseBoardMutationsOptions = {
@@ -149,7 +150,7 @@ export function useBoardMutations({
     }
   }
 
-  async function createList(title: string) {
+  async function createList(title: string, taskStatus: BoardTaskStatus) {
     if (!target || !title.trim()) {
       return false
     }
@@ -162,7 +163,8 @@ export function useBoardMutations({
             workspaceId,
             projectId,
             target.boardId,
-            title
+            title,
+            taskStatus
           )
         )
       },

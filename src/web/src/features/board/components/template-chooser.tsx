@@ -127,6 +127,14 @@ export function TemplateChooser({
           ))}
         </div>
       ) : null}
+      <BoardTemplateOption
+        contents="No lists, no cards"
+        disabled={isDisabled}
+        lists={[]}
+        name="Blank"
+        summary="Start from an empty board and add your own lists."
+        onSelect={() => onCreate({ template: "BLANK" })}
+      />
       <div className="grid gap-2 rounded-md border border-dashed border-zinc-950/15 bg-zinc-50 p-2 md:grid-cols-[1fr_auto] md:items-end dark:border-white/10 dark:bg-white/[0.035]">
         <Field>
           <FieldLabel htmlFor="custom-lists">Custom board lists</FieldLabel>

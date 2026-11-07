@@ -26,6 +26,7 @@ import type {
   BoardCardSubtask,
   BoardCreationInput,
   BoardList,
+  BoardTaskStatus,
 } from "@/types/task"
 import type { Workspace } from "@/types/workspace"
 
@@ -39,6 +40,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null)
   const [quickTitle, setQuickTitle] = useState("")
   const [newListTitle, setNewListTitle] = useState("")
+  const [newListStatus, setNewListStatus] = useState<BoardTaskStatus>("TODO")
   const [isAddingList, setIsAddingList] = useState(false)
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
@@ -133,10 +135,15 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
   }
 
   async function handleCreateList() {
-    if (await mutations.createList(newListTitle)) {
-      setNewListTitle("")
-      setIsAddingList(false)
+    if (await mutations.createList(newListTitle, newListStatus)) {
+      handleCancelNewList()
     }
+  }
+
+  function handleCancelNewList() {
+    setNewListTitle("")
+    setNewListStatus("TODO")
+    setIsAddingList(false)
   }
 
   async function handleRenameList(list: BoardList, title: string) {
@@ -194,6 +201,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     filters,
     handleAddComment: mutations.addComment,
     handleAddDependency: mutations.addDependency,
+    handleCancelNewList,
     handleCreateBoard,
     handleCreateList,
     handleCreateSubtask: mutations.createSubtask,
@@ -217,6 +225,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     members: resource.members,
     metrics,
     myCardCount,
+    newListStatus,
     newListTitle,
     notice: mutations.notice,
     planningPreferences,
@@ -226,6 +235,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     setDraggingCardId,
     setIsAddingList,
     setIsPlanningPanelOpen,
+    setNewListStatus,
     setNewListTitle,
     setPlanningPreferences,
     setQuickAddListId,

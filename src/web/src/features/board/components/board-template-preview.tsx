@@ -57,7 +57,7 @@ export function BoardTemplateOption({
           />
         ) : null}
       </span>
-      <BoardTemplatePreview lists={lists} />
+      {lists.length > 0 ? <BoardTemplatePreview lists={lists} /> : null}
     </button>
   )
 }

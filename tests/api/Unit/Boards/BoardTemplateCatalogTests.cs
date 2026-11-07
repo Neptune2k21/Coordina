@@ -10,10 +10,10 @@ public sealed class BoardTemplateCatalogTests
     new(BoardTemplateCatalog.All.Select(template => template.Id));
 
   [Fact]
-  public void Catalog_CoversEveryTemplateExceptCustom()
+  public void Catalog_CoversEveryTemplateExceptCustomAndBlank()
   {
     var expected = Enum.GetValues<BoardTemplate>()
-      .Where(template => template != BoardTemplate.Custom);
+      .Where(template => template is not (BoardTemplate.Custom or BoardTemplate.Blank));
 
     Assert.Equal(expected, BoardTemplateCatalog.All.Select(template => template.Id));
   }

@@ -1,5 +1,10 @@
 export type BoardTemplate =
-  "BASIC" | "AGILE_SCRUM" | "BUG_TRACKING" | "PRODUCT_ROADMAP" | "CUSTOM"
+  | "BASIC"
+  | "AGILE_SCRUM"
+  | "BUG_TRACKING"
+  | "PRODUCT_ROADMAP"
+  | "CUSTOM"
+  | "BLANK"
 
 export type BoardCardPriority = "LOW" | "MEDIUM" | "HIGH"
 

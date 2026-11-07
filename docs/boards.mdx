@@ -27,6 +27,7 @@ Renaming "Done" to "Shipped" changes nothing about the cards in it.
 | `BUG_TRACKING` template | Reported `TODO`, Investigating `IN_PROGRESS`, Verifying `IN_PROGRESS`, Released `DONE` |
 | `PRODUCT_ROADMAP` template | Ideas `TODO`, Planned `TODO`, In Progress `IN_PROGRESS`, Shipped `DONE` |
 | `CUSTOM` board | First list `TODO`, last list `DONE` (when there are at least two), others `IN_PROGRESS` |
+| `BLANK` board | No lists |
 | `POST .../lists` | `taskStatus` from the request, default `TODO` |
 
 ## Card completion
@@ -120,8 +121,11 @@ Project creation intentionally does not choose the board workflow. When a new pr
 | `BUG_TRACKING` | Reported (`TODO`), Investigating (`IN_PROGRESS`), Verifying (`IN_PROGRESS`), Released (`DONE`) | Verifying holds fixes being confirmed before release. A bug is only `DONE` once customers have the fix. |
 | `PRODUCT_ROADMAP` | Ideas (`TODO`), Planned (`TODO`), In Progress (`IN_PROGRESS`), Shipped (`DONE`) | Ideas are not committed, Planned are. Neither has started, so both are `TODO`. |
 | `CUSTOM` | First list `TODO`, last list `DONE` (when there are at least two), remaining lists `IN_PROGRESS` | The user names the lists. Custom boards never have example cards. |
+| `BLANK` | None | The user builds the board list by list and picks each list's status. Cards can only be completed once the board has a `DONE` list. |
 
-`POST .../lists` accepts an optional `taskStatus`, defaulting to `TODO`.
+`CUSTOM` and `BLANK` are not in `GET /board-templates`, because they have no content to return. The setup screen offers them directly.
+
+`POST .../lists` accepts an optional `taskStatus`, defaulting to `TODO`. The form for adding a list lets the user choose it.
 
 #### Example cards
 

@@ -6,5 +6,6 @@ public enum BoardTemplate
   AgileScrum,
   BugTracking,
   ProductRoadmap,
-  Custom
+  Custom,
+  Blank
 }
