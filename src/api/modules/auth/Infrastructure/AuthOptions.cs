@@ -1,4 +1,4 @@
-namespace Coordina.Api.Modules.Auth;
+namespace Coordina.Api.Modules.Auth.Infrastructure;
 
 public sealed class AuthOptions
 {

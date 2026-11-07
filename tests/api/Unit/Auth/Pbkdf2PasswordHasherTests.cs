@@ -1,6 +1,6 @@
 using Coordina.Api.Modules.Auth.Infrastructure;
 
-namespace Coordina.Api.Tests;
+namespace Coordina.Api.Tests.Unit.Auth;
 
 public sealed class Pbkdf2PasswordHasherTests
 {

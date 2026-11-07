@@ -3,7 +3,7 @@ using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Shared.Enums;
 using Coordina.Api.Tests.Support;
 
-namespace Coordina.Api.Tests;
+namespace Coordina.Api.Tests.Integration.Boards;
 
 public sealed class BoardTemplateEndpointsTests(ApiTestApplicationFactory factory)
   : ApiTest(factory)

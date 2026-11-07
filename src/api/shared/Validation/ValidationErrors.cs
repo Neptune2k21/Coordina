@@ -9,21 +9,21 @@ namespace Coordina.Api.Shared.Validation;
 /// </summary>
 public sealed class ValidationErrors
 {
-  private readonly Dictionary<string, List<string>> errors = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, List<string>> _errors = new(StringComparer.Ordinal);
 
-  public bool HasErrors => errors.Count > 0;
+  public bool HasErrors => _errors.Count > 0;
 
-  public bool Contains(string field) => errors.ContainsKey(field);
+  public bool Contains(string field) => _errors.ContainsKey(field);
 
   public ValidationErrors Add(string field, string message)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(field);
     ArgumentException.ThrowIfNullOrWhiteSpace(message);
 
-    if (!errors.TryGetValue(field, out var messages))
+    if (!_errors.TryGetValue(field, out var messages))
     {
       messages = [];
-      errors[field] = messages;
+      _errors[field] = messages;
     }
 
     messages.Add(message);
@@ -116,7 +116,7 @@ public sealed class ValidationErrors
   }
 
   public IReadOnlyDictionary<string, string[]> ToDictionary() =>
-    errors.ToDictionary(
+    _errors.ToDictionary(
       entry => entry.Key,
       entry => entry.Value.ToArray(),
       StringComparer.Ordinal);

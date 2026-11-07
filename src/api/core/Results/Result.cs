@@ -37,12 +37,12 @@ public class Result
 /// <summary>Outcome of a use case that produces a value on success.</summary>
 public sealed class Result<T> : Result
 {
-  private readonly T? value;
+  private readonly T? _value;
 
   internal Result(T value)
     : base(null)
   {
-    this.value = value;
+    _value = value;
   }
 
   private Result(Error error)
@@ -51,7 +51,7 @@ public sealed class Result<T> : Result
   }
 
   public T Value => IsSuccess
-    ? value!
+    ? _value!
     : throw new InvalidOperationException(
       "A failed result has no value. Check IsSuccess first.");
 

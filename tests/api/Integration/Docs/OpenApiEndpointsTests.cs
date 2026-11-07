@@ -1,7 +1,7 @@
 using System.Net;
 using Coordina.Api.Tests.Support;
 
-namespace Coordina.Api.Tests;
+namespace Coordina.Api.Tests.Integration.Docs;
 
 public sealed class OpenApiEndpointsTests(ApiTestApplicationFactory factory)
   : ApiTest(factory)
