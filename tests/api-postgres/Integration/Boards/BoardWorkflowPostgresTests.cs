@@ -26,19 +26,10 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
   [Fact]
   public async Task Backfill_AssignsStatusesAndAlignsCompletion()
   {
-    await using var database = await Postgres.CreateEmptyDatabaseAsync();
-    await using (var dbContext = database.CreateDbContext())
-    {
-      await dbContext.GetService<IMigrator>().MigrateAsync("RemoveLegacyTasks");
-    }
+    await using var database = await Postgres.CreateDatabaseAtMigrationAsync("RemoveLegacyTasks");
 
+    await database.InsertWorkspaceWithProjectsAsync(WorkspaceId, ProjectId, ScrumProjectId);
     await database.ExecuteAsync($"""
-      INSERT INTO workspaces (id, name, created_at)
-      VALUES ('{WorkspaceId}', 'Legacy', now());
-      INSERT INTO projects (id, workspace_id, name, project_owner_id, status, created_at, updated_at)
-      VALUES
-        ('{ProjectId}', '{WorkspaceId}', 'Legacy', gen_random_uuid(), 'ACTIVE', now(), now()),
-        ('{ScrumProjectId}', '{WorkspaceId}', 'Legacy scrum', gen_random_uuid(), 'ACTIVE', now(), now());
       INSERT INTO boards (id, workspace_id, project_id, name, template, created_at, updated_at)
       VALUES
         ('{SingleListBoardId}', '{WorkspaceId}', '{ProjectId}', 'Single', 'CUSTOM', now(), now()),

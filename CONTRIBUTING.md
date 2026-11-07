@@ -233,7 +233,14 @@ both give the same answer.
 | `make hooks` | Enables git hooks: staged files and the commit message are checked before each commit |
 
 Every message names its rule, such as `CQ1102`, and explains why the rule
-exists. Errors fail the check; warnings, such as a file over 500 lines, are
+exists.
+
+`make check` also looks for duplicated code (`CQ4001`) in C#, TypeScript and
+C++ with [jscpd](https://github.com/kucherenko/jscpd), installed with the web
+app's dev dependencies. It compares your changes with the whole repository, so
+copying an unchanged file is caught too, but it only reports clones that touch
+the files you changed. The pre-commit hook skips this check to stay fast; `make
+check` and CI run it, and CI fails if jscpd is not installed. Errors fail the check; warnings, such as a file over 500 lines, are
 shown so you can decide.
 
 Run `make check` while you work instead of the whole `make quality`, then

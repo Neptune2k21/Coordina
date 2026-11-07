@@ -16,9 +16,36 @@ internal static partial class Suppressions
     Severity.Error,
     "An exception without a reason cannot be reviewed, and one without a rule id hides every rule.");
 
+  /// <summary>Drops suppressed violations and reports malformed suppressions.</summary>
   public static IReadOnlyCollection<Violation> Apply(
     SourceFile file,
     IEnumerable<Violation> violations)
+  {
+    var (suppressed, problems) = Read(file);
+
+    return violations
+      .Where(violation => !suppressed.Contains((violation.Rule.Id, violation.Line)))
+      .Concat(problems)
+      .ToArray();
+  }
+
+  /// <summary>
+  /// Drops suppressed violations only, for checks that run after
+  /// <see cref="Apply"/> has already reported the file's malformed suppressions.
+  /// </summary>
+  public static IReadOnlyCollection<Violation> Filter(
+    SourceFile file,
+    IEnumerable<Violation> violations)
+  {
+    var (suppressed, _) = Read(file);
+
+    return violations
+      .Where(violation => !suppressed.Contains((violation.Rule.Id, violation.Line)))
+      .ToArray();
+  }
+
+  private static (HashSet<(string RuleId, int Line)> Suppressed, List<Violation> Problems) Read(
+    SourceFile file)
   {
     var suppressed = new HashSet<(string RuleId, int Line)>();
     var problems = new List<Violation>();
@@ -48,10 +75,7 @@ internal static partial class Suppressions
       suppressed.Add((ruleId, line + 1));
     }
 
-    return violations
-      .Where(violation => !suppressed.Contains((violation.Rule.Id, violation.Line)))
-      .Concat(problems)
-      .ToArray();
+    return (suppressed, problems);
   }
 
   /// <summary>

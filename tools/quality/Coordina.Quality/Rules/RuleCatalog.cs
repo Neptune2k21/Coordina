@@ -1,5 +1,6 @@
 using Coordina.Quality.Checks;
 using Coordina.Quality.Commits;
+using Coordina.Quality.Duplication;
 using Coordina.Quality.Rules.CSharp;
 using Coordina.Quality.Rules.Files;
 
@@ -30,6 +31,7 @@ internal static class RuleCatalog
   public static IReadOnlyList<RuleInfo> Others { get; } =
   [
     Suppressions.Info,
+    DuplicationRule.Info,
     .. CommitMessageChecker.Rules
   ];
 }

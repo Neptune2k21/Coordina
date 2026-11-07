@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Coordina.Quality.Cli;
+using Coordina.Quality.Tests.Support;
 
 namespace Coordina.Quality.Tests.Cli;
 
@@ -13,6 +14,8 @@ public sealed class CommandLineTests : IDisposable
     Git("init", "--quiet", "--initial-branch=master");
     Git("config", "user.email", "tests@coordina.test");
     Git("config", "user.name", "Quality Tests");
+    Write(".gitignore", "node_modules/\n");
+    RepositoryFixture.LinkWebDependencies(_root);
     Write("src/web/src/features/board/board-api.ts", "export const ok = 1\n");
     Git("add", ".");
     Git("commit", "--quiet", "-m", "chore: start");
@@ -75,6 +78,28 @@ public sealed class CommandLineTests : IDisposable
       "::error file=src/web/src/features/board/BadName.ts,line=1,title=CQ2001 Web files and folders use kebab-case::",
       output,
       StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void Check_ReportsACopyOfUnchangedCode_OnTheChangedSide()
+  {
+    var block = string.Join('\n', Enumerable.Range(0, 12).Select(index =>
+      $"export const value{index} = compute(\"{index}\", {index} * 2, [{index}, {index + 1}])"));
+    Write("src/web/src/features/board/original.ts", block + "\n");
+    Git("add", ".");
+    Git("commit", "--quiet", "-m", "chore: add original");
+    Git("switch", "--quiet", "-c", "feature");
+    Write("src/web/src/features/board/copy.ts", block + "\n");
+
+    var (exitCode, output) = Run("check", "--base", "master");
+
+    Assert.Equal(CommandLine.Failure, exitCode);
+    Assert.Contains(
+      "CQ4001  This block is repeated in src/web/src/features/board/original.ts.",
+      output,
+      StringComparison.Ordinal);
+    Assert.DoesNotContain("original.ts\n", output, StringComparison.Ordinal);
+    Assert.Equal(CommandLine.Success, Run("check", "--staged").ExitCode);
   }
 
   [Fact]

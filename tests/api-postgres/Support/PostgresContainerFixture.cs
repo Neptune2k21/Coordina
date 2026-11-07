@@ -1,5 +1,7 @@
 using Coordina.Api.Core.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -58,6 +60,17 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
   public Task<PostgresDatabase> CreateEmptyDatabaseAsync()
   {
     return CreateDatabaseAsync(string.Empty);
+  }
+
+  /// <summary>A database migrated up to <paramref name="migration"/>, to test the migrations after it.</summary>
+  public async Task<PostgresDatabase> CreateDatabaseAtMigrationAsync(string migration)
+  {
+    var database = await CreateEmptyDatabaseAsync();
+
+    await using var dbContext = database.CreateDbContext();
+    await dbContext.GetService<IMigrator>().MigrateAsync(migration);
+
+    return database;
   }
 
   internal string ConnectionStringFor(string database)

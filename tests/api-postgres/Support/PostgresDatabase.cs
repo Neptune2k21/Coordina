@@ -44,6 +44,19 @@ public sealed class PostgresDatabase : IAsyncDisposable
     return value is null or DBNull ? default : (T)value;
   }
 
+  /// <summary>
+  /// Inserts a workspace and its projects with SQL, for migration tests that
+  /// run against an older schema the API's stores no longer match.
+  /// </summary>
+  public Task InsertWorkspaceWithProjectsAsync(Guid workspaceId, params Guid[] projectIds) =>
+    ExecuteAsync($"""
+      INSERT INTO workspaces (id, name, created_at)
+      VALUES ('{workspaceId}', 'Legacy', now());
+      INSERT INTO projects (id, workspace_id, name, project_owner_id, status, created_at, updated_at)
+      VALUES {string.Join(", ", projectIds.Select(projectId =>
+        $"('{projectId}', '{workspaceId}', 'Legacy', gen_random_uuid(), 'ACTIVE', now(), now())"))};
+      """);
+
   public async Task ExecuteAsync(string sql)
   {
     await using var connection = await OpenConnectionAsync();
