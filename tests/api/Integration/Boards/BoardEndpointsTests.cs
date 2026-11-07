@@ -406,6 +406,26 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
   }
 
   [Fact]
+  public async Task CreateBoard_WhenTheProjectHasOne_ReturnsConflictAndKeepsTheFirst()
+  {
+    var owner = await Api.RegisterAsync();
+    var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Board Team");
+    var project = await Api.CreateProjectAsync(owner.AccessToken, workspace.Id, "Delivery");
+    var first = await Api.CreateBoardAsync(owner.AccessToken, workspace.Id, project.Id, "BASIC");
+
+    var response = await Api.SendAsync(
+      HttpMethod.Post,
+      $"/workspaces/{workspace.Id}/projects/{project.Id}/boards",
+      owner.AccessToken,
+      new { name = "Second", template = "BLANK" });
+    var board = await Api.GetDefaultBoardAsync(owner.AccessToken, workspace.Id, project.Id);
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    Assert.Contains("already has a board", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    Assert.Equal(first.Id, board.Id);
+  }
+
+  [Fact]
   public async Task AddCardDependency_WhenItWouldCreateCycle_ReturnsConflict()
   {
     var owner = await Api.RegisterAsync();
