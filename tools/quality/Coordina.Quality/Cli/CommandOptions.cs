@@ -6,6 +6,7 @@ internal sealed record CommandOptions(
   bool DryRun,
   string? Base,
   string Format,
+  string? Sarif,
   IReadOnlyList<string> Skip,
   IReadOnlyList<string> Positional)
 {
@@ -14,7 +15,7 @@ internal sealed record CommandOptions(
   public static CommandOptions Parse(IEnumerable<string> arguments)
   {
     var queue = new Queue<string>(arguments);
-    var options = new CommandOptions(false, false, false, null, "console", [], []);
+    var options = new CommandOptions(false, false, false, null, "console", null, [], []);
     var skip = new List<string>();
     var positional = new List<string>();
 
@@ -29,6 +30,7 @@ internal sealed record CommandOptions(
         "--dry-run" => options with { DryRun = true },
         "--base" => options with { Base = ValueOf(queue, argument) },
         "--format" => options with { Format = FormatOf(ValueOf(queue, argument)) },
+        "--sarif" => options with { Sarif = ValueOf(queue, argument) },
         "--skip" => Add(options, skip, ValueOf(queue, argument)),
         _ when argument.StartsWith("--", StringComparison.Ordinal) =>
           throw new UsageException($"Unknown option '{argument}'."),

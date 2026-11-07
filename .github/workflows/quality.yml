@@ -19,6 +19,10 @@ jobs:
   quality:
     name: Format, lint, test and build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploads the quality results to code scanning.
+      security-events: write
 
     steps:
       - name: Checkout
@@ -57,7 +61,16 @@ jobs:
         run: make docker-up
 
       - name: Quality rules
-        run: dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release -- check --all --format github
+        run: dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release -- check --all --format github --sarif quality.sarif
+
+      # Annotations already show on pull requests, so only master feeds code
+      # scanning, which then lists every known problem in the Security tab.
+      - name: Upload quality results to code scanning
+        if: ${{ !cancelled() && github.event_name == 'push' && hashFiles('quality.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: quality.sarif
+          category: coordina-quality
 
       - name: Affected suites
         if: github.event_name == 'pull_request'

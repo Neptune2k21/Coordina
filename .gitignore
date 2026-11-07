@@ -22,3 +22,6 @@ obj/
 TestResults/
 coverage/
 coverage.cobertura.xml
+
+# Quality results for code scanning
+*.sarif
