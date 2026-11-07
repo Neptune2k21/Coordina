@@ -197,8 +197,15 @@ export function isCardOverdue(card: BoardCard, today = todayDateKey()) {
 }
 
 export function isBlockedCard(card: BoardCard) {
-  return card.labels.some((label) =>
-    ["blocked", "blocker", "bloque"].includes(label.toLowerCase())
+  if (card.isCompleted) {
+    return false
+  }
+
+  return (
+    card.dependencies.some((dependency) => !dependency.isCompleted) ||
+    card.labels.some((label) =>
+      ["blocked", "blocker", "bloque"].includes(label.toLowerCase())
+    )
   )
 }
 
