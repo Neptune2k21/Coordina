@@ -47,7 +47,8 @@ public sealed class BoardEntityConfiguration
       .IsRequired();
 
     builder.HasIndex(board => new { board.WorkspaceId, board.ProjectId });
-    builder.HasIndex(board => board.ProjectId);
+    // One board per project for v0. The web app only shows a project's board.
+    builder.HasIndex(board => board.ProjectId).IsUnique();
 
     builder.HasOne(board => board.Project)
       .WithMany()

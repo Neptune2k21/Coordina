@@ -114,6 +114,12 @@ GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/graph
 ## Project shell and board system
 
 Each project detail page is a container, not a single-purpose board screen. The shell owns project metadata and module navigation, while each module owns its data and state.
+### One board per project
+
+For v0, a project has exactly one board: the project page shows it, and nothing lets a user pick another. `POST .../boards` returns `409` when the project already has one, including when two requests race, because a unique index on `boards.project_id` decides. The web app then loads the existing board instead of showing an error.
+
+The `OneBoardPerProject` migration keeps the oldest board of each project, which is the one the app was already showing, and deletes the others with their lists and cards. Several boards per project can come back later, with a way to choose between them.
+
 ### Board templates
 
 Project creation intentionally does not choose the board workflow. When a new project is opened for the first time, the board module shows a setup screen where the user can choose a template or create custom lists.

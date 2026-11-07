@@ -59,7 +59,7 @@ public sealed class InMemoryBoardStore : IBoardStore
     return Task.FromResult<ProjectBoard?>(ToBoard(board));
   }
 
-  public Task<ProjectBoard> CreateAsync(
+  public Task<ProjectBoard?> CreateAsync(
     Guid workspaceId,
     Guid projectId,
     string name,
@@ -69,6 +69,11 @@ public sealed class InMemoryBoardStore : IBoardStore
     CancellationToken cancellationToken)
   {
     cancellationToken.ThrowIfCancellationRequested();
+
+    if (_boards.Values.Any(existing => existing.ProjectId == projectId))
+    {
+      return Task.FromResult<ProjectBoard?>(null);
+    }
 
     var board = new BoardRecord(
       Guid.NewGuid(),
@@ -148,7 +153,7 @@ public sealed class InMemoryBoardStore : IBoardStore
       }
     }
 
-    return Task.FromResult(ToBoard(board));
+    return Task.FromResult<ProjectBoard?>(ToBoard(board));
   }
 
   public Task<ProjectBoard?> CreateListAsync(

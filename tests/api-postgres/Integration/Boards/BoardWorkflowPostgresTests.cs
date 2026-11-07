@@ -10,6 +10,7 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
 {
   private static readonly Guid WorkspaceId = Guid.Parse("10000000-0000-0000-0000-000000000001");
   private static readonly Guid ProjectId = Guid.Parse("20000000-0000-0000-0000-000000000001");
+  private static readonly Guid ScrumProjectId = Guid.Parse("20000000-0000-0000-0000-000000000002");
   private static readonly Guid SingleListBoardId = Guid.Parse("30000000-0000-0000-0000-000000000001");
   private static readonly Guid ScrumBoardId = Guid.Parse("30000000-0000-0000-0000-000000000002");
   private static readonly Guid SingleListId = Guid.Parse("40000000-0000-0000-0000-000000000001");
@@ -35,22 +36,24 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
       INSERT INTO workspaces (id, name, created_at)
       VALUES ('{WorkspaceId}', 'Legacy', now());
       INSERT INTO projects (id, workspace_id, name, project_owner_id, status, created_at, updated_at)
-      VALUES ('{ProjectId}', '{WorkspaceId}', 'Legacy', gen_random_uuid(), 'ACTIVE', now(), now());
+      VALUES
+        ('{ProjectId}', '{WorkspaceId}', 'Legacy', gen_random_uuid(), 'ACTIVE', now(), now()),
+        ('{ScrumProjectId}', '{WorkspaceId}', 'Legacy scrum', gen_random_uuid(), 'ACTIVE', now(), now());
       INSERT INTO boards (id, workspace_id, project_id, name, template, created_at, updated_at)
       VALUES
         ('{SingleListBoardId}', '{WorkspaceId}', '{ProjectId}', 'Single', 'CUSTOM', now(), now()),
-        ('{ScrumBoardId}', '{WorkspaceId}', '{ProjectId}', 'Scrum', 'AGILE_SCRUM', now(), now());
+        ('{ScrumBoardId}', '{WorkspaceId}', '{ScrumProjectId}', 'Scrum', 'AGILE_SCRUM', now(), now());
       INSERT INTO board_lists (id, board_id, workspace_id, project_id, title, position, created_at, updated_at)
       VALUES
         ('{SingleListId}', '{SingleListBoardId}', '{WorkspaceId}', '{ProjectId}', 'Only', 0, now(), now()),
-        ('{BacklogListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ProjectId}', 'Backlog', 0, now(), now()),
-        ('{SprintListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ProjectId}', 'Sprint', 5, now(), now()),
-        ('{ReviewListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ProjectId}', 'Review', 7, now(), now()),
-        ('{DoneListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ProjectId}', 'Done', 9, now(), now());
+        ('{BacklogListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ScrumProjectId}', 'Backlog', 0, now(), now()),
+        ('{SprintListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ScrumProjectId}', 'Sprint', 5, now(), now()),
+        ('{ReviewListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ScrumProjectId}', 'Review', 7, now(), now()),
+        ('{DoneListId}', '{ScrumBoardId}', '{WorkspaceId}', '{ScrumProjectId}', 'Done', 9, now(), now());
       INSERT INTO board_cards (id, board_id, list_id, workspace_id, project_id, title, labels, is_completed, completed_at, position, created_at, updated_at)
       VALUES
-        ('{CompletedReviewCardId}', '{ScrumBoardId}', '{ReviewListId}', '{WorkspaceId}', '{ProjectId}', 'Checked in review', ARRAY[]::text[], TRUE, now(), 0, now(), now()),
-        ('{OpenDoneCardId}', '{ScrumBoardId}', '{DoneListId}', '{WorkspaceId}', '{ProjectId}', 'Open in done', ARRAY[]::text[], FALSE, NULL, 0, now(), now());
+        ('{CompletedReviewCardId}', '{ScrumBoardId}', '{ReviewListId}', '{WorkspaceId}', '{ScrumProjectId}', 'Checked in review', ARRAY[]::text[], TRUE, now(), 0, now(), now()),
+        ('{OpenDoneCardId}', '{ScrumBoardId}', '{DoneListId}', '{WorkspaceId}', '{ScrumProjectId}', 'Open in done', ARRAY[]::text[], FALSE, NULL, 0, now(), now());
       """);
 
     await using (var dbContext = database.CreateDbContext())

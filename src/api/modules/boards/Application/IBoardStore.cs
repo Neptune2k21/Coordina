@@ -25,7 +25,8 @@ public interface IBoardStore
     Guid boardId,
     CancellationToken cancellationToken);
 
-  Task<ProjectBoard> CreateAsync(
+  /// <summary>Returns <c>null</c> when the project already has a board.</summary>
+  Task<ProjectBoard?> CreateAsync(
     Guid workspaceId,
     Guid projectId,
     string name,
