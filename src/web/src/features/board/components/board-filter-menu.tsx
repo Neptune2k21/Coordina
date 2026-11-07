@@ -15,15 +15,15 @@ import type { WorkspaceMember } from "@/types/workspace"
 
 type BoardFilterMenuProps = {
   activeFilterCount: number
-  assigneeFilter: string | "ALL"
-  labelFilter: string | "ALL"
+  assigneeFilter: string | null
+  labelFilter: string | null
   labels: string[]
   members: WorkspaceMember[]
-  priorityFilter: BoardCardPriority | "ALL"
-  onAssigneeFilterChange: (value: string | "ALL") => void
+  priorityFilter: BoardCardPriority | null
+  onAssigneeFilterChange: (value: string | null) => void
   onClear: () => void
-  onLabelFilterChange: (value: string | "ALL") => void
-  onPriorityFilterChange: (value: BoardCardPriority | "ALL") => void
+  onLabelFilterChange: (value: string | null) => void
+  onPriorityFilterChange: (value: BoardCardPriority | null) => void
 }
 
 export function BoardFilterMenu({
@@ -64,8 +64,8 @@ export function BoardFilterMenu({
       >
         <DropdownMenuLabel>Priority</DropdownMenuLabel>
         <FilterMenuItem
-          active={priorityFilter === "ALL"}
-          onSelect={() => onPriorityFilterChange("ALL")}
+          active={priorityFilter === null}
+          onSelect={() => onPriorityFilterChange(null)}
         >
           Any priority
         </FilterMenuItem>
@@ -81,8 +81,8 @@ export function BoardFilterMenu({
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Labels</DropdownMenuLabel>
         <FilterMenuItem
-          active={labelFilter === "ALL"}
-          onSelect={() => onLabelFilterChange("ALL")}
+          active={labelFilter === null}
+          onSelect={() => onLabelFilterChange(null)}
         >
           Any label
         </FilterMenuItem>
@@ -102,8 +102,8 @@ export function BoardFilterMenu({
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Assignee</DropdownMenuLabel>
         <FilterMenuItem
-          active={assigneeFilter === "ALL"}
-          onSelect={() => onAssigneeFilterChange("ALL")}
+          active={assigneeFilter === null}
+          onSelect={() => onAssigneeFilterChange(null)}
         >
           Any assignee
         </FilterMenuItem>

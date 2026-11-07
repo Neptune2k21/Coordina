@@ -32,7 +32,9 @@ describe("useBoardResource", () => {
       (_token, _workspaceId, projectId) =>
         projectId === "a" ? slowA.promise : Promise.resolve(boardB)
     )
-    vi.mocked(boardApi.getBoardGraph).mockReturnValue(new Promise(() => {}))
+    vi.mocked(boardApi.getBoardGraph).mockReturnValue(
+      new Promise(() => undefined)
+    )
     vi.mocked(workspaceApi.listWorkspaceMembers).mockResolvedValue([])
     const onError = vi.fn()
 
@@ -65,7 +67,9 @@ describe("useBoardResource", () => {
   it("reloads only the graph when planning preferences change", async () => {
     const board = makeBoard([])
     vi.mocked(boardApi.getDefaultBoard).mockResolvedValue(board)
-    vi.mocked(boardApi.getBoardGraph).mockReturnValue(new Promise(() => {}))
+    vi.mocked(boardApi.getBoardGraph).mockReturnValue(
+      new Promise(() => undefined)
+    )
     vi.mocked(workspaceApi.listWorkspaceMembers).mockResolvedValue([])
 
     const { rerender } = renderHook(

@@ -45,15 +45,16 @@ describe("AuthSection", () => {
   it("registers a user and redirects to the app", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        accessToken: "token-123",
-        expiresAt: "2026-05-29T12:00:00.000Z",
-        user: {
-          id: "user-1",
-          email: "ada@coordina.test",
-          name: "Ada Lovelace",
-        },
-      }),
+      json: () =>
+        Promise.resolve({
+          accessToken: "token-123",
+          expiresAt: "2026-05-29T12:00:00.000Z",
+          user: {
+            id: "user-1",
+            email: "ada@coordina.test",
+            name: "Ada Lovelace",
+          },
+        }),
     })
     vi.stubGlobal("fetch", fetchMock)
 

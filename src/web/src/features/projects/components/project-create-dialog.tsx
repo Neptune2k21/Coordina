@@ -95,7 +95,10 @@ export function ProjectCreateDialog({
             project opens.
           </DialogDescription>
         </DialogHeader>
-        <form className="grid gap-4" onSubmit={handleSubmit}>
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => void handleSubmit(event)}
+        >
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="project-name">Project name</FieldLabel>

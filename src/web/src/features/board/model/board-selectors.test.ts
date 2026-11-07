@@ -17,10 +17,10 @@ import {
 
 const today = "2026-10-28"
 const noFilters: BoardFilters = {
-  assigneeId: "ALL",
+  assigneeId: null,
   focus: "all",
-  label: "ALL",
-  priority: "ALL",
+  label: null,
+  priority: null,
   sessionUserId: "me",
 }
 
@@ -119,6 +119,24 @@ describe("getBoardMetrics", () => {
 
     expect(metrics.blocked).toBe(0)
     expect(metrics.risk).toBe(0)
+  })
+})
+
+describe("filterBoard label filter", () => {
+  it("filters on a label literally named ALL", () => {
+    const filtered = filterBoard(
+      makeBoard([
+        makeList("Todo", "TODO", [
+          makeCard({ id: "tagged", labels: ["ALL"] }),
+          makeCard({ id: "other", labels: ["backend"] }),
+        ]),
+      ]),
+      "",
+      { ...noFilters, label: "ALL" },
+      today
+    )
+
+    expect(filtered?.lists[0]?.cards.map((card) => card.id)).toEqual(["tagged"])
   })
 })
 

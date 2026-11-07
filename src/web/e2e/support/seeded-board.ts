@@ -1,6 +1,9 @@
 import { expect, type Page } from "@playwright/test"
 
+import type { AuthSession } from "../../src/types/auth"
+import type { Project } from "../../src/types/project"
 import type { Board, BoardTemplate } from "../../src/types/task"
+import type { Workspace } from "../../src/types/workspace"
 
 export const apiUrl = "http://127.0.0.1:5051"
 const password = "Password123!"
@@ -19,28 +22,32 @@ export async function seedBoard(
   template: BoardTemplate
 ): Promise<SeededBoard> {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@coordina.test`
-  const post = async (path: string, data: object, token?: string) => {
+  const post = async <T>(path: string, data: object, token?: string) => {
     const response = await page.request.post(`${apiUrl}${path}`, {
       data,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     expect(response.ok()).toBe(true)
 
-    return response.json()
+    return (await response.json()) as T
   }
-  const { accessToken } = await post("/auth/register", {
+  const { accessToken } = await post<AuthSession>("/auth/register", {
     name: "E2E Tester",
     email,
     password,
   })
-  const workspace = await post("/workspaces", { name: "E2E team" }, accessToken)
-  const project = await post(
+  const workspace = await post<Workspace>(
+    "/workspaces",
+    { name: "E2E team" },
+    accessToken
+  )
+  const project = await post<Project>(
     `/workspaces/${workspace.id}/projects`,
     { name: "E2E", description: "End-to-end test project" },
     accessToken
   )
   const projectPath = `/workspaces/${workspace.id}/projects/${project.id}`
-  const board: Board = await post(
+  const board = await post<Board>(
     `${projectPath}/boards`,
     { name: "E2E board", template },
     accessToken

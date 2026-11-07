@@ -28,7 +28,7 @@ export function moveCardInBoard(
     ...board,
     lists: listsWithoutCard.map((list) =>
       list.id === listId
-        ? { ...list, cards: [...list.cards, movedCard as BoardCard] }
+        ? { ...list, cards: [...list.cards, movedCard!] }
         : list
     ),
   }

@@ -88,7 +88,7 @@ export function getPlanTags(
   item: BoardGraphPlanItem,
   preferences: PlanningPreferences
 ) {
-  const tags: { label: string; tone: PlanTone }[] = [
+  const tags: Array<{ label: string; tone: PlanTone }> = [
     { label: "Ready to start", tone: "teal" },
   ]
   const dueReason = getDueReason(item)
@@ -177,7 +177,7 @@ function isCriticalPlanItem(item: BoardGraphPlanItem) {
 }
 
 function toUnlockTag(reason: string) {
-  const match = reason.match(/^Unlocks (\d+)/)
+  const match = /^Unlocks (\d+)/.exec(reason)
 
   if (!match) {
     return reason

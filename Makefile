@@ -133,7 +133,7 @@ docs:
 
 test: graph-engine-test graph-engine-benchmark-smoke api-test web-test web-e2e
 
-lint: api-format-check web-contract-check web-lint web-typecheck check-all
+lint: api-format-check web-contract-check web-typecheck check-all
 
 format: api-format web-format
 

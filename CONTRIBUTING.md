@@ -240,7 +240,13 @@ C++ with [jscpd](https://github.com/kucherenko/jscpd), installed with the web
 app's dev dependencies. It compares your changes with the whole repository, so
 copying an unchanged file is caught too, but it only reports clones that touch
 the files you changed. The pre-commit hook skips this check to stay fast; `make
-check` and CI run it, and CI fails if jscpd is not installed. Errors fail the check; warnings, such as a file over 500 lines, are
+check` and CI run it, and CI fails if jscpd is not installed.
+
+The same goes for the web app's ESLint (`eslint/...` rules, configured in
+`src/web/eslint.config.js`): `make check` lints the web files you changed and
+`make check-all` the whole app, with the same report and CI annotations. Its
+rules use TypeScript types, so they catch problems such as a promise passed
+where React expects a plain callback; that takes about 5 seconds. Errors fail the check; warnings, such as a file over 500 lines, are
 shown so you can decide.
 
 Run `make check` while you work instead of the whole `make quality`, then

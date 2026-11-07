@@ -39,7 +39,7 @@ describe("ProjectCreateDialog", () => {
     })
   })
 
-  it("keeps board templates out of the project creation flow", async () => {
+  it("keeps board templates out of the project creation flow", () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
 
     render(<ProjectCreateDialog isCreating={false} onCreate={onCreate} />)

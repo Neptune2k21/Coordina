@@ -10,10 +10,10 @@ import type {
 export type BoardFocus = "all" | "mine" | "risk" | "due-soon" | "unassigned"
 
 export type BoardFilters = {
-  assigneeId: string | "ALL"
+  assigneeId: string | null
   focus: BoardFocus
-  label: string | "ALL"
-  priority: BoardCardPriority | "ALL"
+  label: string | null
+  priority: BoardCardPriority | null
   sessionUserId?: string | null
 }
 
@@ -216,9 +216,9 @@ export function isActiveWorkList(list: Pick<BoardList, "taskStatus">) {
 function hasActiveBoardFilters(filters: BoardFilters) {
   return (
     filters.focus !== "all" ||
-    filters.priority !== "ALL" ||
-    filters.label !== "ALL" ||
-    filters.assigneeId !== "ALL"
+    filters.priority !== null ||
+    filters.label !== null ||
+    filters.assigneeId !== null
   )
 }
 
@@ -250,21 +250,21 @@ function cardMatchesFilters(
     return true
   }
 
-  if (filters.priority !== "ALL" && card.priority !== filters.priority) {
+  if (filters.priority !== null && card.priority !== filters.priority) {
     return false
   }
 
+  const labelFilter = filters.label?.toLowerCase()
+
   if (
-    filters.label !== "ALL" &&
-    !card.labels.some(
-      (label) => label.toLowerCase() === filters.label.toLowerCase()
-    )
+    labelFilter !== undefined &&
+    !card.labels.some((label) => label.toLowerCase() === labelFilter)
   ) {
     return false
   }
 
   if (
-    filters.assigneeId !== "ALL" &&
+    filters.assigneeId !== null &&
     !card.assignees.some((assignee) => assignee.userId === filters.assigneeId)
   ) {
     return false
