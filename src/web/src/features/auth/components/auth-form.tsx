@@ -69,7 +69,7 @@ export function AuthForm({ mode, isSubmitting, onSubmit }: AuthFormProps) {
   return (
     <form
       className="grid gap-5"
-      onSubmit={form.handleSubmit(handleSubmit)}
+      onSubmit={(event) => void form.handleSubmit(handleSubmit)(event)}
       noValidate
     >
       <FieldGroup>

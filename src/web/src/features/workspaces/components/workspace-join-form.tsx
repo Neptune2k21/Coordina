@@ -37,7 +37,7 @@ export function WorkspaceJoinForm({ compact = false }: { compact?: boolean }) {
   return (
     <form
       className={compact ? "grid gap-2" : "grid gap-3"}
-      onSubmit={handleSubmit}
+      onSubmit={(event) => void handleSubmit(event)}
     >
       <FieldGroup>
         <Field>

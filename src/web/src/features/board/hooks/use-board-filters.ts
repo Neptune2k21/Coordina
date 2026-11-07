@@ -14,11 +14,10 @@ export function useBoardFilters(
 ) {
   const [search, setSearch] = useState("")
   const [focus, setFocus] = useState<BoardFocus>("all")
-  const [priorityFilter, setPriorityFilter] = useState<
-    BoardCardPriority | "ALL"
-  >("ALL")
-  const [labelFilter, setLabelFilter] = useState<string | "ALL">("ALL")
-  const [assigneeFilter, setAssigneeFilter] = useState<string | "ALL">("ALL")
+  const [priorityFilter, setPriorityFilter] =
+    useState<BoardCardPriority | null>(null)
+  const [labelFilter, setLabelFilter] = useState<string | null>(null)
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null)
 
   const boardFilters = useMemo<BoardFilters>(
     () => ({
@@ -41,17 +40,17 @@ export function useBoardFilters(
   const activeFilterCount = [
     search.trim(),
     focus !== "all",
-    priorityFilter !== "ALL",
-    labelFilter !== "ALL",
-    assigneeFilter !== "ALL",
+    priorityFilter !== null,
+    labelFilter !== null,
+    assigneeFilter !== null,
   ].filter(Boolean).length
 
   const clearFilters = useCallback(() => {
     setSearch("")
     setFocus("all")
-    setPriorityFilter("ALL")
-    setLabelFilter("ALL")
-    setAssigneeFilter("ALL")
+    setPriorityFilter(null)
+    setLabelFilter(null)
+    setAssigneeFilter(null)
   }, [])
 
   return {

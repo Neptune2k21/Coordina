@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import type * as BoardFormat from "@/features/board/model/board-format"
 import { BoardAddListForm } from "@/features/board/components/board-add-list-form"
 import { BoardListColumn } from "@/features/board/components/board-list-column"
 import { makeCard, makeList } from "@/features/board/model/board-test-fixtures"
@@ -9,8 +10,7 @@ import type { BoardCard } from "@/types/task"
 const renderedCards = vi.hoisted(() => ({ count: 0 }))
 
 vi.mock("@/features/board/model/board-format", async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import("@/features/board/model/board-format")>()
+  const original = await importOriginal<typeof BoardFormat>()
 
   return {
     ...original,
@@ -39,7 +39,7 @@ describe("BoardAddListForm", () => {
       />
     )
 
-    const input = screen.getByPlaceholderText("New list") as HTMLInputElement
+    const input = screen.getByPlaceholderText<HTMLInputElement>("New list")
 
     fireEvent.change(input, { target: { value: "Shipped" } })
     fireEvent.change(screen.getByLabelText("Status"), {
@@ -64,7 +64,7 @@ describe("BoardAddListForm", () => {
     )
 
     expect(
-      (screen.getByRole("button", { name: "Add list" }) as HTMLButtonElement)
+      screen.getByRole<HTMLButtonElement>("button", { name: "Add list" })
         .disabled
     ).toBe(true)
   })

@@ -4,6 +4,7 @@ using Coordina.Quality.Commits;
 using Coordina.Quality.Duplication;
 using Coordina.Quality.Git;
 using Coordina.Quality.Impact;
+using Coordina.Quality.Lint;
 using Coordina.Quality.Reporting;
 using Coordina.Quality.Rules;
 
@@ -76,18 +77,19 @@ internal static class CommandLine
       .ToArray();
     var violations = checker.Check(files);
 
-    // Duplicates are found in the working tree, so the pre-commit hook, which
+    // jscpd and ESLint read the working tree, so the pre-commit hook, which
     // checks the staged version, leaves them to make check and CI.
     if (!options.Staged)
     {
       var duplicates = FindDuplicates(repository, files, output);
+      var lint = RunEslint(repository, options.All ? null : paths, output);
 
-      if (duplicates is null)
+      if (duplicates is null || lint is null)
       {
         return Failure;
       }
 
-      violations = QualityChecker.Order(violations.Concat(duplicates));
+      violations = QualityChecker.Order(violations.Concat(duplicates).Concat(lint));
     }
 
     var baseline = Baseline.Load(repository.Root);
@@ -261,10 +263,7 @@ internal static class CommandLine
 
     if (!detector.IsAvailable)
     {
-      var message = $"Duplicated code was not checked: {DuplicationDetector.RelativeBinaryPath} is missing. Run 'pnpm --dir src/web install'.";
-      output.WriteLine(message);
-
-      return Environment.GetEnvironmentVariable("CI") == "true" ? null : [];
+      return ToolMissing("Duplicated code", DuplicationDetector.RelativeBinaryPath, output);
     }
 
     var filesByPath = files.ToDictionary(file => file.Path, StringComparer.Ordinal);
@@ -274,6 +273,38 @@ internal static class CommandLine
       .GroupBy(violation => violation.Path)
       .SelectMany(group => Suppressions.Filter(filesByPath[group.Key], group))
       .ToArray();
+  }
+
+  /// <summary>
+  /// ESLint findings for <paramref name="paths"/>, or for the whole web app when
+  /// it is <c>null</c>. Returns <c>null</c> when ESLint is missing in CI.
+  /// </summary>
+  private static Violation[]? RunEslint(
+    GitRepository repository,
+    IReadOnlyCollection<string>? paths,
+    TextWriter output)
+  {
+    var eslint = new EslintRunner(repository.Root);
+
+    if (!eslint.AppliesHere)
+    {
+      return [];
+    }
+
+    return eslint.IsAvailable
+      ? eslint.Run(paths).ToArray()
+      : ToolMissing("TypeScript lint", EslintRunner.RelativeBinaryPath, output);
+  }
+
+  /// <summary>
+  /// Says a tool installed with the web app is missing. Locally the check goes
+  /// on without it; in CI it fails, because skipping would hide problems.
+  /// </summary>
+  private static Violation[]? ToolMissing(string what, string relativeBinaryPath, TextWriter output)
+  {
+    output.WriteLine($"{what} was not checked: {relativeBinaryPath} is missing. Run 'pnpm --dir src/web install'.");
+
+    return Environment.GetEnvironmentVariable("CI") == "true" ? null : [];
   }
 
   private static QualityChecker CreateChecker(GitRepository repository) =>

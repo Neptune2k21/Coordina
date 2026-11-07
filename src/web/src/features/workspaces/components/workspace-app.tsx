@@ -48,7 +48,7 @@ function WorkspaceAppContent() {
 
   const isProjectsPage = currentPath.startsWith("/app/projects")
   const isSettingsPage = currentPath.startsWith("/app/workspace-settings")
-  const projectMatch = currentPath.match(/^\/app\/projects\/([^/]+)$/)
+  const projectMatch = /^\/app\/projects\/([^/]+)$/.exec(currentPath)
   const isProjectDetailPage = Boolean(projectMatch)
 
   useLayoutEffect(() => {
