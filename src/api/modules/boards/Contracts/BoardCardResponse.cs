@@ -1,3 +1,6 @@
+using Coordina.Api.Modules.Boards.Domain;
+using Coordina.Api.Shared.OpenApi;
+
 namespace Coordina.Api.Modules.Boards.Contracts;
 
 public sealed record BoardCardResponse(
@@ -6,7 +9,7 @@ public sealed record BoardCardResponse(
   Guid ListId,
   string Title,
   string? Description,
-  string? Priority,
+  [property: EnumCodes<BoardCardPriority>] string? Priority,
   DateOnly? DueDate,
   int? EstimatedMinutes,
   IReadOnlyCollection<string> Labels,
