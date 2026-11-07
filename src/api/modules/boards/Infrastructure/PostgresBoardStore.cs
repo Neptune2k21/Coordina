@@ -32,8 +32,11 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
   {
     ArgumentNullException.ThrowIfNull(action);
 
-    await using var transaction = await dbContext.Database
-      .BeginTransactionAsync(cancellationToken);
+    // Re-entrant: a caller already holding the lock reuses its transaction, and
+    // PostgreSQL lets a session take the same advisory lock again.
+    await using var transaction = dbContext.Database.CurrentTransaction is null
+      ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+      : null;
 
     // An advisory lock only makes other RunExclusiveAsync callers wait for this
     // board. Locking the board row would also block unrelated writes, and could
@@ -45,7 +48,10 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
 
     var result = await action(cancellationToken);
 
-    await transaction.CommitAsync(cancellationToken);
+    if (transaction is not null)
+    {
+      await transaction.CommitAsync(cancellationToken);
+    }
 
     return result;
   }
@@ -96,6 +102,8 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
         && list.ProjectId == projectId
         && list.BoardId == boardId)
       .OrderBy(list => list.Position)
+      .ThenBy(list => list.CreatedAt)
+      .ThenBy(list => list.Id)
       .ToArrayAsync(cancellationToken);
 
     var cards = await BoardCards
@@ -104,6 +112,8 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
         && card.ProjectId == projectId
         && card.BoardId == boardId)
       .OrderBy(card => card.Position)
+      .ThenBy(card => card.CreatedAt)
+      .ThenBy(card => card.Id)
       .ToArrayAsync(cancellationToken);
 
     var cardIds = cards.Select(card => card.Id).ToArray();
@@ -144,6 +154,8 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       .AsNoTracking()
       .Where(subtask => cardIds.Contains(subtask.CardId))
       .OrderBy(subtask => subtask.Position)
+      .ThenBy(subtask => subtask.CreatedAt)
+      .ThenBy(subtask => subtask.Id)
       .ToArrayAsync(cancellationToken);
     var subtaskCompletedUserIds = subtasks
       .Select(subtask => subtask.CompletedByUserId)
@@ -352,7 +364,28 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       ?? throw new InvalidOperationException("Board was not created.");
   }
 
-  public async Task<ProjectBoard?> CreateListAsync(
+  // Positions are MAX + 1, so allocating one must not interleave with another write.
+  public Task<ProjectBoard?> CreateListAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    string title,
+    BoardTaskStatus taskStatus,
+    DateTimeOffset createdAt,
+    CancellationToken cancellationToken) =>
+    RunExclusiveAsync(
+      boardId,
+      token => CreateListUnderLockAsync(
+        workspaceId,
+        projectId,
+        boardId,
+        title,
+        taskStatus,
+        createdAt,
+        token),
+      cancellationToken);
+
+  private async Task<ProjectBoard?> CreateListUnderLockAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
@@ -453,7 +486,28 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       .SingleOrDefault(card => card.Id == cardId);
   }
 
-  public async Task<ProjectBoard?> CreateCardAsync(
+  // Positions are MAX + 1, so allocating one must not interleave with another write.
+  public Task<ProjectBoard?> CreateCardAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid listId,
+    BoardCardMutation mutation,
+    DateTimeOffset createdAt,
+    CancellationToken cancellationToken) =>
+    RunExclusiveAsync(
+      boardId,
+      token => CreateCardUnderLockAsync(
+        workspaceId,
+        projectId,
+        boardId,
+        listId,
+        mutation,
+        createdAt,
+        token),
+      cancellationToken);
+
+  private async Task<ProjectBoard?> CreateCardUnderLockAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
@@ -522,7 +576,30 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       cancellationToken);
   }
 
-  public async Task<ProjectBoard?> UpdateCardAsync(
+  // Positions are MAX + 1, so allocating one must not interleave with another write.
+  public Task<ProjectBoard?> UpdateCardAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid listId,
+    BoardCardMutation mutation,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken) =>
+    RunExclusiveAsync(
+      boardId,
+      token => UpdateCardUnderLockAsync(
+        workspaceId,
+        projectId,
+        boardId,
+        cardId,
+        listId,
+        mutation,
+        updatedAt,
+        token),
+      cancellationToken);
+
+  private async Task<ProjectBoard?> UpdateCardUnderLockAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
@@ -609,7 +686,30 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       cancellationToken);
   }
 
-  public async Task<ProjectBoard?> MoveCardAsync(
+  // Positions are MAX + 1, so allocating one must not interleave with another write.
+  public Task<ProjectBoard?> MoveCardAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid listId,
+    BoardCardCompletion completion,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken) =>
+    RunExclusiveAsync(
+      boardId,
+      token => MoveCardUnderLockAsync(
+        workspaceId,
+        projectId,
+        boardId,
+        cardId,
+        listId,
+        completion,
+        updatedAt,
+        token),
+      cancellationToken);
+
+  private async Task<ProjectBoard?> MoveCardUnderLockAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
@@ -708,7 +808,28 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       cancellationToken);
   }
 
-  public async Task<ProjectBoard?> CreateCardSubtaskAsync(
+  // Positions are MAX + 1, so allocating one must not interleave with another write.
+  public Task<ProjectBoard?> CreateCardSubtaskAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    string title,
+    DateTimeOffset createdAt,
+    CancellationToken cancellationToken) =>
+    RunExclusiveAsync(
+      boardId,
+      token => CreateCardSubtaskUnderLockAsync(
+        workspaceId,
+        projectId,
+        boardId,
+        cardId,
+        title,
+        createdAt,
+        token),
+      cancellationToken);
+
+  private async Task<ProjectBoard?> CreateCardSubtaskUnderLockAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,

@@ -88,6 +88,8 @@ fits the focus time, the ready card with the smallest known estimate is flagged
 
 Adding a dependency runs under a per-board lock (`IBoardStore.RunExclusiveAsync`), so the cycle check and the write cannot interleave with another request. When two requests would close a cycle together, one succeeds and the other gets `409`. Sending the same dependency several times stores it once, and every request succeeds.
 
+Creating a list, a card or a subtask, and moving or completing a card, take the same lock, because the new position is the current maximum plus one. Rows that already share a position, from before this lock, are ordered by creation time and then id, so they always load in the same order.
+
 ## API surface
 
 ```http
