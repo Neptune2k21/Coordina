@@ -47,6 +47,24 @@ describe("useBoardMutations", () => {
     vi.resetAllMocks()
   })
 
+  it("creates a list with the chosen status", async () => {
+    vi.mocked(boardApi.createList).mockResolvedValue(initialBoard)
+    const { result } = renderMutations()
+
+    await act(async () => {
+      await result.current.mutations.createList("Shipped", "DONE")
+    })
+
+    expect(boardApi.createList).toHaveBeenCalledWith(
+      "token",
+      "workspace",
+      "project",
+      initialBoard.id,
+      "Shipped",
+      "DONE"
+    )
+  })
+
   it("restores the previous board when a move fails", async () => {
     vi.mocked(boardApi.moveCard).mockRejectedValue(
       new ApiError("Server unavailable", 503)

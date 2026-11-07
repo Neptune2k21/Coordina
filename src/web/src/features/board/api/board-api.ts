@@ -8,9 +8,18 @@ import type {
   Board,
   BoardCardDependencyAnalysis,
   BoardCardInput,
+  BoardCreationInput,
   BoardGraph,
-  BoardTemplate,
+  BoardTaskStatus,
+  BoardTemplateDefinition,
 } from "@/types/task"
+
+export async function getBoardTemplates(accessToken: string) {
+  return apiRequest<BoardTemplateDefinition[]>("/board-templates", {
+    accessToken,
+    errorMessage: "Board templates request failed.",
+  })
+}
 
 export async function getDefaultBoard(
   accessToken: string,
@@ -30,7 +39,7 @@ export async function createBoard(
   accessToken: string,
   workspaceId: string,
   projectId: string,
-  input: { name: string; template: BoardTemplate; customListTitles?: string[] }
+  input: BoardCreationInput & { name: string }
 ) {
   return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards`,
@@ -48,14 +57,15 @@ export async function createList(
   workspaceId: string,
   projectId: string,
   boardId: string,
-  title: string
+  title: string,
+  taskStatus: BoardTaskStatus
 ) {
   return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists`,
     {
       accessToken,
       method: "POST",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, taskStatus }),
       errorMessage: "Board request failed.",
     }
   )

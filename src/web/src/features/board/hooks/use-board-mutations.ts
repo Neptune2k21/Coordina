@@ -13,8 +13,9 @@ import type {
   BoardCard,
   BoardCardInput,
   BoardCardSubtask,
+  BoardCreationInput,
   BoardList,
-  BoardTemplate,
+  BoardTaskStatus,
 } from "@/types/task"
 
 type UseBoardMutationsOptions = {
@@ -126,11 +127,7 @@ export function useBoardMutations({
     }
   }
 
-  async function createBoard(
-    name: string,
-    template: BoardTemplate,
-    customListTitles?: string[]
-  ) {
+  async function createBoard(name: string, input: BoardCreationInput) {
     if (!accessToken || isReadOnly) {
       return
     }
@@ -142,8 +139,7 @@ export function useBoardMutations({
       setBoard(
         await boardApi.createBoard(accessToken, workspaceId, projectId, {
           name,
-          template,
-          customListTitles,
+          ...input,
         })
       )
       setNotice("Board created")
@@ -154,7 +150,7 @@ export function useBoardMutations({
     }
   }
 
-  async function createList(title: string) {
+  async function createList(title: string, taskStatus: BoardTaskStatus) {
     if (!target || !title.trim()) {
       return false
     }
@@ -167,7 +163,8 @@ export function useBoardMutations({
             workspaceId,
             projectId,
             target.boardId,
-            title
+            title,
+            taskStatus
           )
         )
       },

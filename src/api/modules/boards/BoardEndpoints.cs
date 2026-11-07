@@ -10,6 +10,11 @@ public static class BoardEndpoints
   public static IEndpointRouteBuilder MapBoardEndpoints(
     this IEndpointRouteBuilder app)
   {
+    app.MapApiGroup("/board-templates", "Boards")
+      .MapGet("/", ListTemplates)
+      .WithSummary("List board templates")
+      .WithDescription("Returns every template with its lists and example cards.");
+
     var projectGroup = app.MapApiGroup(
       "/workspaces/{workspaceId:guid}/projects/{projectId:guid}",
       "Boards");
@@ -70,6 +75,9 @@ public static class BoardEndpoints
 
     return app;
   }
+
+  private static IResult ListTemplates(IBoardCatalogService boardCatalog) =>
+    Results.Ok(boardCatalog.ListTemplates());
 
   private static async Task<IResult> GetDefault(
     Guid workspaceId,

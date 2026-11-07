@@ -15,7 +15,9 @@ internal static class BoardRules
 
   private static BoardListSeed[] BuildListSeeds(
     BoardTemplate template,
-    string[]? customListTitles)
+    string[]? customListTitles,
+    bool includeExampleCards,
+    DateOnly today)
   {
     if (template == BoardTemplate.Custom)
     {
@@ -29,17 +31,29 @@ internal static class BoardRules
         .ToArray();
     }
 
-    return BoardTemplateCatalog.GetLists(template)
+    var lists = BoardTemplateCatalog.GetLists(template);
+    var cardIds = lists
+      .SelectMany(list => list.Cards)
+      .ToDictionary(card => card.Key, _ => Guid.NewGuid());
+
+    return lists
       .Select(list => new BoardListSeed(
         list.Title,
         list.TaskStatus,
-        list.Cards
-          .Select(card => new BoardCardSeed(
-            card.Title,
-            card.Description,
-            card.Priority,
-            card.Labels))
-          .ToArray()))
+        includeExampleCards
+          ? list.Cards
+            .Select(card => new BoardCardSeed(
+              cardIds[card.Key],
+              card.Title,
+              card.Description,
+              card.Priority,
+              card.DueInDays is { } days ? today.AddDays(days) : null,
+              card.EstimatedMinutes,
+              card.Labels,
+              card.Subtasks,
+              card.DependsOn.Select(key => cardIds[key]).ToArray()))
+            .ToArray()
+          : []))
       .ToArray();
   }
 
@@ -63,6 +77,8 @@ internal static class BoardRules
     string? name,
     string? templateCode,
     string[]? customListTitles,
+    bool includeExampleCards,
+    DateOnly today,
     out BoardTemplate? template,
     out BoardListSeed[] listSeeds)
   {
@@ -72,7 +88,7 @@ internal static class BoardRules
 
     listSeeds = template is null
       ? []
-      : BuildListSeeds(template.Value, customListTitles);
+      : BuildListSeeds(template.Value, customListTitles, includeExampleCards, today);
 
     if (template == BoardTemplate.Custom && listSeeds.Length == 0)
     {

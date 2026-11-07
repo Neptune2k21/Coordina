@@ -5,6 +5,8 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 public interface IBoardCatalogService
 {
+  IReadOnlyCollection<BoardTemplateResponse> ListTemplates();
+
   Task<Result<BoardResponse>> GetDefaultAsync(
     Guid workspaceId,
     Guid projectId,

@@ -267,9 +267,12 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
       var cardPosition = 0;
       foreach (var cardSeed in listSeed.Cards)
       {
+        var isDone = listSeed.TaskStatus == BoardTaskStatus.Done;
+        var subtaskPosition = 0;
+
         list.Cards.Add(new BoardCardEntity
         {
-          Id = Guid.NewGuid(),
+          Id = cardSeed.Id,
           BoardId = board.Id,
           ListId = list.Id,
           WorkspaceId = workspaceId,
@@ -277,14 +280,36 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
           Title = cardSeed.Title,
           Description = cardSeed.Description,
           Priority = cardSeed.Priority,
+          DueDate = cardSeed.DueDate,
+          EstimatedMinutes = cardSeed.EstimatedMinutes,
           Labels = cardSeed.Labels.ToArray(),
-          IsCompleted = listSeed.TaskStatus == BoardTaskStatus.Done,
-          CompletedAt = listSeed.TaskStatus == BoardTaskStatus.Done
-            ? createdAt
-            : null,
+          IsCompleted = isDone,
+          CompletedAt = isDone ? createdAt : null,
           Position = cardPosition++,
           CreatedAt = createdAt,
-          UpdatedAt = createdAt
+          UpdatedAt = createdAt,
+          Subtasks = cardSeed.Subtasks
+            .Select(title => new BoardCardSubtaskEntity
+            {
+              Id = Guid.NewGuid(),
+              CardId = cardSeed.Id,
+              Title = title,
+              IsCompleted = isDone,
+              CompletedAt = isDone ? createdAt : null,
+              Position = subtaskPosition++,
+              CreatedAt = createdAt,
+              UpdatedAt = createdAt
+            })
+            .ToList(),
+          Dependencies = cardSeed.DependsOnCardIds
+            .Select(dependsOnCardId => new BoardCardDependencyEntity
+            {
+              Id = Guid.NewGuid(),
+              CardId = cardSeed.Id,
+              DependsOnCardId = dependsOnCardId,
+              CreatedAt = createdAt
+            })
+            .ToList()
         });
       }
 

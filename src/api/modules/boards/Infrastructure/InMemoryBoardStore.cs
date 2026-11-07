@@ -86,8 +86,9 @@ public sealed class InMemoryBoardStore : IBoardStore
       var cardPosition = 0;
       foreach (var cardSeed in listSeed.Cards)
       {
+        var isDone = listSeed.TaskStatus == BoardTaskStatus.Done;
         var card = new CardRecord(
-          Guid.NewGuid(),
+          cardSeed.Id,
           board.Id,
           list.Id,
           projectId,
@@ -95,17 +96,43 @@ public sealed class InMemoryBoardStore : IBoardStore
           cardSeed.Title,
           cardSeed.Description,
           cardSeed.Priority,
-          null,
-          null,
+          cardSeed.DueDate,
+          cardSeed.EstimatedMinutes,
           cardSeed.Labels.ToArray(),
-          listSeed.TaskStatus == BoardTaskStatus.Done,
-          listSeed.TaskStatus == BoardTaskStatus.Done ? createdAt : null,
+          isDone,
+          isDone ? createdAt : null,
           null,
           cardPosition++,
           createdAt,
           createdAt,
           []);
         _cards[card.Id] = card;
+
+        var subtaskPosition = 0;
+        foreach (var title in cardSeed.Subtasks)
+        {
+          var subtask = new SubtaskRecord(
+            Guid.NewGuid(),
+            card.Id,
+            title,
+            isDone,
+            isDone ? createdAt : null,
+            null,
+            subtaskPosition++,
+            createdAt,
+            createdAt);
+          _subtasks[subtask.Id] = subtask;
+        }
+
+        foreach (var dependsOnCardId in cardSeed.DependsOnCardIds)
+        {
+          var dependency = new DependencyRecord(
+            Guid.NewGuid(),
+            card.Id,
+            dependsOnCardId,
+            createdAt);
+          _dependencies[dependency.Id] = dependency;
+        }
       }
     }
 

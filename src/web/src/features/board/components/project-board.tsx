@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { boardTaskStatuses } from "@/features/board/model/board-constants"
 import { isActiveWorkList } from "@/features/board/model/board-selectors"
 import { BoardFilterMenu } from "@/features/board/components/board-filter-menu"
 import { BoardFocusTabs } from "@/features/board/components/board-focus-tabs"
@@ -24,6 +25,7 @@ import { BoardSkeleton } from "@/features/board/components/board-skeleton"
 import { CardSidePanel } from "@/features/board/components/card-side-panel"
 import { useProjectBoard } from "@/features/board/hooks/use-project-board"
 import type { Project } from "@/types/project"
+import type { BoardTaskStatus } from "@/types/task"
 import type { Workspace } from "@/types/workspace"
 
 type ProjectBoardProps = {
@@ -46,6 +48,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     filters,
     handleAddComment,
     handleAddDependency,
+    handleCancelNewList,
     handleCreateBoard,
     handleCreateList,
     handleCreateSubtask,
@@ -69,6 +72,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     members,
     metrics,
     myCardCount,
+    newListStatus,
     newListTitle,
     notice,
     planningPreferences,
@@ -78,6 +82,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     setDraggingCardId,
     setIsAddingList,
     setIsPlanningPanelOpen,
+    setNewListStatus,
     setNewListTitle,
     setPlanningPreferences,
     setQuickAddListId,
@@ -116,9 +121,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
       <BoardSetupOnboarding
         isCreating={isCreatingBoard}
         projectName={project.name}
-        onCreate={(template, customListTitles) =>
-          void handleCreateBoard(template, customListTitles)
-        }
+        onCreate={(input) => void handleCreateBoard(input)}
       />
     )
   }
@@ -276,7 +279,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
           )
         })}
         {!isReadOnly && isAddingList ? (
-          <div className="w-72 shrink-0 rounded-md border border-zinc-950/10 bg-white p-2 shadow-xs dark:border-white/10 dark:bg-zinc-950">
+          <div className="grid w-72 shrink-0 gap-2 self-start rounded-md border border-zinc-950/10 bg-white p-2 shadow-xs dark:border-white/10 dark:bg-zinc-950">
             <div className="flex gap-2">
               <Input
                 value={newListTitle}
@@ -294,10 +297,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
                 variant="ghost"
                 size="icon"
                 className="size-8 rounded-md"
-                onClick={() => {
-                  setIsAddingList(false)
-                  setNewListTitle("")
-                }}
+                onClick={handleCancelNewList}
               >
                 <X className="size-3.5" />
               </Button>
@@ -311,6 +311,22 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
                 <Plus className="size-3.5" />
               </Button>
             </div>
+            <label className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              Status
+              <select
+                className="h-7 min-w-0 rounded-md border border-zinc-950/10 bg-white px-1.5 text-[11px] text-foreground dark:border-white/10 dark:bg-zinc-950"
+                value={newListStatus}
+                onChange={(event) =>
+                  setNewListStatus(event.target.value as BoardTaskStatus)
+                }
+              >
+                {boardTaskStatuses.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         ) : !isReadOnly ? (
           <button

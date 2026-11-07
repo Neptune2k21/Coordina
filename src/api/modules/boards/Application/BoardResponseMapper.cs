@@ -6,6 +6,29 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 internal static class BoardResponseMapper
 {
+  public static BoardTemplateResponse ToResponse(BoardTemplateDefinition template) =>
+    new(
+      EnumCode.Format(template.Id),
+      template.Name,
+      template.Summary,
+      template.Lists
+        .Select(list => new BoardTemplateListResponse(
+          list.Title,
+          EnumCode.Format(list.TaskStatus),
+          list.Cards
+            .Select(card => new BoardTemplateCardResponse(
+              card.Key,
+              card.Title,
+              card.Description,
+              EnumCode.Format(card.Priority),
+              card.EstimatedMinutes,
+              card.DueInDays,
+              card.Labels,
+              card.Subtasks,
+              card.DependsOn))
+            .ToArray()))
+        .ToArray());
+
   public static BoardResponse ToResponse(ProjectBoard board) =>
     new(
       board.Id,
