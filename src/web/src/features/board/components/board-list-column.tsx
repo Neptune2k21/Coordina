@@ -5,7 +5,7 @@ import {
   TextAlignLeft,
   WarningCircle,
 } from "@phosphor-icons/react"
-import { useEffect, useState } from "react"
+import { memo, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -32,11 +32,9 @@ type BoardListColumnProps = {
   onCardClick: (card: BoardCard) => void
   onDragCard: (cardId: string) => void
   onDropCard: (cardId: string) => void
-  onQuickAdd: () => void
-  onQuickTitleChange: (title: string) => void
+  onQuickAdd: (title: string) => void
   onRename: (title: string) => void
   onToggleQuickAdd: () => void
-  quickTitle: string
   wipLimit?: number
 }
 
@@ -51,10 +49,8 @@ export function BoardListColumn({
   onDragCard,
   onDropCard,
   onQuickAdd,
-  onQuickTitleChange,
   onRename,
   onToggleQuickAdd,
-  quickTitle,
   wipLimit,
 }: BoardListColumnProps) {
   const [title, setTitle] = useState(list.title)
@@ -146,29 +142,7 @@ export function BoardListColumn({
       </div>
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">
         {isQuickAdding && !isReadOnly ? (
-          <div className="rounded-md border border-zinc-950/10 bg-white p-1.5 shadow-xs dark:border-white/10 dark:bg-zinc-950">
-            <Input
-              value={quickTitle}
-              autoFocus
-              placeholder="Card title"
-              className="h-8 rounded-md text-xs"
-              onChange={(event) => onQuickTitleChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  onQuickAdd()
-                }
-              }}
-            />
-            <Button
-              type="button"
-              size="sm"
-              className="mt-1.5 h-7 rounded-md px-2 text-xs"
-              disabled={!quickTitle.trim() || isSaving}
-              onClick={onQuickAdd}
-            >
-              Add
-            </Button>
-          </div>
+          <QuickAddForm isSaving={isSaving} onSubmit={onQuickAdd} />
         ) : null}
         {list.cards.length > 0 ? (
           list.cards.map((card) => (
@@ -176,8 +150,8 @@ export function BoardListColumn({
               key={card.id}
               card={card}
               isReadOnly={isReadOnly}
-              onClick={() => onCardClick(card)}
-              onDragStart={() => onDragCard(card.id)}
+              onClick={onCardClick}
+              onDragStart={onDragCard}
             />
           ))
         ) : (
@@ -190,7 +164,44 @@ export function BoardListColumn({
   )
 }
 
-function CompactCard({
+// Keeps what is being typed here, so typing does not re-render the whole board.
+function QuickAddForm({
+  isSaving,
+  onSubmit,
+}: {
+  isSaving: boolean
+  onSubmit: (title: string) => void
+}) {
+  const [title, setTitle] = useState("")
+
+  return (
+    <div className="rounded-md border border-zinc-950/10 bg-white p-1.5 shadow-xs dark:border-white/10 dark:bg-zinc-950">
+      <Input
+        value={title}
+        autoFocus
+        placeholder="Card title"
+        className="h-8 rounded-md text-xs"
+        onChange={(event) => setTitle(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            onSubmit(title)
+          }
+        }}
+      />
+      <Button
+        type="button"
+        size="sm"
+        className="mt-1.5 h-7 rounded-md px-2 text-xs"
+        disabled={!title.trim() || isSaving}
+        onClick={() => onSubmit(title)}
+      >
+        Add
+      </Button>
+    </div>
+  )
+}
+
+const CompactCard = memo(function CompactCard({
   card,
   isReadOnly,
   onClick,
@@ -198,8 +209,8 @@ function CompactCard({
 }: {
   card: BoardCard
   isReadOnly: boolean
-  onClick: () => void
-  onDragStart: () => void
+  onClick: (card: BoardCard) => void
+  onDragStart: (cardId: string) => void
 }) {
   const isBlocked = isBlockedCard(card)
 
@@ -209,7 +220,7 @@ function CompactCard({
       className={`cursor-pointer overflow-hidden rounded-md border-zinc-950/10 bg-white text-zinc-950 shadow-xs transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900 ${
         card.isCompleted ? "opacity-78" : ""
       }`}
-      onClick={onClick}
+      onClick={() => onClick(card)}
       onDragStart={(event) => {
         if (isReadOnly) {
           event.preventDefault()
@@ -218,7 +229,7 @@ function CompactCard({
 
         event.dataTransfer.effectAllowed = "move"
         event.dataTransfer.setData("text/plain", card.id)
-        onDragStart()
+        onDragStart(card.id)
       }}
     >
       <div className={`h-1 ${priorityBar(card.priority)}`} />
@@ -317,4 +328,4 @@ function CompactCard({
       </CardContent>
     </Card>
   )
-}
+})

@@ -38,9 +38,6 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
 
   const [error, setError] = useState<string | null>(null)
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null)
-  const [quickTitle, setQuickTitle] = useState("")
-  const [newListTitle, setNewListTitle] = useState("")
-  const [newListStatus, setNewListStatus] = useState<BoardTaskStatus>("TODO")
   const [isAddingList, setIsAddingList] = useState(false)
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
@@ -128,31 +125,27 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     !isReadOnly &&
     (workspace.role === "OWNER" || project.projectOwnerId === sessionUserId)
   const canShowPlanningPanel = cardCount > 0
+  const handleSelectCard = useCallback((card: BoardCard) => {
+    setSelectedCardId(card.id)
+  }, [])
   const isPlanningPanelVisible = canShowPlanningPanel && isPlanningPanelOpen
 
   async function handleCreateBoard(input: BoardCreationInput) {
     await mutations.createBoard(`${project.name} Board`, input)
   }
 
-  async function handleCreateList() {
-    if (await mutations.createList(newListTitle, newListStatus)) {
-      handleCancelNewList()
+  async function handleCreateList(title: string, taskStatus: BoardTaskStatus) {
+    if (await mutations.createList(title, taskStatus)) {
+      setIsAddingList(false)
     }
-  }
-
-  function handleCancelNewList() {
-    setNewListTitle("")
-    setNewListStatus("TODO")
-    setIsAddingList(false)
   }
 
   async function handleRenameList(list: BoardList, title: string) {
     await mutations.renameList(list, title)
   }
 
-  async function handleQuickAdd(list: BoardList) {
-    if (await mutations.quickAddCard(list.id, quickTitle)) {
-      setQuickTitle("")
+  async function handleQuickAdd(list: BoardList, title: string) {
+    if (await mutations.quickAddCard(list.id, title)) {
       setQuickAddListId(null)
     }
   }
@@ -201,7 +194,6 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     filters,
     handleAddComment: mutations.addComment,
     handleAddDependency: mutations.addDependency,
-    handleCancelNewList,
     handleCreateBoard,
     handleCreateList,
     handleCreateSubtask: mutations.createSubtask,
@@ -213,6 +205,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     handleQuickAdd,
     handleRenameList,
     handleSaveCard,
+    handleSelectCard,
     handleUpdateSubtask,
     isAddingList,
     isCreatingBoard: mutations.isCreatingBoard,
@@ -225,21 +218,15 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     members: resource.members,
     metrics,
     myCardCount,
-    newListStatus,
-    newListTitle,
     notice: mutations.notice,
     planningPreferences,
     quickAddListId,
-    quickTitle,
     selectedCard,
     setDraggingCardId,
     setIsAddingList,
     setIsPlanningPanelOpen,
-    setNewListStatus,
-    setNewListTitle,
     setPlanningPreferences,
     setQuickAddListId,
-    setQuickTitle,
     setSelectedCardId,
     wipAlerts,
   }
