@@ -76,7 +76,7 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         LIMIT 1
                     ),
                     updated_at = p.created_at,
-                    status = 'ACTIVE'
+                    status = 'ACTIVE';
                 """);
 
       migrationBuilder.AlterColumn<Guid>(
