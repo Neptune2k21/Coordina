@@ -7,17 +7,16 @@ import {
   useState,
 } from "react"
 
+import { SaasShell } from "@/app/saas-shell"
 import { Card, CardContent } from "@/components/ui/card"
-import { SaasShell } from "@/components/layout/saas-shell"
-import { ProjectShell } from "@/features/projects/components/project-shell"
-import { ProjectsPage } from "@/features/projects/components/projects-page"
-import { WorkspaceDashboard } from "@/features/workspaces/components/workspace-dashboard"
-import { WorkspaceOnboarding } from "@/features/workspaces/components/workspace-onboarding"
-import { WorkspaceSettingsPage } from "@/features/workspaces/components/workspace-settings-page"
+import { ProjectShell, ProjectsPage } from "@/features/projects"
 import {
+  WorkspaceDashboard,
+  WorkspaceOnboarding,
   WorkspaceProvider,
+  WorkspaceSettingsPage,
   useWorkspaces,
-} from "@/features/workspaces/workspace-context"
+} from "@/features/workspaces"
 
 export function WorkspaceApp() {
   return (

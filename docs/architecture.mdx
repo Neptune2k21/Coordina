@@ -22,6 +22,7 @@ src/
       health/      Liveness and readiness (database) checks
   graph-engine/   C++20 native library (critical path, planning, suggestions)
   web/            React + Vite application
+    app/           Routing and the app shell, composing the features
     features/      One folder per product area (auth, workspaces, projects, board)
     components/    Shared UI primitives and layout
     lib/           API client and cross-cutting helpers
@@ -177,9 +178,24 @@ and completion changes in one write.
 
 **Features own their state.** Each feature folder contains its API client
 (`*-api.ts`), domain hooks (`use-*.ts`), pure helpers, and components. Shared UI
-lives in `components/ui`; nothing in `components/` may import from `features/`.
-Larger features split into `api/`, `model/`, `hooks/`, and `components/`, as
-`features/board` does.
+lives in `components/ui`. Larger features split into `api/`, `model/`, `hooks/`,
+and `components/`, as `features/board` does.
+
+**Layering is one-way: `app → features → shared`.** ESLint enforces it, through
+`src/web/lint/module-boundaries.js`:
+
+- The app layer (`src/app`, `App.tsx`, `main.tsx`) routes and composes features.
+  Nothing else imports it.
+- A feature exposes what others may use in its `index.ts`. Code outside the
+  feature imports `@/features/<name>`, never a file inside it. The exception is
+  a lazily loaded page, imported with `import()` so it stays in its own chunk.
+- A feature may only use the features declared for it in `featureDependencies`
+  (`auth` → `workspaces` → `board` → `projects`). Each one comes before the
+  features that use it, so features never form a cycle. A new feature folder
+  must be added to that table.
+- Shared code (`components`, `lib`, `types`) never imports a feature.
+- Imports use `@/…` instead of `../`, so the module a file depends on shows in
+  the import.
 
 **Components render, hooks decide.** Data loading, mutations, and derived state
 live in hooks (`use-board-resource`, `use-board-mutations`, `use-board-filters`,
@@ -214,7 +230,7 @@ module seams. When the product grows, evolve in this order rather than jumping
 to microservices:
 
 1. **Routing** — replace the hand-rolled `popstate` navigation in `App.tsx` and
-   `workspace-app.tsx` with a real router (React Router) so workspace/project
+   `app/workspace-app.tsx` with a real router (React Router) so workspace/project
    URLs become shareable deep links (`/app/w/:workspaceId/projects/:projectId`).
 2. **Server state** — adopt TanStack Query for the frontend data layer. The
    current hooks centralize fetching well, but caching, retries, and optimistic

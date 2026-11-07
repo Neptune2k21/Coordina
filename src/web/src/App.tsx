@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react"
 
 import { Header } from "@/components/layout/header"
 import { Hero } from "@/components/sections/hero"
-import { AuthProvider, useAuth } from "@/features/auth/auth-context"
+import { AuthProvider, useAuth } from "@/features/auth"
 import { docsBaseUrl } from "@/lib/docs-url"
 
 const AuthSection = lazy(() =>
@@ -11,7 +11,7 @@ const AuthSection = lazy(() =>
   }))
 )
 const WorkspaceApp = lazy(() =>
-  import("@/features/workspaces/components/workspace-app").then((module) => ({
+  import("@/app/workspace-app").then((module) => ({
     default: module.WorkspaceApp,
   }))
 )

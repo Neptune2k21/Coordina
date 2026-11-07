@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 
-import { useAuth } from "@/features/auth/auth-context"
+import { useAuth } from "@/features/auth"
 import { ApiError } from "@/lib/api"
 import {
   archiveProject,
@@ -11,7 +11,7 @@ import {
   listProjects,
 } from "@/features/projects/project-api"
 import type { Project, ProjectInput, ProjectUpdateInput } from "@/types/project"
-import { useWorkspaces } from "@/features/workspaces/workspace-context"
+import { useWorkspaces } from "@/features/workspaces"
 
 export type ProjectAction = {
   type: "archive" | "restore" | "delete"

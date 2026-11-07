@@ -17,8 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/features/auth/auth-context"
-import { WorkspaceSwitcher } from "@/features/workspaces/components/workspace-switcher"
+import { useAuth } from "@/features/auth"
+import { WorkspaceSwitcher } from "@/features/workspaces"
 
 type SaasShellProps = {
   children: React.ReactNode

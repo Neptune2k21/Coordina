@@ -7,7 +7,7 @@ import {
   useState,
 } from "react"
 
-import { useAuth } from "@/features/auth/auth-context"
+import { useAuth } from "@/features/auth"
 import {
   createWorkspaceInvite,
   createWorkspace,

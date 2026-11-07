@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ApiError } from "@/lib/api"
-import { useAuth } from "@/features/auth/auth-context"
+import { useAuth } from "@/features/auth"
 import { ProjectIconMark } from "@/features/projects/components/project-personalization"
 import { getProject } from "@/features/projects/project-api"
 import type { Project } from "@/types/project"
-import { ProjectBoard } from "@/features/board/components/project-board"
-import { useWorkspaces } from "@/features/workspaces/workspace-context"
+import { ProjectBoard } from "@/features/board"
+import { useWorkspaces } from "@/features/workspaces"
 
 type ProjectShellProps = {
   projectId: string

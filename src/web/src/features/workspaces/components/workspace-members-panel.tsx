@@ -12,7 +12,7 @@ import {
 import { FieldError } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { ApiError } from "@/lib/api"
-import { useAuth } from "@/features/auth/auth-context"
+import { useAuth } from "@/features/auth"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
 import type { WorkspaceMember } from "@/types/workspace"
 
