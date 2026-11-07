@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { useAuth } from "@/features/auth/auth-context"
+import { useAuth } from "@/features/auth"
 import { useBoardFilters } from "@/features/board/hooks/use-board-filters"
 import { useBoardMutations } from "@/features/board/hooks/use-board-mutations"
 import {

@@ -184,6 +184,12 @@ The web app is organized by feature:
 src/web/src/features/<feature>
 ```
 
+A feature is used from outside only through its `index.ts`. It may only depend
+on the features declared for it in `src/web/lint/module-boundaries.js`, and
+shared code (`components`, `lib`, `types`) never imports a feature. ESLint
+reports any import that breaks this, and the full rules are in
+[docs/architecture.mdx](docs/architecture.mdx#frontend-rules).
+
 When adding frontend behavior:
 
 1. Keep API calls in a feature API client.

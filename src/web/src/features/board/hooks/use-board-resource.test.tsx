@@ -4,11 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import * as boardApi from "@/features/board/api/board-api"
 import { useBoardResource } from "@/features/board/hooks/use-board-resource"
 import { makeBoard } from "@/features/board/model/board-test-fixtures"
-import * as workspaceApi from "@/features/workspaces/workspace-api"
+import * as workspaces from "@/features/workspaces"
 import type { Board } from "@/types/task"
 
 vi.mock("@/features/board/api/board-api")
-vi.mock("@/features/workspaces/workspace-api")
+vi.mock("@/features/workspaces")
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -35,7 +35,7 @@ describe("useBoardResource", () => {
     vi.mocked(boardApi.getBoardGraph).mockReturnValue(
       new Promise(() => undefined)
     )
-    vi.mocked(workspaceApi.listWorkspaceMembers).mockResolvedValue([])
+    vi.mocked(workspaces.listWorkspaceMembers).mockResolvedValue([])
     const onError = vi.fn()
 
     const { result, rerender } = renderHook(
@@ -70,7 +70,7 @@ describe("useBoardResource", () => {
     vi.mocked(boardApi.getBoardGraph).mockReturnValue(
       new Promise(() => undefined)
     )
-    vi.mocked(workspaceApi.listWorkspaceMembers).mockResolvedValue([])
+    vi.mocked(workspaces.listWorkspaceMembers).mockResolvedValue([])
 
     const { rerender } = renderHook(
       ({ availableMinutes }) =>

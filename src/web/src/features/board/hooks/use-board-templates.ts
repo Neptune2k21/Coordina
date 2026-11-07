@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 
-import { useAuth } from "@/features/auth/auth-context"
+import { useAuth } from "@/features/auth"
 import * as boardApi from "@/features/board/api/board-api"
 import type { BoardTemplateDefinition } from "@/types/task"
 

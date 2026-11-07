@@ -5,6 +5,8 @@ import reactRefresh from "eslint-plugin-react-refresh"
 import tseslint from "typescript-eslint"
 import { defineConfig, globalIgnores } from "eslint/config"
 
+import { featuresIn, moduleBoundaries } from "./lint/module-boundaries.js"
+
 export default defineConfig([
   // api-contract.ts is generated from contracts/openapi.json.
   globalIgnores(["dist", "src/types/api-contract.ts"]),
@@ -64,6 +66,7 @@ export default defineConfig([
       ],
     },
   },
+  ...moduleBoundaries(featuresIn(import.meta.dirname)),
   {
     // Augmenting a global type such as ImportMetaEnv needs an interface.
     files: ["**/*.d.ts"],

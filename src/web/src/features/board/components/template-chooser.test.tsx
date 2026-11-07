@@ -6,7 +6,7 @@ import { TemplateChooser } from "@/features/board/components/template-chooser"
 import type { BoardTemplateDefinition } from "@/types/task"
 
 vi.mock("@/features/board/api/board-api")
-vi.mock("@/features/auth/auth-context", () => ({
+vi.mock("@/features/auth", () => ({
   useAuth: () => ({ session: { accessToken: "token" } }),
 }))
 

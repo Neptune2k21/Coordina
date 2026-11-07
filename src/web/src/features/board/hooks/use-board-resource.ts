@@ -5,7 +5,7 @@ import {
   defaultPlanningPreferences,
   type PlanningPreferences,
 } from "@/features/board/model/planning-preferences"
-import { listWorkspaceMembers } from "@/features/workspaces/workspace-api"
+import { listWorkspaceMembers } from "@/features/workspaces"
 import { ApiError } from "@/lib/api"
 import type {
   Board,
