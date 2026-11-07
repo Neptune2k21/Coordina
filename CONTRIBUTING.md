@@ -300,6 +300,32 @@ describe what the web app sends, like form values, stay hand-written.
 Because of this, the quality tool only runs the web suites for an API change
 when the contract changes too.
 
+## Graph Engine ABI
+
+The API calls the C++ engine through the C structs and enums in
+`src/graph-engine/include/coordina_graph_engine.h`, and `NativeGuidGraphEngine`
+declares the same structs in C#. Nothing at runtime checks that the two agree:
+a field that differs on one side corrupts memory without failing.
+
+`contracts/graph-engine-abi.json` records every struct's size and field offsets
+and every enum's values, as the C++ compiler sees them. Each side checks
+itself against that file:
+
+- `make graph-engine-test` fails when the header no longer matches the file.
+  `tests/graph-engine/abi_layout.cpp` lists the fields and values to print, and
+  it does not compile if a struct field or an enum value is missing from it.
+- `GraphEngineAbiTests` fails when a C# struct or enum differs from the file,
+  or when C# marshals a struct the file does not describe.
+
+After changing the header, update `abi_layout.cpp` if needed, run `make
+graph-engine-abi`, then update the C# side until `make api-test` passes. The
+offsets are those of 64-bit Linux, where CI builds the engine.
+
+`make graph-engine-sanitize` runs the native tests under AddressSanitizer and
+UndefinedBehaviorSanitizer, which catch out-of-bounds access, use after free,
+leaks and undefined behaviour that the plain tests can pass despite. CI runs
+it with the rest of the graph-engine suite.
+
 ## Testing
 
 Endpoint tests derive from `ApiTest`, which provides an in-memory API and an

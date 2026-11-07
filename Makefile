@@ -1,4 +1,4 @@
-.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks contract web-contract-check
+.PHONY: help graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks contract web-contract-check
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -16,11 +16,15 @@ GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
 GRAPH_ENGINE_TEST_OUT := tests/graph-engine/bin
 GRAPH_ENGINE_SOURCES := $(GRAPH_ENGINE_DIR)/src/interop/coordina_graph_engine.cpp $(GRAPH_ENGINE_DIR)/src/interop/native_bridge.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_snapshot.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_types.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/critical_path.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/dependency_validator.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/graph_traversal.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/node_analysis.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/suggestion_engine.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/topological_order.cpp $(GRAPH_ENGINE_DIR)/src/planning/planning_analysis.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_planner.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_score.cpp
 GRAPH_ENGINE_FLAGS := -std=c++20 -O2 -fPIC -Wall -Wextra -Wpedantic -Werror -I$(GRAPH_ENGINE_DIR)/include -I$(GRAPH_ENGINE_DIR)/src
+GRAPH_ENGINE_SANITIZE_FLAGS := $(filter-out -O2,$(GRAPH_ENGINE_FLAGS)) -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all
+GRAPH_ENGINE_ABI := contracts/graph-engine-abi.json
 
 help:
 	@echo "Commandes disponibles :"
 	@echo "  make dev          Lance l'API C# et le front React"
 	@echo "  make graph-engine-test Lance les tests natifs du moteur de graphe C++"
+	@echo "  make graph-engine-sanitize Lance les tests natifs sous AddressSanitizer et UBSan"
+	@echo "  make graph-engine-abi Regenere contracts/graph-engine-abi.json depuis le header C"
 	@echo "  make graph-engine-benchmark Mesure l'analyse de board native (sizes=\"100 1000\" optionnel)"
 	@echo "  make api          Lance l'API C#"
 	@echo "  make api-watch    Lance l'API C# en mode watch"
@@ -55,10 +59,26 @@ graph-engine-build:
 	mkdir -p $(GRAPH_ENGINE_OUT)
 	g++ $(GRAPH_ENGINE_FLAGS) -shared $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_OUT)/libcoordina_graph_engine.so
 
-graph-engine-test:
+graph-engine-test: graph-engine-abi-check
 	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
 	g++ $(GRAPH_ENGINE_FLAGS) tests/graph-engine/graph_engine_tests.cpp $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_TEST_OUT)/graph_engine_tests
 	$(GRAPH_ENGINE_TEST_OUT)/graph_engine_tests
+
+graph-engine-sanitize:
+	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
+	g++ $(GRAPH_ENGINE_SANITIZE_FLAGS) tests/graph-engine/graph_engine_tests.cpp $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_TEST_OUT)/graph_engine_tests_sanitized
+	ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1 $(GRAPH_ENGINE_TEST_OUT)/graph_engine_tests_sanitized
+
+graph-engine-abi:
+	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
+	g++ $(GRAPH_ENGINE_FLAGS) tests/graph-engine/abi_layout.cpp -o $(GRAPH_ENGINE_TEST_OUT)/abi_layout
+	$(GRAPH_ENGINE_TEST_OUT)/abi_layout > $(GRAPH_ENGINE_ABI)
+
+graph-engine-abi-check:
+	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
+	g++ $(GRAPH_ENGINE_FLAGS) tests/graph-engine/abi_layout.cpp -o $(GRAPH_ENGINE_TEST_OUT)/abi_layout
+	@$(GRAPH_ENGINE_TEST_OUT)/abi_layout | diff -u $(GRAPH_ENGINE_ABI) - \
+		|| (echo "$(GRAPH_ENGINE_ABI) is out of date. Run 'make graph-engine-abi' and commit the result." && exit 1)
 
 graph-engine-benchmark:
 	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
@@ -131,7 +151,7 @@ web-typecheck:
 docs:
 	cd $(DOCS_DIR) && npx mint dev
 
-test: graph-engine-test graph-engine-benchmark-smoke api-test web-test web-e2e
+test: graph-engine-test graph-engine-sanitize graph-engine-benchmark-smoke api-test web-test web-e2e
 
 lint: api-format-check web-contract-check web-typecheck check-all
 

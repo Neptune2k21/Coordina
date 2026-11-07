@@ -1,0 +1,136 @@
+{
+  "structs": [
+    {
+      "name": "coordina_graph_node_id",
+      "size": 16,
+      "fields": [
+        { "name": "high", "offset": 0, "size": 8 },
+        { "name": "low", "offset": 8, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_edge",
+      "size": 32,
+      "fields": [
+        { "name": "source", "offset": 0, "size": 16 },
+        { "name": "target", "offset": 16, "size": 16 }
+      ]
+    },
+    {
+      "name": "coordina_graph_node_analysis",
+      "size": 40,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "dependency_count", "offset": 16, "size": 4 },
+        { "name": "dependent_count", "offset": 20, "size": 4 },
+        { "name": "dependency_depth", "offset": 24, "size": 4 },
+        { "name": "dependent_depth", "offset": 28, "size": 4 },
+        { "name": "transitive_dependent_count", "offset": 32, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_work_item",
+      "size": 56,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "is_completed", "offset": 16, "size": 4 },
+        { "name": "priority", "offset": 20, "size": 4 },
+        { "name": "due_days", "offset": 24, "size": 4 },
+        { "name": "subtask_total", "offset": 28, "size": 4 },
+        { "name": "subtask_completed", "offset": 32, "size": 4 },
+        { "name": "position", "offset": 36, "size": 4 },
+        { "name": "estimated_minutes", "offset": 40, "size": 4 },
+        { "name": "assignment", "offset": 44, "size": 4 },
+        { "name": "is_in_progress", "offset": 48, "size": 4 },
+        { "name": "is_context_match", "offset": 52, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_planning_options",
+      "size": 12,
+      "fields": [
+        { "name": "available_minutes", "offset": 0, "size": 4 },
+        { "name": "prefer_assigned", "offset": 4, "size": 4 },
+        { "name": "include_unassigned", "offset": 8, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_work_recommendation",
+      "size": 80,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "score", "offset": 16, "size": 4 },
+        { "name": "blocker_count", "offset": 20, "size": 4 },
+        { "name": "unlock_score", "offset": 24, "size": 4 },
+        { "name": "urgency_score", "offset": 28, "size": 4 },
+        { "name": "priority_score", "offset": 32, "size": 4 },
+        { "name": "progress_score", "offset": 36, "size": 4 },
+        { "name": "is_critical_path", "offset": 40, "size": 4 },
+        { "name": "effort_score", "offset": 44, "size": 4 },
+        { "name": "assignment_score", "offset": 48, "size": 4 },
+        { "name": "momentum_score", "offset": 52, "size": 4 },
+        { "name": "context_score", "offset": 56, "size": 4 },
+        { "name": "fits_available_time", "offset": 60, "size": 4 },
+        { "name": "is_assignment_match", "offset": 64, "size": 4 },
+        { "name": "is_context_match", "offset": 68, "size": 4 },
+        { "name": "is_in_progress", "offset": 72, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_node_buffer",
+      "size": 24,
+      "fields": [
+        { "name": "items", "offset": 0, "size": 8 },
+        { "name": "capacity", "offset": 8, "size": 8 },
+        { "name": "count", "offset": 16, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_board_analysis",
+      "size": 128,
+      "fields": [
+        { "name": "ready_nodes", "offset": 0, "size": 24 },
+        { "name": "dependency_order", "offset": 24, "size": 24 },
+        { "name": "critical_path", "offset": 48, "size": 24 },
+        { "name": "node_analyses", "offset": 72, "size": 8 },
+        { "name": "node_analysis_capacity", "offset": 80, "size": 8 },
+        { "name": "node_analysis_count", "offset": 88, "size": 8 },
+        { "name": "recommendations", "offset": 96, "size": 8 },
+        { "name": "recommendation_capacity", "offset": 104, "size": 8 },
+        { "name": "recommendation_count", "offset": 112, "size": 8 },
+        { "name": "is_acyclic", "offset": 120, "size": 4 },
+        { "name": "reserved", "offset": 124, "size": 4 }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "name": "coordina_graph_assignment",
+      "values": [
+        { "name": "COORDINA_GRAPH_UNASSIGNED", "value": 0 },
+        { "name": "COORDINA_GRAPH_ASSIGNED_TO_REQUESTER", "value": 1 },
+        { "name": "COORDINA_GRAPH_ASSIGNED_TO_OTHERS", "value": 2 }
+      ]
+    },
+    {
+      "name": "coordina_graph_edge_status",
+      "values": [
+        { "name": "COORDINA_GRAPH_EDGE_ALLOWED", "value": 0 },
+        { "name": "COORDINA_GRAPH_EDGE_MISSING_SOURCE", "value": 1 },
+        { "name": "COORDINA_GRAPH_EDGE_MISSING_TARGET", "value": 2 },
+        { "name": "COORDINA_GRAPH_EDGE_SELF_REFERENCE", "value": 3 },
+        { "name": "COORDINA_GRAPH_EDGE_DUPLICATE", "value": 4 },
+        { "name": "COORDINA_GRAPH_EDGE_CYCLE", "value": 5 },
+        { "name": "COORDINA_GRAPH_EDGE_INVALID_ARGUMENT", "value": 100 }
+      ]
+    },
+    {
+      "name": "coordina_graph_status",
+      "values": [
+        { "name": "COORDINA_GRAPH_OK", "value": 0 },
+        { "name": "COORDINA_GRAPH_INVALID_ARGUMENT", "value": 1 },
+        { "name": "COORDINA_GRAPH_INSUFFICIENT_CAPACITY", "value": 2 }
+      ]
+    }
+  ]
+}
