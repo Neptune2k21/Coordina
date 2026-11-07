@@ -28,7 +28,7 @@ The project is in **pre-MVP** state and is not production-hardened. The API enfo
 
 ## Tech Stack
 
-- **API:** .NET 9, ASP.NET Core Minimal APIs, C#
+- **API:** .NET 10, ASP.NET Core Minimal APIs, C#
 - **Graph engine:** C++20 native library with a stable C ABI and .NET interop
 - **Persistence:** PostgreSQL 16, Entity Framework Core, Npgsql
 - **Authentication:** JWT bearer tokens, PBKDF2 password hashing
@@ -53,7 +53,7 @@ Current API modules include authentication, workspaces, projects, boards, and he
 
 ## Quickstart
 
-Requirements: .NET SDK 9.x, Node.js 24.x, pnpm 10.17.x, and Docker.
+Requirements: .NET SDK 10.x, Node.js 24.x, pnpm 10.17.x, and Docker.
 
 ```bash
 cp .env.example .env

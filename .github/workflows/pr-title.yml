@@ -2,6 +2,10 @@ name: PR title
 
 # Pull requests are squash-merged, so the title becomes the commit message on
 # master. It must follow Conventional Commits.
+#
+# Dependabot does not always follow them (`chore: Bump x`), so its titles are
+# fixed here instead of failing. A rename made with the workflow token does not
+# trigger a new run, so the same run checks the new title.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
@@ -15,12 +19,30 @@ jobs:
     name: Conventional title
     runs-on: ubuntu-latest
 
+    # Forks still get a read-only token. This job never checks out the pull
+    # request code, and it only renames pull requests opened by Dependabot.
+    permissions:
+      pull-requests: write
+
     steps:
       - name: Check title
         env:
           TITLE: ${{ github.event.pull_request.title }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           pattern='^(feat|fix|perf|refactor|test|docs|build|ci|chore|revert)(\([a-z0-9-]+\))?!?: [^A-Z ].*[^.]$'
+
+          if [[ "$AUTHOR" == "dependabot[bot]" ]]; then
+            fixed=$(sed -E -e 's/^chore(\([a-z0-9-]+\))?: (.)/chore\1: \L\2/' -e 's/^chore: /chore(deps): /' <<< "$TITLE")
+
+            if [[ "$fixed" != "$TITLE" ]]; then
+              gh api --method PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" -f title="$fixed" --silent
+              echo "Renamed '$TITLE' to '$fixed'."
+              TITLE=$fixed
+            fi
+          fi
 
           if [[ ! "$TITLE" =~ $pattern ]]; then
             echo "::error::'$TITLE' is not a Conventional Commits title."
@@ -29,7 +51,8 @@ jobs:
             exit 1
           fi
 
-          if (( ${#TITLE} > 72 )); then
+          # Package names and versions can make Dependabot titles longer than this.
+          if [[ "$AUTHOR" != "dependabot[bot]" ]] && (( ${#TITLE} > 72 )); then
             echo "::error::The title is ${#TITLE} characters long. Keep it at 72 or fewer."
             exit 1
           fi
