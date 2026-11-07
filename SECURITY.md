@@ -33,6 +33,13 @@ Please include:
 | Environment | Local, CI, browser, OS, dependency versions |
 | Suggested mitigation | Optional, but welcome |
 
+## Automated Scanning
+
+| Tool | What it checks | Where results appear |
+| --- | --- | --- |
+| CodeQL | Our C#, TypeScript, C++ and GitHub Actions code, on pull requests, on `master` and weekly | Security tab and pull request checks |
+| Dependabot | Our dependencies | Security tab and its own pull requests |
+
 ## Response Expectations
 
 Expected handling:

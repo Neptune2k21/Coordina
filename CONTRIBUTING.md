@@ -102,6 +102,10 @@ git rebase upstream/master
 | Branch up to date | The branch is rebased on the latest `master` |
 | Squash merge only | One pull request becomes one commit on `master` |
 
+CodeQL also runs on pull requests. It is not required to merge yet, but look at
+any alert it reports on your changes: open the check's details, or the
+**Security** tab, to see the path through the code and the suggested fix.
+
 Open a draft pull request early if you want feedback. Link the issue with
 `Closes #123` in the description. For a first contribution, a maintainer has to
 approve the CI run before it starts.
