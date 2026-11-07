@@ -1,8 +1,11 @@
-.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full
+.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
 API_TEST_PROJECT := tests/api/Coordina.Api.Tests.csproj
+QUALITY_PROJECT := tools/quality/Coordina.Quality/Coordina.Quality.csproj
+QUALITY_TEST_PROJECT := tests/quality/Coordina.Quality.Tests.csproj
+QUALITY := dotnet run --project $(QUALITY_PROJECT) --configuration Release --
 API_POSTGRES_TEST_PROJECT := tests/api-postgres/Coordina.Api.Postgres.Tests.csproj
 API_URL := http://localhost:5050
 WEB_DIR := src/web
@@ -36,6 +39,13 @@ help:
 	@echo "  make test         Lance tous les tests"
 	@echo "  make docs         Lance la documentation Mintlify"
 	@echo "  make quality      Lance format-check, lint, tests et builds"
+	@echo "  make check        Verifie les regles qualite sur tes changements (depuis origin/master)"
+	@echo "  make check-all    Verifie les regles qualite sur tout le depot"
+	@echo "  make affected     Liste les suites impactees par tes changements, et pourquoi"
+	@echo "  make verify       Lance seulement les suites impactees (skip=e2e pour les ignorer)"
+	@echo "  make quality-rules Liste les regles qualite et leur raison d'etre"
+	@echo "  make quality-baseline Reecrit la baseline des erreurs connues"
+	@echo "  make hooks        Active les hooks git (pre-commit et commit-msg)"
 	@echo "  make docker-up    Lance les services Docker"
 	@echo "  make docker-down  Stoppe les services Docker"
 	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
@@ -122,13 +132,41 @@ docs:
 
 test: graph-engine-test graph-engine-benchmark-smoke api-test web-test web-e2e
 
-lint: api-format-check web-lint web-typecheck
+lint: api-format-check web-lint web-typecheck check-all
 
 format: api-format web-format
 
 format-check: api-format-check web-format-check
 
 quality: format-check lint test api-build web-build
+
+check:
+	$(QUALITY) check
+
+check-all:
+	$(QUALITY) check --all
+
+check-staged:
+	$(QUALITY) check --staged
+
+affected:
+	$(QUALITY) affected
+
+verify:
+	$(QUALITY) verify $(if $(skip),$(foreach suite,$(skip),--skip $(suite)))
+
+quality-baseline:
+	$(QUALITY) baseline
+
+quality-rules:
+	$(QUALITY) rules
+
+quality-test:
+	dotnet test $(QUALITY_TEST_PROJECT) --configuration Release -m:1
+
+hooks:
+	git config core.hooksPath .githooks
+	@echo "Hooks enabled: pre-commit runs 'make check-staged', commit-msg checks the message."
 
 dev:
 	$(MAKE) -j2 api-watch web

@@ -3,7 +3,7 @@ namespace Coordina.Api.Tests.Support;
 // Wire contracts as the web client sees them. They are declared here, not
 // borrowed from the API, so a renamed or retyped JSON field breaks a test
 // instead of silently breaking the frontend.
-
+// quality-ignore CQ1101: one file holds the whole wire contract, so a reviewer sees every field the web client relies on.
 public sealed record AuthResponse(
   string AccessToken,
   DateTimeOffset ExpiresAt,
