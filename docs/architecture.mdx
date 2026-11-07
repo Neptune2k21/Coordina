@@ -207,6 +207,12 @@ module (`NativeGuidGraphEngine` wraps the C ABI). Nothing else in the API may
 P/Invoke into the native library, so the engine can evolve — or be replaced —
 behind one interface.
 
+The structs both sides exchange are described in
+`contracts/graph-engine-abi.json`, generated from the C header. The native
+tests and `GraphEngineAbiTests` each check their side against it, so a layout
+change on one side fails a test instead of corrupting memory. See
+[CONTRIBUTING](https://github.com/Neptune2k21/Coordina/blob/master/CONTRIBUTING.md#graph-engine-abi).
+
 ## Scaling roadmap
 
 The modular monolith is intentional at this stage: one deployable, strict

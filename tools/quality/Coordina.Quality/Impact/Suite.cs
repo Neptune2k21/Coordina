@@ -15,8 +15,8 @@ internal sealed record Suite(string Name, string Description, IReadOnlyList<stri
 
   public static Suite GraphEngine { get; } = new(
     "graph-engine",
-    "Native engine tests and benchmark smoke test",
-    ["graph-engine-test", "graph-engine-benchmark-smoke"]);
+    "Native engine tests, ABI contract, sanitizers and benchmark smoke test",
+    ["graph-engine-test", "graph-engine-sanitize", "graph-engine-benchmark-smoke"]);
 
   public static Suite EndToEnd { get; } = new(
     "e2e",

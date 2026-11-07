@@ -30,6 +30,10 @@ internal static class ImpactAnalysis
       [Suite.GraphEngine, Suite.Api, Suite.EndToEnd],
       "graph engine, which the API calls through native interop"),
     new(
+      path => path == "contracts/graph-engine-abi.json",
+      [Suite.GraphEngine, Suite.Api],
+      "native ABI contract, which the graph engine and the API both check"),
+    new(
       path => path.StartsWith("contracts/", StringComparison.Ordinal),
       [Suite.Api, Suite.Web, Suite.EndToEnd],
       "API contract, which the web app depends on"),
