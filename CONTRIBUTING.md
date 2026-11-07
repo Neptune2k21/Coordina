@@ -257,6 +257,20 @@ and the reason. The reason is required, so a reviewer can judge it:
 If a rule is wrong in general, change the rule in `tools/quality` in the same
 pull request, with a test.
 
+## API Contract
+
+`contracts/openapi.json` is the contract between the API and the web app. It
+is generated from the API and committed, so every change to a request or a
+response shows up in review.
+
+- Each endpoint declares its success response with `.Produces<T>(status)`.
+- A string that carries an enum code is annotated, for example
+  `[property: EnumCodes<BoardTaskStatus>] string TaskStatus`, so the contract
+  lists the allowed values instead of any string.
+- After changing an endpoint or a contract type, run `make contract` and
+  commit the updated file. `ApiContractTests` fails in CI when the file is out
+  of date.
+
 ## Testing
 
 Endpoint tests derive from `ApiTest`, which provides an in-memory API and an

@@ -13,14 +13,17 @@ public static class AuthEndpoints
     var group = app.MapApiGroup("/auth", "Auth");
 
     group.MapPost("/register", Register)
+      .Produces<AuthResponse>(StatusCodes.Status201Created)
       .AllowAnonymous()
       .WithSummary("Create a workspace account")
       .WithDescription("Creates a user account and returns an access token.");
     group.MapPost("/login", Login)
+      .Produces<AuthResponse>(StatusCodes.Status200OK)
       .AllowAnonymous()
       .WithSummary("Sign in")
       .WithDescription("Authenticates a user and returns an access token.");
     group.MapGet("/me", GetCurrentUser)
+      .Produces<CurrentUserResponse>(StatusCodes.Status200OK)
       .WithSummary("Get current user")
       .WithDescription("Returns the user attached to the bearer token.");
 

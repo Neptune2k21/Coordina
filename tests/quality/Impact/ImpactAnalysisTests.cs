@@ -13,6 +13,7 @@ public sealed class ImpactAnalysisTests
   [InlineData("src/graph-engine/src/core/graph_types.cpp", "graph-engine,api,e2e")]
   [InlineData("tools/quality/Coordina.Quality/Program.cs", "quality")]
   [InlineData(".githooks/pre-commit", "quality")]
+  [InlineData("contracts/openapi.json", "api,web,e2e")]
   [InlineData("Makefile", "quality,graph-engine,api,web,e2e")]
   [InlineData(".github/workflows/quality.yml", "quality,graph-engine,api,web,e2e")]
   [InlineData("src/web/README.md", "web,e2e")]
