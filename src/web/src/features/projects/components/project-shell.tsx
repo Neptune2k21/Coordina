@@ -114,7 +114,7 @@ export function ProjectShell({ projectId, onBack }: ProjectShellProps) {
   }
 
   return (
-    <div className="grid gap-2">
+    <div className="grid grid-cols-1 gap-2">
       <section className="rounded-md border border-zinc-950/[0.08] bg-white/84 px-3 py-2 shadow-[0_12px_28px_rgba(24,24,27,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.055]">
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -162,7 +162,7 @@ export function ProjectShell({ projectId, onBack }: ProjectShellProps) {
         </div>
       </section>
 
-      <div>
+      <div className="min-w-0">
         {activeTab === "board" ? (
           <ProjectBoard project={project} workspace={activeWorkspace} />
         ) : activeTab === "docs" ? (
@@ -209,7 +209,7 @@ function PlaceholderModule({
 
 function ProjectShellSkeleton() {
   return (
-    <div className="grid gap-2">
+    <div className="grid grid-cols-1 gap-2">
       <section className="rounded-md border border-zinc-950/[0.08] bg-white/84 px-3 py-2 shadow-[0_12px_28px_rgba(24,24,27,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.055]">
         <Skeleton className="h-8 w-80 max-w-full" />
       </section>
