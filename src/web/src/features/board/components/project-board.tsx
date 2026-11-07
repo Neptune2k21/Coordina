@@ -116,9 +116,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
       <BoardSetupOnboarding
         isCreating={isCreatingBoard}
         projectName={project.name}
-        onCreate={(template, customListTitles) =>
-          void handleCreateBoard(template, customListTitles)
-        }
+        onCreate={(input) => void handleCreateBoard(input)}
       />
     )
   }

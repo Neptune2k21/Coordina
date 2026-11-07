@@ -23,8 +23,8 @@ Renaming "Done" to "Shipped" changes nothing about the cards in it.
 | How the list is created | Status |
 | --- | --- |
 | `BASIC` template | To Do `TODO`, In Progress `IN_PROGRESS`, Done `DONE` |
-| `AGILE_SCRUM` template | Backlog `TODO`, Sprint `TODO`, In Progress `IN_PROGRESS`, Review `IN_PROGRESS`, Done `DONE` |
-| `BUG_TRACKING` template | Reported `TODO`, Investigating `IN_PROGRESS`, Fixed `IN_PROGRESS`, Released `DONE` |
+| `AGILE_SCRUM` template | Backlog `TODO`, Sprint Backlog `TODO`, In Progress `IN_PROGRESS`, Review `IN_PROGRESS`, Done `DONE` |
+| `BUG_TRACKING` template | Reported `TODO`, Investigating `IN_PROGRESS`, Verifying `IN_PROGRESS`, Released `DONE` |
 | `PRODUCT_ROADMAP` template | Ideas `TODO`, Planned `TODO`, In Progress `IN_PROGRESS`, Shipped `DONE` |
 | `CUSTOM` board | First list `TODO`, last list `DONE` (when there are at least two), others `IN_PROGRESS` |
 | `POST .../lists` | `taskStatus` from the request, default `TODO` |
@@ -86,9 +86,11 @@ fits the focus time, the ready card with the smallest known estimate is flagged
 ## API surface
 
 ```http
+GET    /board-templates
 GET    /workspaces/{workspaceId}/projects/{projectId}/board
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards
        { "name": "Delivery", "template": "CUSTOM", "customListTitles": ["Inbox", "Build", "Live"] }
+       { "name": "Sprint 12", "template": "AGILE_SCRUM", "includeExampleCards": false }
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists
        { "title": "Review", "taskStatus": "IN_PROGRESS" }
 PATCH  /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists/{listId}
@@ -109,16 +111,31 @@ Each project detail page is a container, not a single-purpose board screen. The 
 
 Project creation intentionally does not choose the board workflow. When a new project is opened for the first time, the board module shows a setup screen where the user can choose a template or create custom lists.
 
+`BoardTemplateCatalog` in the API is the only definition of templates. `GET /board-templates` returns each one (id, name, summary, lists with their status, and example cards), and the setup screen renders its preview from that response. To change a template, edit the catalog; the web app needs no change.
 
-| Template | Generated lists (status) |
-| --- | --- |
-| `BASIC` | To Do (`TODO`), In Progress (`IN_PROGRESS`), Done (`DONE`) |
-| `AGILE_SCRUM` | Backlog (`TODO`), Sprint (`TODO`), In Progress (`IN_PROGRESS`), Review (`IN_PROGRESS`), Done (`DONE`) |
-| `BUG_TRACKING` | Reported (`TODO`), Investigating (`IN_PROGRESS`), Fixed (`IN_PROGRESS`), Released (`DONE`) |
-| `PRODUCT_ROADMAP` | Ideas (`TODO`), Planned (`TODO`), In Progress (`IN_PROGRESS`), Shipped (`DONE`) |
-| `CUSTOM` | First list `TODO`, last list `DONE` (when there are at least two), remaining lists `IN_PROGRESS` |
+| Template | Generated lists (status) | Intent of the lists |
+| --- | --- | --- |
+| `BASIC` | To Do (`TODO`), In Progress (`IN_PROGRESS`), Done (`DONE`) | The three statuses and nothing else, for small pieces of work. |
+| `AGILE_SCRUM` | Backlog (`TODO`), Sprint Backlog (`TODO`), In Progress (`IN_PROGRESS`), Review (`IN_PROGRESS`), Done (`DONE`) | Sprint Backlog is committed work nobody has started, so it is still `TODO`. Review is not finished until it is accepted, so it is still `IN_PROGRESS`. |
+| `BUG_TRACKING` | Reported (`TODO`), Investigating (`IN_PROGRESS`), Verifying (`IN_PROGRESS`), Released (`DONE`) | Verifying holds fixes being confirmed before release. A bug is only `DONE` once customers have the fix. |
+| `PRODUCT_ROADMAP` | Ideas (`TODO`), Planned (`TODO`), In Progress (`IN_PROGRESS`), Shipped (`DONE`) | Ideas are not committed, Planned are. Neither has started, so both are `TODO`. |
+| `CUSTOM` | First list `TODO`, last list `DONE` (when there are at least two), remaining lists `IN_PROGRESS` | The user names the lists. Custom boards never have example cards. |
 
 `POST .../lists` accepts an optional `taskStatus`, defaulting to `TODO`.
+
+#### Example cards
+
+By default, a board created from a template includes example cards, so planning has something to show on day one: ready and blocked work, a critical path, and a next-task ranking. Each card has a description, labels, a priority, and an effort estimate. Some also have subtasks, dependencies on other cards in the template, and a due date relative to the day the board is created.
+
+Send `"includeExampleCards": false` to get the same lists with no cards. The setup screen offers this as a checkbox.
+
+Tests hold every template to these rules:
+
+- Every status has at least one list.
+- Card keys are unique, and every dependency points to a card in the same template.
+- The dependency graph is acyclic, and a card is never further along than a card it waits for.
+- `IN_PROGRESS` lists stay within the WIP limit.
+- A new board has a non-empty next-task ranking.
 
 Each list in a board response includes `taskStatus`:
 

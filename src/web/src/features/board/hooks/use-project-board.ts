@@ -24,8 +24,8 @@ import type {
   BoardCard,
   BoardCardInput,
   BoardCardSubtask,
+  BoardCreationInput,
   BoardList,
-  BoardTemplate,
 } from "@/types/task"
 import type { Workspace } from "@/types/workspace"
 
@@ -128,15 +128,8 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
   const canShowPlanningPanel = cardCount > 0
   const isPlanningPanelVisible = canShowPlanningPanel && isPlanningPanelOpen
 
-  async function handleCreateBoard(
-    template: BoardTemplate,
-    customListTitles?: string[]
-  ) {
-    await mutations.createBoard(
-      `${project.name} Board`,
-      template,
-      customListTitles
-    )
+  async function handleCreateBoard(input: BoardCreationInput) {
+    await mutations.createBoard(`${project.name} Board`, input)
   }
 
   async function handleCreateList() {

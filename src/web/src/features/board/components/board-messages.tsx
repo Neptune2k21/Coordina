@@ -1,11 +1,11 @@
 import { Kanban } from "@phosphor-icons/react"
 
 import { TemplateChooser } from "@/features/board/components/template-chooser"
-import type { BoardTemplate } from "@/types/task"
+import type { BoardCreationInput } from "@/types/task"
 
 type BoardSetupOnboardingProps = {
   isCreating: boolean
-  onCreate: (template: BoardTemplate, customListTitles?: string[]) => void
+  onCreate: (input: BoardCreationInput) => void
   projectName: string
 }
 

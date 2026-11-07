@@ -1,5 +1,7 @@
 using Coordina.Api.Core.Results;
+using Coordina.Api.Core.Time;
 using Coordina.Api.Modules.Boards.Contracts;
+using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Modules.Projects.Application;
 
 namespace Coordina.Api.Modules.Boards.Application;
@@ -9,6 +11,11 @@ public sealed class BoardCatalogService(
   IProjectAccessGuard projectAccess,
   TimeProvider clock) : IBoardCatalogService
 {
+  public IReadOnlyCollection<BoardTemplateResponse> ListTemplates() =>
+    BoardTemplateCatalog.All
+      .Select(BoardResponseMapper.ToResponse)
+      .ToArray();
+
   public async Task<Result<BoardResponse>> GetDefaultAsync(
     Guid workspaceId,
     Guid projectId,
@@ -58,6 +65,8 @@ public sealed class BoardCatalogService(
       request.Name,
       request.Template,
       request.CustomListTitles,
+      request.IncludeExampleCards,
+      clock.GetUtcToday(),
       out var template,
       out var listSeeds);
 

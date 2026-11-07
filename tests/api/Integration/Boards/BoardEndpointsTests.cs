@@ -38,11 +38,11 @@ public sealed class BoardEndpointsTests(ApiTestApplicationFactory factory)
     Assert.Equal(project.Id, board.ProjectId);
     Assert.Equal("AGILE_SCRUM", board.Template);
     Assert.Equal(
-      ["Backlog", "Sprint", "In Progress", "Review", "Done"],
+      ["Backlog", "Sprint Backlog", "In Progress", "Review", "Done"],
       board.Lists.Select(list => list.Title).ToArray());
     Assert.Contains(
       board.Lists.Single(list => list.Title == "Backlog").Cards,
-      card => card.Title == "Define user story"
+      card => card.Title == "Log account security events"
         && card.Priority == "MEDIUM"
         && card.Labels.Contains("story"));
   }

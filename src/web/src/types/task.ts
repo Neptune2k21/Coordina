@@ -1,17 +1,40 @@
 export type BoardTemplate =
   "BASIC" | "AGILE_SCRUM" | "BUG_TRACKING" | "PRODUCT_ROADMAP" | "CUSTOM"
 
+export type BoardCardPriority = "LOW" | "MEDIUM" | "HIGH"
+
+export type BoardTaskStatus = "TODO" | "IN_PROGRESS" | "DONE"
+
 export type BoardTemplateDefinition = {
   id: BoardTemplate
   name: string
   summary: string
-  listTitles: string[]
-  previewCards: string[]
+  lists: BoardTemplateList[]
 }
 
-export type BoardCardPriority = "LOW" | "MEDIUM" | "HIGH"
+export type BoardTemplateList = {
+  title: string
+  taskStatus: BoardTaskStatus
+  cards: BoardTemplateCard[]
+}
 
-export type BoardTaskStatus = "TODO" | "IN_PROGRESS" | "DONE"
+export type BoardTemplateCard = {
+  key: string
+  title: string
+  description: string
+  priority: BoardCardPriority
+  estimatedMinutes: number
+  dueInDays: number | null
+  labels: string[]
+  subtasks: string[]
+  dependsOn: string[]
+}
+
+export type BoardCreationInput = {
+  template: BoardTemplate
+  customListTitles?: string[]
+  includeExampleCards?: boolean
+}
 
 export type Board = {
   id: string

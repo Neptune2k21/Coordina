@@ -170,7 +170,12 @@ public sealed record BoardListSeed(
   IReadOnlyCollection<BoardCardSeed> Cards);
 
 public sealed record BoardCardSeed(
+  Guid Id,
   string Title,
   string? Description,
   BoardCardPriority? Priority,
-  IReadOnlyCollection<string> Labels);
+  DateOnly? DueDate,
+  int? EstimatedMinutes,
+  IReadOnlyCollection<string> Labels,
+  IReadOnlyCollection<string> Subtasks,
+  IReadOnlyCollection<Guid> DependsOnCardIds);
