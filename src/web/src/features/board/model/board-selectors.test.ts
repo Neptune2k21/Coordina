@@ -79,6 +79,70 @@ describe("getBoardMetrics", () => {
     expect(metrics.blocked).toBe(1)
     expect(metrics.highPriority).toBe(2)
   })
+
+  it("counts a card as blocked only while a dependency is open", () => {
+    const openDependency = { cardId: "a", title: "A", isCompleted: false }
+    const doneDependency = { cardId: "b", title: "B", isCompleted: true }
+
+    const metrics = getBoardMetrics(
+      makeBoard([
+        makeList("Todo", "TODO", [
+          makeCard({ id: "waiting", dependencies: [openDependency] }),
+          makeCard({
+            id: "partly-unblocked",
+            dependencies: [doneDependency, openDependency],
+          }),
+          makeCard({ id: "unblocked", dependencies: [doneDependency] }),
+        ]),
+      ]),
+      today
+    )
+
+    expect(metrics.blocked).toBe(2)
+    expect(metrics.risk).toBe(2)
+  })
+
+  it("never counts a completed card as blocked", () => {
+    const metrics = getBoardMetrics(
+      makeBoard([
+        makeList("Done", "DONE", [
+          makeCard({
+            id: "done",
+            isCompleted: true,
+            labels: ["blocked"],
+            dependencies: [{ cardId: "a", title: "A", isCompleted: false }],
+          }),
+        ]),
+      ]),
+      today
+    )
+
+    expect(metrics.blocked).toBe(0)
+    expect(metrics.risk).toBe(0)
+  })
+})
+
+describe("filterBoard risk focus", () => {
+  it("keeps cards waiting on an open dependency", () => {
+    const filtered = filterBoard(
+      makeBoard([
+        makeList("Todo", "TODO", [
+          makeCard({
+            id: "waiting",
+            dependencies: [{ cardId: "a", title: "A", isCompleted: false }],
+          }),
+          makeCard({ id: "calm" }),
+        ]),
+      ]),
+      "",
+      { ...noFilters, focus: "risk" },
+      today
+    )
+
+    expect(filtered?.lists[0]?.cards.map((card) => card.id)).toEqual([
+      "waiting",
+    ])
+  })
 })
 
 describe("getWipAlerts", () => {
