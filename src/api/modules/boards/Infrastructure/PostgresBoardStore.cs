@@ -25,6 +25,31 @@ public sealed class PostgresBoardStore(CoordinaDbContext dbContext)
 
   private DbSet<BoardCardDependencyEntity> BoardCardDependencies => dbContext.Set<BoardCardDependencyEntity>();
 
+  public async Task<T> RunExclusiveAsync<T>(
+    Guid boardId,
+    Func<CancellationToken, Task<T>> action,
+    CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(action);
+
+    await using var transaction = await dbContext.Database
+      .BeginTransactionAsync(cancellationToken);
+
+    // An advisory lock only makes other RunExclusiveAsync callers wait for this
+    // board. Locking the board row would also block unrelated writes, and could
+    // deadlock with writes that update a card and then its board. The lock is
+    // released when the transaction ends.
+    await dbContext.Database.ExecuteSqlInterpolatedAsync(
+      $"SELECT pg_advisory_xact_lock(hashtextextended({boardId.ToString()}, 0))",
+      cancellationToken);
+
+    var result = await action(cancellationToken);
+
+    await transaction.CommitAsync(cancellationToken);
+
+    return result;
+  }
+
   public async Task<ProjectBoard?> FindDefaultForProjectAsync(
     Guid workspaceId,
     Guid projectId,
