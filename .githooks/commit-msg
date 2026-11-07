@@ -1,0 +1,3 @@
+#!/bin/sh
+# Checks the commit message format. Enable with 'make hooks'.
+exec dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release -- commit-msg "$1"

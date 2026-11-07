@@ -216,6 +216,47 @@ Before submitting a database change, verify:
 | Indexes match query patterns | Keeps workspace-scoped queries efficient |
 | Constraints enforce important invariants | Avoids depending only on application code |
 
+## Quality Checks
+
+`tools/quality` is our own quality tool. It checks naming, file names,
+namespaces, module layout and commit messages, and it works out which test
+suites a change can break. The same tool runs on your machine and in CI, so
+both give the same answer.
+
+| Command | What it does |
+| --- | --- |
+| `make check` | Checks the files you changed since `origin/master`, then lists the suites they affect |
+| `make check-all` | Checks the whole repository. Part of `make lint`, so CI runs it |
+| `make affected` | Explains which suites your change needs, and why |
+| `make verify` | Runs only those suites. `make verify skip=e2e` leaves out the ones that need the database |
+| `make quality-rules` | Lists every rule with the reason it exists |
+| `make hooks` | Enables git hooks: staged files and the commit message are checked before each commit |
+
+Every message names its rule, such as `CQ1102`, and explains why the rule
+exists. Errors fail the check; warnings, such as a file over 500 lines, are
+shown so you can decide.
+
+Run `make check` while you work instead of the whole `make quality`, then
+`make verify` before pushing.
+
+### Known issues and exceptions
+
+`.quality/baseline.json` records the errors that existed when a rule was
+introduced. They do not fail the check, but any new error does. When you fix
+one, `make check` says so; run `make quality-baseline` and commit the smaller
+file. The baseline should only ever shrink: a pull request that grows it needs
+a reason in its description.
+
+When a rule is wrong for one specific line, suppress it there with the rule id
+and the reason. The reason is required, so a reviewer can judge it:
+
+```csharp
+// quality-ignore CQ1101: one file holds the whole wire contract.
+```
+
+If a rule is wrong in general, change the rule in `tools/quality` in the same
+pull request, with a test.
+
 ## Testing
 
 Endpoint tests derive from `ApiTest`, which provides an in-memory API and an
@@ -290,6 +331,7 @@ Before requesting review, confirm:
 [ ] Database changes include an EF migration.
 [ ] Security-sensitive behavior is enforced server-side.
 [ ] New public endpoints use AllowAnonymous() and are allow-listed in EndpointAuthorizationTests.
+[ ] make check reports no new errors, and make verify passes.
 [ ] make quality passes locally.
 [ ] Documentation was updated if commands, contracts, or setup changed.
 ```

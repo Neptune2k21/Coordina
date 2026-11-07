@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The quality tool compares the branch with master.
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
@@ -52,6 +55,22 @@ jobs:
 
       - name: Start infrastructure
         run: make docker-up
+
+      - name: Quality rules
+        run: dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release -- check --all --format github
+
+      - name: Affected suites
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          {
+            echo '### Suites this change affects'
+            echo '```text'
+            dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release --no-build -- affected --base "$BASE_REF"
+            echo '```'
+            echo 'Every suite still runs for now. Running only these is the next step of the CI plan.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run quality gate
         run: make quality

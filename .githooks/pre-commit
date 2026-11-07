@@ -1,0 +1,3 @@
+#!/bin/sh
+# Checks the staged changes with the same rules as CI. Enable with 'make hooks'.
+exec make --no-print-directory check-staged

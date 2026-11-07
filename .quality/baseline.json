@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "rule": "CQ1004",
+      "path": "src/api/core/Results/Result.cs",
+      "message": "Rename private field 'value' to _camelCase.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1201",
+      "path": "src/api/modules/auth/AuthOptions.cs",
+      "message": "The root of module 'auth' only holds AuthModule.cs and AuthEndpoints.cs: rename or move 'AuthOptions.cs'.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1201",
+      "path": "src/api/modules/boards/BoardEndpoints.cs",
+      "message": "The root of module 'boards' only holds BoardsModule.cs and BoardsEndpoints.cs: rename or move 'BoardEndpoints.cs'.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1004",
+      "path": "src/api/shared/Validation/ValidationErrors.cs",
+      "message": "Rename private field 'errors' to _camelCase.",
+      "count": 1
+    },
+    {
+      "rule": "CQ2001",
+      "path": "src/web/src/setupTests.ts",
+      "message": "Rename 'setupTests.ts' to kebab-case.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Auth/AuthEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Auth', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Boards/BoardEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Boards', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Boards/BoardPlanningEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Boards', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Boards/BoardTemplateEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Boards', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Boards/BoardWorkflowEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Boards', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Docs/OpenApiEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Docs', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Health/ApiEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Health', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Projects/ProjectEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Projects', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Integration/Workspaces/WorkspaceEndpointsTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Workspaces', which matches the folder.",
+      "count": 1
+    },
+    {
+      "rule": "CQ1102",
+      "path": "tests/api/Unit/Auth/Pbkdf2PasswordHasherTests.cs",
+      "message": "Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Unit.Auth', which matches the folder.",
+      "count": 1
+    }
+  ]
+}
