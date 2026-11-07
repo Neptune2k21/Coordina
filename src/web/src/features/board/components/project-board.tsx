@@ -11,8 +11,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { boardTaskStatuses } from "@/features/board/model/board-constants"
 import { isActiveWorkList } from "@/features/board/model/board-selectors"
+import { BoardAddListForm } from "@/features/board/components/board-add-list-form"
 import { BoardFilterMenu } from "@/features/board/components/board-filter-menu"
 import { BoardFocusTabs } from "@/features/board/components/board-focus-tabs"
 import { BoardListColumn } from "@/features/board/components/board-list-column"
@@ -25,7 +25,6 @@ import { BoardSkeleton } from "@/features/board/components/board-skeleton"
 import { CardSidePanel } from "@/features/board/components/card-side-panel"
 import { useProjectBoard } from "@/features/board/hooks/use-project-board"
 import type { Project } from "@/types/project"
-import type { BoardTaskStatus } from "@/types/task"
 import type { Workspace } from "@/types/workspace"
 
 type ProjectBoardProps = {
@@ -48,7 +47,6 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     filters,
     handleAddComment,
     handleAddDependency,
-    handleCancelNewList,
     handleCreateBoard,
     handleCreateList,
     handleCreateSubtask,
@@ -60,6 +58,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     handleQuickAdd,
     handleRenameList,
     handleSaveCard,
+    handleSelectCard,
     handleUpdateSubtask,
     isAddingList,
     isCreatingBoard,
@@ -72,21 +71,15 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     members,
     metrics,
     myCardCount,
-    newListStatus,
-    newListTitle,
     notice,
     planningPreferences,
     quickAddListId,
-    quickTitle,
     selectedCard,
     setDraggingCardId,
     setIsAddingList,
     setIsPlanningPanelOpen,
-    setNewListStatus,
-    setNewListTitle,
     setPlanningPreferences,
     setQuickAddListId,
-    setQuickTitle,
     setSelectedCardId,
     wipAlerts,
   } = useProjectBoard(project, workspace)
@@ -262,72 +255,27 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
               isReadOnly={isReadOnly}
               isSaving={isMutating}
               list={list}
-              quickTitle={quickTitle}
               totalCardCount={totalCardCount}
               wipLimit={wipLimit}
-              onCardClick={(card) => setSelectedCardId(card.id)}
-              onDragCard={(cardId) => setDraggingCardId(cardId)}
+              onCardClick={handleSelectCard}
+              onDragCard={setDraggingCardId}
               onDropCard={(cardId) => void handleMoveCard(cardId, list.id)}
-              onQuickAdd={() => void handleQuickAdd(list)}
-              onQuickTitleChange={setQuickTitle}
+              onQuickAdd={(title) => void handleQuickAdd(list, title)}
               onRename={(title) => void handleRenameList(list, title)}
               onToggleQuickAdd={() => {
                 setQuickAddListId(quickAddListId === list.id ? null : list.id)
-                setQuickTitle("")
               }}
             />
           )
         })}
         {!isReadOnly && isAddingList ? (
-          <div className="grid w-72 shrink-0 gap-2 self-start rounded-md border border-zinc-950/10 bg-white p-2 shadow-xs dark:border-white/10 dark:bg-zinc-950">
-            <div className="flex gap-2">
-              <Input
-                value={newListTitle}
-                onChange={(event) => setNewListTitle(event.target.value)}
-                placeholder="New list"
-                className="h-8 rounded-md text-xs"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    void handleCreateList()
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 rounded-md"
-                onClick={handleCancelNewList}
-              >
-                <X className="size-3.5" />
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 rounded-md px-2"
-                disabled={!newListTitle.trim() || isMutating}
-                onClick={() => void handleCreateList()}
-              >
-                <Plus className="size-3.5" />
-              </Button>
-            </div>
-            <label className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              Status
-              <select
-                className="h-7 min-w-0 rounded-md border border-zinc-950/10 bg-white px-1.5 text-[11px] text-foreground dark:border-white/10 dark:bg-zinc-950"
-                value={newListStatus}
-                onChange={(event) =>
-                  setNewListStatus(event.target.value as BoardTaskStatus)
-                }
-              >
-                {boardTaskStatuses.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <BoardAddListForm
+            isSaving={isMutating}
+            onCancel={() => setIsAddingList(false)}
+            onSubmit={(title, taskStatus) =>
+              void handleCreateList(title, taskStatus)
+            }
+          />
         ) : !isReadOnly ? (
           <button
             type="button"
