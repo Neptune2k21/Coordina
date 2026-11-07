@@ -1,20 +1,7 @@
-export type ProjectStatus = "ACTIVE" | "ARCHIVED" | "COMPLETED"
+import type { components } from "@/types/api-contract"
 
-export type Project = {
-  id: string
-  name: string
-  description: string | null
-  key: string | null
-  icon: string | null
-  color: string | null
-  workspaceId: string
-  projectOwnerId: string
-  projectOwnerName: string | null
-  status: ProjectStatus
-  createdAt: string
-  updatedAt: string
-  archivedAt: string | null
-}
+export type Project = components["schemas"]["ProjectResponse"]
+export type ProjectStatus = Project["status"]
 
 export type ProjectInput = {
   name: string

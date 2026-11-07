@@ -268,8 +268,18 @@ response shows up in review.
   `[property: EnumCodes<BoardTaskStatus>] string TaskStatus`, so the contract
   lists the allowed values instead of any string.
 - After changing an endpoint or a contract type, run `make contract` and
-  commit the updated file. `ApiContractTests` fails in CI when the file is out
-  of date.
+  commit the updated files. `ApiContractTests` fails in CI when
+  `contracts/openapi.json` is out of date.
+
+The web app's types for API data (`Board`, `Project`, `Workspace`...) are
+aliases of `src/web/src/types/api-contract.ts`, which `make contract` generates
+from the contract. Renaming or retyping a field in the API therefore breaks
+the web build at every place that uses it, in the same pull request. `make
+lint` checks that the generated file matches the contract. Types that only
+describe what the web app sends, like form values, stay hand-written.
+
+Because of this, the quality tool only runs the web suites for an API change
+when the contract changes too.
 
 ## Testing
 

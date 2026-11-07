@@ -1,21 +1,8 @@
-export type WorkspaceRole = "OWNER" | "MEMBER"
+import type { components } from "@/types/api-contract"
 
-export type Workspace = {
-  id: string
-  name: string
-  role: WorkspaceRole
-  createdAt: string
-}
+type Schemas = components["schemas"]
 
-export type WorkspaceInvite = {
-  code: string
-  expiresAt: string
-}
-
-export type WorkspaceMember = {
-  userId: string
-  name: string | null
-  email: string | null
-  role: WorkspaceRole
-  joinedAt: string
-}
+export type Workspace = Schemas["WorkspaceResponse"]
+export type WorkspaceRole = Workspace["role"]
+export type WorkspaceInvite = Schemas["CreateWorkspaceInviteResponse"]
+export type WorkspaceMember = Schemas["WorkspaceMemberResponse"]

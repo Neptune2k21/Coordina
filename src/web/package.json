@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "typecheck": "tsc -b",
+    "contract": "openapi-typescript ../../contracts/openapi.json --output src/types/api-contract.ts && prettier --write src/types/api-contract.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
     "jsdom": "^30.1.3",
+    "openapi-typescript": "7.13.0",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",

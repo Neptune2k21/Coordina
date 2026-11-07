@@ -1,4 +1,4 @@
-.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks contract
+.PHONY: help graph-engine-build graph-engine-test graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks contract web-contract-check
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -46,7 +46,7 @@ help:
 	@echo "  make quality-rules Liste les regles qualite et leur raison d'etre"
 	@echo "  make quality-baseline Reecrit la baseline des erreurs connues"
 	@echo "  make hooks        Active les hooks git (pre-commit et commit-msg)"
-	@echo "  make contract     Regenere contracts/openapi.json apres un changement d'API"
+	@echo "  make contract     Regenere contracts/openapi.json et les types web apres un changement d'API"
 	@echo "  make docker-up    Lance les services Docker"
 	@echo "  make docker-down  Stoppe les services Docker"
 	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
@@ -133,7 +133,7 @@ docs:
 
 test: graph-engine-test graph-engine-benchmark-smoke api-test web-test web-e2e
 
-lint: api-format-check web-lint web-typecheck check-all
+lint: api-format-check web-contract-check web-lint web-typecheck check-all
 
 format: api-format web-format
 
@@ -167,6 +167,11 @@ quality-test:
 
 contract:
 	UPDATE_API_CONTRACT=1 dotnet test $(API_TEST_PROJECT) --configuration Release -m:1 --filter "FullyQualifiedName~ApiContractTests"
+	pnpm --dir $(WEB_DIR) contract
+
+web-contract-check:
+	pnpm --dir $(WEB_DIR) contract
+	git diff --exit-code -- $(WEB_DIR)/src/types/api-contract.ts || (echo "src/web/src/types/api-contract.ts is out of date. Run 'make contract' and commit the result." && exit 1)
 
 hooks:
 	git config core.hooksPath .githooks
