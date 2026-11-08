@@ -1,11 +1,14 @@
-export type PlanningPreferences = {
-  availableMinutes: number
-  context: string | null
-}
+import type { components } from "@/types/api-contract"
+
+/** How the next-work ranking is computed. Each user saves theirs per board. */
+export type PlanningPreferences =
+  components["schemas"]["BoardPlanningPreferencesResponse"]
 
 export const defaultPlanningPreferences: PlanningPreferences = {
   availableMinutes: 0,
   context: null,
+  preferAssigned: true,
+  includeUnassigned: true,
 }
 
 export const focusTimeOptions = [
@@ -36,6 +39,15 @@ export function planningQuery(preferences: PlanningPreferences) {
 
   if (preferences.context) {
     params.set("context", preferences.context)
+  }
+
+  // Both default to true on the API, so only a false value needs sending.
+  if (!preferences.preferAssigned) {
+    params.set("preferAssigned", "false")
+  }
+
+  if (!preferences.includeUnassigned) {
+    params.set("includeUnassigned", "false")
   }
 
   const query = params.toString()

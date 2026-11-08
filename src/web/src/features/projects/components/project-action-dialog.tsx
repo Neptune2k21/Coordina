@@ -1,6 +1,7 @@
 import {
   Archive,
   ArrowCounterClockwise,
+  CheckCircle,
   CircleNotch,
   Trash,
 } from "@phosphor-icons/react"
@@ -34,13 +35,17 @@ export function ProjectActionDialog({
       ? "Archive project"
       : action?.type === "restore"
         ? "Restore project"
-        : "Delete project permanently"
+        : action?.type === "complete"
+          ? "Complete project"
+          : "Delete project permanently"
   const description =
     action?.type === "archive"
       ? "Archived projects are hidden from the default project list but remain accessible."
       : action?.type === "restore"
         ? "The project will return to the active project list."
-        : "This permanently removes the project and cannot be undone."
+        : action?.type === "complete"
+          ? "A completed project becomes read-only for good: its board and settings can no longer change."
+          : "This permanently removes the project and cannot be undone."
 
   return (
     <Dialog open={action !== null} onOpenChange={(open) => !open && onCancel()}>
@@ -72,6 +77,8 @@ export function ProjectActionDialog({
               <ArrowCounterClockwise className="size-4" />
             ) : action?.type === "delete" ? (
               <Trash className="size-4" />
+            ) : action?.type === "complete" ? (
+              <CheckCircle className="size-4" />
             ) : (
               <Archive className="size-4" />
             )}

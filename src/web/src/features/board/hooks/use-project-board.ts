@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAuth } from "@/features/auth"
+import { getPlanningPreferences } from "@/features/board/api/board-api"
 import { useBoardFilters } from "@/features/board/hooks/use-board-filters"
 import { useBoardMutations } from "@/features/board/hooks/use-board-mutations"
 import {
@@ -98,6 +99,30 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
       clearFilters()
     })
   }, [clearFilters, project.id, workspace.id])
+
+  // The board starts from the preferences saved in Settings; changes made in
+  // the planning panel only last for this visit.
+  const boardId = board?.id
+  useEffect(() => {
+    if (!accessToken || !boardId) {
+      return
+    }
+
+    let isCurrent = true
+
+    getPlanningPreferences(accessToken, workspace.id, project.id, boardId)
+      .then((saved) => {
+        if (isCurrent) {
+          setPlanningPreferences(saved)
+        }
+      })
+      // Without them the board keeps working with the defaults.
+      .catch(() => undefined)
+
+    return () => {
+      isCurrent = false
+    }
+  }, [accessToken, boardId, project.id, workspace.id])
 
   const selectedCard = useMemo(
     () =>

@@ -71,21 +71,48 @@ export async function createList(
   )
 }
 
+export type BoardListChanges = {
+  title?: string
+  taskStatus?: BoardTaskStatus
+  position?: number
+}
+
 export async function updateList(
   accessToken: string,
   workspaceId: string,
   projectId: string,
   boardId: string,
   listId: string,
-  title: string
+  changes: BoardListChanges
 ) {
   return apiRequest<Board>(
     `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists/${listId}`,
     {
       accessToken,
       method: "PATCH",
-      body: JSON.stringify({ title }),
-      errorMessage: "Board request failed.",
+      body: JSON.stringify(changes),
+      errorMessage: "List could not be updated.",
+    }
+  )
+}
+
+/** Deletes a list. A list with cards needs `moveCardsTo`, another list of the board. */
+export async function deleteList(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  listId: string,
+  moveCardsTo: string | null
+) {
+  const query = moveCardsTo ? `?moveCardsTo=${moveCardsTo}` : ""
+
+  return apiRequest<Board>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/lists/${listId}${query}`,
+    {
+      accessToken,
+      method: "DELETE",
+      errorMessage: "List could not be deleted.",
     }
   )
 }
@@ -178,6 +205,39 @@ export async function getBoardGraph(
     {
       accessToken,
       errorMessage: "Board graph request failed.",
+    }
+  )
+}
+
+export async function getPlanningPreferences(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string
+) {
+  return apiRequest<PlanningPreferences>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/planning-preferences`,
+    {
+      accessToken,
+      errorMessage: "Planning preferences could not be loaded.",
+    }
+  )
+}
+
+export async function savePlanningPreferences(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  preferences: PlanningPreferences
+) {
+  return apiRequest<PlanningPreferences>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/planning-preferences`,
+    {
+      accessToken,
+      method: "PUT",
+      body: JSON.stringify(preferences),
+      errorMessage: "Planning preferences could not be saved.",
     }
   )
 }

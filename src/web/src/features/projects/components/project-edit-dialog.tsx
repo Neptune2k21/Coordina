@@ -16,14 +16,12 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { ApiError } from "@/lib/api"
+import { ProjectDetailsFields } from "@/features/projects/components/project-details-fields"
 import {
-  ProjectColorPicker,
-  ProjectIconMark,
-  ProjectIconPicker,
-} from "@/features/projects/components/project-personalization"
+  detailsOf,
+  projectErrorMessage,
+  type ProjectDetails,
+} from "@/features/projects/project-details"
 import type { Project, ProjectUpdateInput } from "@/types/project"
 
 type ProjectEditDialogProps = {
@@ -41,11 +39,7 @@ export function ProjectEditDialog({
   open,
   project,
 }: ProjectEditDialogProps) {
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [key, setKey] = useState("")
-  const [icon, setIcon] = useState("")
-  const [color, setColor] = useState("")
+  const [details, setDetails] = useState<ProjectDetails | null>(null)
   const [status, setStatus] = useState<Project["status"]>("ACTIVE")
   const [error, setError] = useState<string | null>(null)
 
@@ -55,11 +49,7 @@ export function ProjectEditDialog({
     }
 
     queueMicrotask(() => {
-      setName(project.name)
-      setDescription(project.description ?? "")
-      setKey(project.key ?? "")
-      setIcon(project.icon ?? "")
-      setColor(project.color ?? "")
+      setDetails(detailsOf(project))
       setStatus(project.status)
       setError(null)
     })
@@ -68,36 +58,19 @@ export function ProjectEditDialog({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!project) {
+    if (!project || !details) {
       return
     }
 
     setError(null)
 
     try {
-      await onSave(project, {
-        name,
-        description,
-        key,
-        icon,
-        color,
-        status,
-      })
+      await onSave(project, { ...details, status })
       onOpenChange(false)
     } catch (submitError) {
-      if (submitError instanceof ApiError) {
-        setError(
-          submitError.errors?.Name?.[0] ??
-            submitError.errors?.Description?.[0] ??
-            submitError.errors?.Key?.[0] ??
-            submitError.errors?.Icon?.[0] ??
-            submitError.errors?.Color?.[0] ??
-            submitError.message
-        )
-        return
-      }
-
-      setError("Project could not be updated.")
+      setError(
+        projectErrorMessage(submitError, "Project could not be updated.")
+      )
     }
   }
 
@@ -115,54 +88,13 @@ export function ProjectEditDialog({
           onSubmit={(event) => void handleSubmit(event)}
         >
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="edit-project-name">Project name</FieldLabel>
-              <Input
-                id="edit-project-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="h-9 rounded-md bg-white px-3 text-sm dark:bg-white/[0.06]"
+            {details ? (
+              <ProjectDetailsFields
+                idPrefix="edit-project"
+                value={details}
+                onChange={setDetails}
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="edit-project-description">
-                Description
-              </FieldLabel>
-              <Textarea
-                id="edit-project-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                className="rounded-md bg-white px-3 text-sm dark:bg-white/[0.06]"
-              />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
-              <Field>
-                <FieldLabel htmlFor="edit-project-key">Key</FieldLabel>
-                <Input
-                  id="edit-project-key"
-                  value={key}
-                  onChange={(event) => setKey(event.target.value)}
-                  className="h-9 rounded-md bg-white px-3 text-sm uppercase dark:bg-white/[0.06]"
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Preview</FieldLabel>
-                <div className="flex h-9 items-center gap-3 rounded-md border border-zinc-950/10 bg-white px-3 dark:border-white/10 dark:bg-white/[0.06]">
-                  <ProjectIconMark icon={icon} color={color} />
-                  <span className="truncate text-sm font-medium">
-                    {name || "Project"}
-                  </span>
-                </div>
-              </Field>
-            </div>
-            <Field>
-              <FieldLabel>Icon</FieldLabel>
-              <ProjectIconPicker value={icon} onChange={setIcon} />
-            </Field>
-            <Field>
-              <FieldLabel>Color</FieldLabel>
-              <ProjectColorPicker value={color} onChange={setColor} />
-            </Field>
+            ) : null}
             <Field>
               <FieldLabel htmlFor="edit-project-status">Status</FieldLabel>
               <select

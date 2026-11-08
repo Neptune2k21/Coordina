@@ -12,15 +12,37 @@ describe("planningQuery", () => {
   })
 
   it("serializes focus time and context", () => {
-    expect(planningQuery({ availableMinutes: 60, context: null })).toBe(
-      "?availableMinutes=60"
-    )
-    expect(planningQuery({ availableMinutes: 0, context: "front end" })).toBe(
-      "?context=front+end"
-    )
-    expect(planningQuery({ availableMinutes: 30, context: "backend" })).toBe(
-      "?availableMinutes=30&context=backend"
-    )
+    expect(
+      planningQuery({
+        ...defaultPlanningPreferences,
+        availableMinutes: 60,
+        context: null,
+      })
+    ).toBe("?availableMinutes=60")
+    expect(
+      planningQuery({
+        ...defaultPlanningPreferences,
+        availableMinutes: 0,
+        context: "front end",
+      })
+    ).toBe("?context=front+end")
+    expect(
+      planningQuery({
+        ...defaultPlanningPreferences,
+        availableMinutes: 30,
+        context: "backend",
+      })
+    ).toBe("?availableMinutes=30&context=backend")
+  })
+
+  it("sends the assignment options only when they are turned off", () => {
+    expect(
+      planningQuery({
+        ...defaultPlanningPreferences,
+        preferAssigned: false,
+        includeUnassigned: false,
+      })
+    ).toBe("?preferAssigned=false&includeUnassigned=false")
   })
 })
 

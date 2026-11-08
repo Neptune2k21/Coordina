@@ -104,6 +104,7 @@ export function BoardListColumn({
     >
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-zinc-950/10 px-2 dark:border-white/10">
         <Input
+          aria-label="List title"
           value={title}
           disabled={isReadOnly}
           onChange={(event) => setTitle(event.target.value)}

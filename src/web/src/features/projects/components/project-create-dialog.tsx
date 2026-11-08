@@ -11,21 +11,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { FieldError, FieldGroup } from "@/components/ui/field"
+import { ProjectDetailsFields } from "@/features/projects/components/project-details-fields"
 import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { ApiError } from "@/lib/api"
-import {
-  ProjectColorPicker,
-  ProjectIconMark,
-  ProjectIconPicker,
-} from "@/features/projects/components/project-personalization"
+  projectErrorMessage,
+  type ProjectDetails,
+} from "@/features/projects/project-details"
 import type { ProjectInput } from "@/types/project"
+
+const emptyDetails: ProjectDetails = {
+  name: "",
+  description: "",
+  key: "",
+  icon: "kanban",
+  color: "teal",
+}
 
 type ProjectCreateDialogProps = {
   disabled?: boolean
@@ -39,11 +39,7 @@ export function ProjectCreateDialog({
   onCreate,
 }: ProjectCreateDialogProps) {
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [key, setKey] = useState("")
-  const [icon, setIcon] = useState("kanban")
-  const [color, setColor] = useState("teal")
+  const [details, setDetails] = useState(emptyDetails)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -51,27 +47,13 @@ export function ProjectCreateDialog({
     setError(null)
 
     try {
-      await onCreate({ name, description, key, icon, color })
-      setName("")
-      setDescription("")
-      setKey("")
-      setIcon("kanban")
-      setColor("teal")
+      await onCreate(details)
+      setDetails(emptyDetails)
       setOpen(false)
     } catch (submitError) {
-      if (submitError instanceof ApiError) {
-        setError(
-          submitError.errors?.Name?.[0] ??
-            submitError.errors?.Description?.[0] ??
-            submitError.errors?.Key?.[0] ??
-            submitError.errors?.Icon?.[0] ??
-            submitError.errors?.Color?.[0] ??
-            submitError.message
-        )
-        return
-      }
-
-      setError("Project could not be created.")
+      setError(
+        projectErrorMessage(submitError, "Project could not be created.")
+      )
     }
   }
 
@@ -100,57 +82,16 @@ export function ProjectCreateDialog({
           onSubmit={(event) => void handleSubmit(event)}
         >
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="project-name">Project name</FieldLabel>
-              <Input
-                id="project-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Launch plan"
-                autoComplete="off"
-                className="dark:bg-white/0.06 h-9 rounded-md bg-white px-3 text-sm"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="project-description">Description</FieldLabel>
-              <Textarea
-                id="project-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Optional context for the team"
-                className="dark:bg-white/0.06 rounded-md bg-white px-3 text-sm"
-              />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
-              <Field>
-                <FieldLabel htmlFor="project-key">Key</FieldLabel>
-                <Input
-                  id="project-key"
-                  value={key}
-                  onChange={(event) => setKey(event.target.value)}
-                  placeholder="APP"
-                  autoComplete="off"
-                  className="dark:bg-white/0.06 h-9 rounded-md bg-white px-3 text-sm uppercase"
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Preview</FieldLabel>
-                <div className="dark:bg-white/0.06 flex h-9 items-center gap-3 rounded-md border border-zinc-950/10 bg-white px-3 dark:border-white/10">
-                  <ProjectIconMark icon={icon} color={color} />
-                  <span className="truncate text-sm font-medium">
-                    {name || "Launch plan"}
-                  </span>
-                </div>
-              </Field>
-            </div>
-            <Field>
-              <FieldLabel>Icon</FieldLabel>
-              <ProjectIconPicker value={icon} onChange={setIcon} />
-            </Field>
-            <Field>
-              <FieldLabel>Color</FieldLabel>
-              <ProjectColorPicker value={color} onChange={setColor} />
-            </Field>
+            <ProjectDetailsFields
+              idPrefix="project"
+              value={details}
+              onChange={setDetails}
+              placeholders={{
+                name: "Launch plan",
+                description: "Optional context for the team",
+                key: "APP",
+              }}
+            />
             {error ? <FieldError>{error}</FieldError> : null}
           </FieldGroup>
           <DialogFooter>

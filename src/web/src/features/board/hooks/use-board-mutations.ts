@@ -195,7 +195,7 @@ export function useBoardMutations({
           projectId,
           target.boardId,
           list.id,
-          title
+          { title }
         ),
       { failureMessage: "List could not be renamed." }
     )

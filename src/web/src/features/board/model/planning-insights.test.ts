@@ -5,6 +5,7 @@ import {
   getPlanTags,
   pickPlanFocus,
 } from "@/features/board/model/planning-insights"
+import { defaultPlanningPreferences } from "@/features/board/model/planning-preferences"
 
 describe("pickPlanFocus", () => {
   it("skips blocked items and queues the next two ready ones", () => {
@@ -74,7 +75,11 @@ describe("getPlanTags", () => {
         isContextMatch: true,
         isInProgress: true,
       }),
-      { availableMinutes: 60, context: "backend" }
+      {
+        ...defaultPlanningPreferences,
+        availableMinutes: 60,
+        context: "backend",
+      }
     ).map((tag) => tag.label)
 
     expect(labels).toEqual([
@@ -90,14 +95,18 @@ describe("getPlanTags", () => {
     const item = makePlanItem({ fitsAvailableTime: false })
 
     expect(
-      getPlanTags(item, { availableMinutes: 30, context: null }).map(
-        (tag) => tag.label
-      )
+      getPlanTags(item, {
+        ...defaultPlanningPreferences,
+        availableMinutes: 30,
+        context: null,
+      }).map((tag) => tag.label)
     ).toContain("Effort unknown")
     expect(
-      getPlanTags(item, { availableMinutes: 0, context: null }).map(
-        (tag) => tag.label
-      )
+      getPlanTags(item, {
+        ...defaultPlanningPreferences,
+        availableMinutes: 0,
+        context: null,
+      }).map((tag) => tag.label)
     ).not.toContain("Effort unknown")
   })
 })

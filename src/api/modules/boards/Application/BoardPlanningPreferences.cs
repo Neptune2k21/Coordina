@@ -5,7 +5,7 @@ using Coordina.Api.Shared.Validation;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
-internal sealed partial record BoardPlanningPreferences(
+public sealed partial record BoardPlanningPreferences(
   Guid UserId,
   int AvailableMinutes,
   string? Context,

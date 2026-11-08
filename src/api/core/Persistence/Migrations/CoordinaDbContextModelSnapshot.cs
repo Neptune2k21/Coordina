@@ -401,6 +401,44 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardPlanningPreferenceEntity", b =>
+                {
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("AvailableMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("available_minutes");
+
+                    b.Property<string>("Context")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("context");
+
+                    b.Property<bool>("IncludeUnassigned")
+                        .HasColumnType("boolean")
+                        .HasColumnName("include_unassigned");
+
+                    b.Property<bool>("PreferAssigned")
+                        .HasColumnType("boolean")
+                        .HasColumnName("prefer_assigned");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("BoardId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("board_planning_preferences", (string)null);
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Projects.Infrastructure.ProjectEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -660,6 +698,15 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Board");
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardPlanningPreferenceEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Boards.Infrastructure.BoardEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Projects.Infrastructure.ProjectEntity", b =>
