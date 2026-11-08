@@ -27,6 +27,18 @@ public sealed class StructureRulesTests
   }
 
   [Theory]
+  [InlineData("PostgresBoardStore.Cards.cs", "public sealed partial class PostgresBoardStore { }", true)]
+  [InlineData("PostgresBoardStore.Cards.cs", "public sealed class PostgresBoardStore { }", false)]
+  [InlineData("PostgresBoardStore.Cards.Extra.cs", "public sealed partial class PostgresBoardStore { }", false)]
+  [InlineData("OtherStore.Cards.cs", "public sealed partial class PostgresBoardStore { }", false)]
+  public void FileMatchesType_LetsAPartialTypeNameItsParts(string fileName, string source, bool allowed)
+  {
+    var violations = RuleHarness.Check(new FileMatchesTypeRule(), $"src/api/modules/boards/Infrastructure/{fileName}", $"namespace X;\n{source}");
+
+    Assert.Equal(allowed, violations.Length == 0);
+  }
+
+  [Theory]
   [InlineData("src/api/modules/boards/Domain", "Coordina.Api.Modules.Boards.Domain")]
   [InlineData("src/api", "Coordina.Api")]
   [InlineData("tests/api/Integration/Boards", "Coordina.Api.Tests.Integration.Boards")]

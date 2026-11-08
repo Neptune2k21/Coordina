@@ -9,12 +9,6 @@
     },
     {
       "rule": "CQ4001",
-      "path": "src/api/modules/boards/Infrastructure/InMemoryBoardStore.cs",
-      "message": "This block is repeated elsewhere in this file.",
-      "count": 4
-    },
-    {
-      "rule": "CQ4001",
       "path": "src/graph-engine/src/interop/coordina_graph_engine.cpp",
       "message": "This block is repeated elsewhere in this file.",
       "count": 4
