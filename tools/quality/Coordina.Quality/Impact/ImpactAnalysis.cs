@@ -83,6 +83,9 @@ internal static class ImpactAnalysis
       reasons.ToDictionary(pair => pair.Key, pair => (IReadOnlyCollection<string>)pair.Value));
   }
 
+  public static ImpactPlan Only(Suite suite, string reason) =>
+    new([suite], new Dictionary<Suite, IReadOnlyCollection<string>> { [suite] = [reason] });
+
   public static ImpactPlan Everything(string reason) =>
     new(Suite.All, Suite.All.ToDictionary(suite => suite, _ => (IReadOnlyCollection<string>)[reason]));
 

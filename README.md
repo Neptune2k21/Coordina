@@ -92,7 +92,7 @@ For additional test targets, benchmarks, and formatting commands, see the [Makef
 
 ## Quality Gate
 
-The GitHub Actions quality workflow runs for pushes and pull requests targeting `master`. Run the same overall gate locally before opening a pull request:
+The GitHub Actions quality workflow runs for pushes and pull requests targeting `master`. On a pull request it runs only the suites the change can affect, as `make verify` does locally, and reports one `CI OK` check. Run the full gate locally with:
 
 ```bash
 make quality

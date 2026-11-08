@@ -7,6 +7,7 @@ internal sealed record CommandOptions(
   string? Base,
   string Format,
   string? Sarif,
+  string? Only,
   IReadOnlyList<string> Skip,
   IReadOnlyList<string> Positional)
 {
@@ -15,7 +16,7 @@ internal sealed record CommandOptions(
   public static CommandOptions Parse(IEnumerable<string> arguments)
   {
     var queue = new Queue<string>(arguments);
-    var options = new CommandOptions(false, false, false, null, "console", null, [], []);
+    var options = new CommandOptions(false, false, false, null, "console", null, null, [], []);
     var skip = new List<string>();
     var positional = new List<string>();
 
@@ -31,6 +32,7 @@ internal sealed record CommandOptions(
         "--base" => options with { Base = ValueOf(queue, argument) },
         "--format" => options with { Format = FormatOf(ValueOf(queue, argument)) },
         "--sarif" => options with { Sarif = ValueOf(queue, argument) },
+        "--only" => options with { Only = ValueOf(queue, argument) },
         "--skip" => Add(options, skip, ValueOf(queue, argument)),
         _ when argument.StartsWith("--", StringComparison.Ordinal) =>
           throw new UsageException($"Unknown option '{argument}'."),
@@ -41,6 +43,11 @@ internal sealed record CommandOptions(
     if (options.All && options.Staged)
     {
       throw new UsageException("Use either --all or --staged, not both.");
+    }
+
+    if (options.Only is not null && (options.All || options.Base is not null || skip.Count > 0))
+    {
+      throw new UsageException("--only runs one suite; it cannot be combined with --all, --base or --skip.");
     }
 
     return options with { Skip = skip, Positional = positional };

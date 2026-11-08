@@ -153,6 +153,8 @@ public sealed class CommandLineTests : IDisposable
   [InlineData("check", "--format", "xml")]
   [InlineData("check", "--all", "--staged")]
   [InlineData("verify", "--skip", "everything")]
+  [InlineData("verify", "--only", "everything")]
+  [InlineData("verify", "--only", "api", "--skip", "e2e")]
   public void BadUsage_ExitsWithTheUsageCode(params string[] args)
   {
     Assert.Equal(CommandLine.UsageError, Run(args).ExitCode);
@@ -167,9 +169,19 @@ public sealed class CommandLineTests : IDisposable
     var (exitCode, output) = Run("verify", "--base", "master", "--dry-run", "--skip", "e2e");
 
     Assert.Equal(CommandLine.Success, exitCode);
-    Assert.Contains("==> web: make web-format-check web-lint web-typecheck web-test web-build", output, StringComparison.Ordinal);
+    Assert.Contains("==> web: make web-format-check web-contract-check web-lint web-typecheck web-test web-build", output, StringComparison.Ordinal);
     Assert.DoesNotContain("==> e2e", output, StringComparison.Ordinal);
     Assert.DoesNotContain("==> api", output, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void Verify_Only_RunsThatSuiteWhateverChanged()
+  {
+    var (exitCode, output) = Run("verify", "--only", "graph-engine", "--dry-run");
+
+    Assert.Equal(CommandLine.Success, exitCode);
+    Assert.Contains("==> graph-engine: make graph-engine-test graph-engine-sanitize graph-engine-benchmark-smoke", output, StringComparison.Ordinal);
+    Assert.DoesNotContain("==> web", output, StringComparison.Ordinal);
   }
 
   private (int ExitCode, string Output) Run(params string[] args)

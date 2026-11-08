@@ -15,14 +15,22 @@ concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  QUALITY: dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release --
+
+# The quality tool decides which suites a pull request needs, from the files
+# it changes; each suite is a job that runs only when needed. Pushes to master
+# run every suite. "CI OK" is the one check branch protection requires.
 jobs:
-  quality:
-    name: Format, lint, test and build
+  plan:
+    name: Plan
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # Uploads the quality results to code scanning.
-      security-events: write
+    outputs:
+      quality: ${{ steps.affected.outputs.quality }}
+      graph-engine: ${{ steps.affected.outputs.graph-engine }}
+      api: ${{ steps.affected.outputs.api }}
+      web: ${{ steps.affected.outputs.web }}
+      e2e: ${{ steps.affected.outputs.e2e }}
 
     steps:
       - name: Checkout
@@ -36,32 +44,49 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - name: Affected suites
+        id: affected
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            $QUALITY affected --base "$BASE_REF" --format github > plan.txt
+          else
+            echo "Every suite runs on a push to master." > plan.txt
+            for suite in quality graph-engine api web e2e; do
+              echo "$suite=true" >> "$GITHUB_OUTPUT"
+            done
+          fi
+          cat plan.txt
+          {
+            echo '### Suites this change runs'
+            echo '```text'
+            cat plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  rules:
+    name: Quality rules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploads the quality results to code scanning.
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
-          version: 10.17.1
+          fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Setup
+        uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: src/web/pnpm-lock.yaml
-
-      - name: Install web dependencies
-        run: pnpm --dir src/web install --frozen-lockfile
-
-      - name: Install Playwright browser
-        run: pnpm --dir src/web exec playwright install --with-deps chromium
-
-      - name: Prepare CI environment
-        run: cp .env.example .env
-
-      - name: Start infrastructure
-        run: make docker-up
+          web: "true"
 
       - name: Quality rules
-        run: dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release -- check --all --format github --sarif quality.sarif
+        run: $QUALITY check --all --format github --sarif quality.sarif
 
       # Annotations already show on pull requests, so only master feeds code
       # scanning, which then lists every known problem in the Security tab.
@@ -72,22 +97,82 @@ jobs:
           sarif_file: quality.sarif
           category: coordina-quality
 
-      - name: Affected suites
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_REF: origin/${{ github.base_ref }}
-        run: |
-          {
-            echo '### Suites this change affects'
-            echo '```text'
-            dotnet run --project tools/quality/Coordina.Quality/Coordina.Quality.csproj --configuration Release --no-build -- affected --base "$BASE_REF"
-            echo '```'
-            echo 'Every suite still runs for now. Running only these is the next step of the CI plan.'
-          } >> "$GITHUB_STEP_SUMMARY"
+  quality:
+    name: Suite quality
+    needs: plan
+    if: needs.plan.outputs.quality == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: make suite name=quality
 
-      - name: Run quality gate
-        run: make quality
+  graph-engine:
+    name: Suite graph-engine
+    needs: plan
+    if: needs.plan.outputs.graph-engine == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: make suite name=graph-engine
 
+  api:
+    name: Suite api
+    needs: plan
+    if: needs.plan.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # The PostgreSQL tests start their own container with Testcontainers.
+      - run: make suite name=api
+
+  web:
+    name: Suite web
+    needs: plan
+    if: needs.plan.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          web: "true"
+      - run: make suite name=web
+
+  e2e:
+    name: Suite e2e
+    needs: plan
+    if: needs.plan.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          web: "true"
+          playwright: "true"
+      - name: Start infrastructure
+        run: make docker-up
+      - run: make suite name=e2e
       - name: Stop infrastructure
         if: always()
         run: make docker-down
+
+  ci-ok:
+    name: CI OK
+    needs: [plan, rules, quality, graph-engine, api, web, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # A suite the change does not need is skipped, which is fine; one that
+      # failed or was cancelled is not.
+      - name: Check every job
+        env:
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "Job results: $RESULTS"
+          if [ "$FAILED" = "true" ]; then
+            echo "A required job failed or was cancelled."
+            exit 1
+          fi
