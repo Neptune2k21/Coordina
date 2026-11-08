@@ -26,6 +26,7 @@ public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>
       services.Replace(ServiceDescriptor.Singleton<IWorkspaceStore, InMemoryWorkspaceStore>());
       services.Replace(ServiceDescriptor.Singleton<IProjectStore, InMemoryProjectStore>());
       services.Replace(ServiceDescriptor.Singleton<IBoardStore, InMemoryBoardStore>());
+      services.Replace(ServiceDescriptor.Singleton<IBoardPlanningPreferenceStore, InMemoryBoardPlanningPreferenceStore>());
     });
   }
 }

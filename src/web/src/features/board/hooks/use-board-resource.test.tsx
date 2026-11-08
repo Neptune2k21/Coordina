@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import * as boardApi from "@/features/board/api/board-api"
 import { useBoardResource } from "@/features/board/hooks/use-board-resource"
 import { makeBoard } from "@/features/board/model/board-test-fixtures"
+import { defaultPlanningPreferences } from "@/features/board/model/planning-preferences"
 import * as workspaces from "@/features/workspaces"
 import type { Board } from "@/types/task"
 
@@ -79,7 +80,7 @@ describe("useBoardResource", () => {
           workspaceId: "workspace",
           projectId: "project",
           onError: vi.fn(),
-          planning: { availableMinutes, context: null },
+          planning: { ...defaultPlanningPreferences, availableMinutes },
         }),
       { initialProps: { availableMinutes: 0 } }
     )
@@ -90,6 +91,7 @@ describe("useBoardResource", () => {
 
     expect(boardApi.getDefaultBoard).toHaveBeenCalledTimes(1)
     expect(vi.mocked(boardApi.getBoardGraph).mock.calls[1][4]).toEqual({
+      ...defaultPlanningPreferences,
       availableMinutes: 60,
       context: null,
     })

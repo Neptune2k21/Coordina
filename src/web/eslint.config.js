@@ -61,8 +61,16 @@ export default defineConfig([
         },
         { selector: "typeLike", format: ["PascalCase"] },
         { selector: "import", format: null },
-        // Keys follow the API and HTTP headers, not our naming.
-        { selector: ["objectLiteralProperty", "typeProperty"], format: null },
+        // Keys follow the API and HTTP headers, not our naming, and a module
+        // mock's keys follow the names it exports, components included.
+        {
+          selector: [
+            "objectLiteralProperty",
+            "objectLiteralMethod",
+            "typeProperty",
+          ],
+          format: null,
+        },
       ],
     },
   },

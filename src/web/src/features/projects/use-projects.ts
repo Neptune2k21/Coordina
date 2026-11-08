@@ -14,7 +14,7 @@ import type { Project, ProjectInput, ProjectUpdateInput } from "@/types/project"
 import { useWorkspaces } from "@/features/workspaces"
 
 export type ProjectAction = {
-  type: "archive" | "restore" | "delete"
+  type: "archive" | "restore" | "complete" | "delete"
   project: Project
 }
 

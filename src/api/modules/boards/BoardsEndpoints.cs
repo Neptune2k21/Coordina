@@ -37,13 +37,29 @@ public static class BoardsEndpoints
       .WithSummary("Get board dependency graph")
       .WithDescription("Returns graph-derived planning signals for the board.");
 
+    boardGroup.MapGet("/planning-preferences", GetPlanningPreferences)
+      .Produces<BoardPlanningPreferencesResponse>(StatusCodes.Status200OK)
+      .WithSummary("Get my planning preferences")
+      .WithDescription("Returns the signed-in user's planning preferences for the board, or the defaults when none are saved.");
+
+    boardGroup.MapPut("/planning-preferences", SavePlanningPreferences)
+      .Produces<BoardPlanningPreferencesResponse>(StatusCodes.Status200OK)
+      .WithSummary("Save my planning preferences")
+      .WithDescription("Replaces the signed-in user's planning preferences for the board. Fields left out take their default.");
+
     boardGroup.MapPost("/lists", CreateList)
       .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Create board list");
 
     boardGroup.MapPatch("/lists/{listId:guid}", UpdateList)
       .Produces<BoardResponse>(StatusCodes.Status200OK)
-      .WithSummary("Update board list title");
+      .WithSummary("Update board list")
+      .WithDescription("Renames a list, changes its task status or moves it. A status change completes or reopens its cards, as moving them would.");
+
+    boardGroup.MapDelete("/lists/{listId:guid}", DeleteList)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
+      .WithSummary("Delete board list")
+      .WithDescription("Deletes a list. Its cards move to the list given by moveCardsTo, which is required when it has cards.");
 
     boardGroup.MapPost("/lists/{listId:guid}/cards", CreateCard)
       .Produces<BoardResponse>(StatusCodes.Status200OK)
@@ -158,6 +174,44 @@ public static class BoardsEndpoints
     return result.ToOkResult();
   }
 
+  private static async Task<IResult> GetPlanningPreferences(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    CurrentUser user,
+    IBoardPlanningService planning,
+    CancellationToken cancellationToken)
+  {
+    var result = await planning.GetPreferencesAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> SavePlanningPreferences(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    BoardPlanningRequest request,
+    CurrentUser user,
+    IBoardPlanningService planning,
+    CancellationToken cancellationToken)
+  {
+    var result = await planning.SavePreferencesAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
   private static async Task<IResult> CreateList(
     Guid workspaceId,
     Guid projectId,
@@ -194,6 +248,28 @@ public static class BoardsEndpoints
       boardId,
       listId,
       request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> DeleteList(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid listId,
+    Guid? moveCardsTo,
+    CurrentUser user,
+    IBoardListService boardLists,
+    CancellationToken cancellationToken)
+  {
+    var result = await boardLists.DeleteListAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      listId,
+      moveCardsTo,
       user.Id,
       cancellationToken);
 

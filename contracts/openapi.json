@@ -781,6 +781,114 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/planning-preferences": {
+      "get": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Get my planning preferences",
+        "description": "Returns the signed-in user\u0027s planning preferences for the board, or the defaults when none are saved.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardPlanningPreferencesResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Save my planning preferences",
+        "description": "Replaces the signed-in user\u0027s planning preferences for the board. Fields left out take their default.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardPlanningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardPlanningPreferencesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists": {
       "post": {
         "tags": [
@@ -845,7 +953,8 @@
         "tags": [
           "Boards"
         ],
-        "summary": "Update board list title",
+        "summary": "Update board list",
+        "description": "Renames a list, changes its task status or moves it. A status change completes or reopens its cards, as moving them would.",
         "parameters": [
           {
             "name": "workspaceId",
@@ -894,6 +1003,71 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Delete board list",
+        "description": "Deletes a list. Its cards move to the list given by moveCardsTo, which is required when it has cards.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "listId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "moveCardsTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -2253,6 +2427,63 @@
           }
         }
       },
+      "BoardPlanningPreferencesResponse": {
+        "required": [
+          "availableMinutes",
+          "context",
+          "preferAssigned",
+          "includeUnassigned"
+        ],
+        "type": "object",
+        "properties": {
+          "availableMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "context": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "preferAssigned": {
+            "type": "boolean"
+          },
+          "includeUnassigned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BoardPlanningRequest": {
+        "type": "object",
+        "properties": {
+          "availableMinutes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "context": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "preferAssigned": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "includeUnassigned": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "BoardResponse": {
         "required": [
           "id",
@@ -2923,9 +3154,6 @@
         }
       },
       "UpdateBoardListRequest": {
-        "required": [
-          "title"
-        ],
         "type": "object",
         "properties": {
           "title": {
@@ -2933,6 +3161,25 @@
               "null",
               "string"
             ]
+          },
+          "taskStatus": {
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              null
+            ],
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "position": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },

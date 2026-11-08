@@ -17,6 +17,8 @@ public sealed class BoardsModule : IModule
     services.AddScoped<IBoardCardService, BoardCardService>();
     services.AddScoped<IBoardCollaborationService, BoardCollaborationService>();
     services.AddScoped<IBoardDependencyService, BoardDependencyService>();
+    services.AddScoped<IBoardPlanningPreferenceStore, PostgresBoardPlanningPreferenceStore>();
+    services.AddScoped<IBoardPlanningService, BoardPlanningService>();
     services.AddSingleton<IGraphEngine<Guid>, NativeGuidGraphEngine>();
   }
 

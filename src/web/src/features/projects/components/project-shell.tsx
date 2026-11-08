@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpenText, Gear, Kanban } from "@phosphor-icons/react"
+import { ArrowLeft, Gear, Kanban } from "@phosphor-icons/react"
 import { useCallback, useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "@/features/auth"
 import { ProjectIconMark } from "@/features/projects/components/project-personalization"
+import { ProjectSettings } from "@/features/projects/components/project-settings"
 import { getProject } from "@/features/projects/project-api"
 import type { Project } from "@/types/project"
 import { ProjectBoard } from "@/features/board"
@@ -24,7 +25,8 @@ type ProjectShellProps = {
   onBack: () => void
 }
 
-type ProjectTab = "board" | "docs" | "settings"
+// Docs is not here: it is a product of its own, not a v0 screen.
+type ProjectTab = "board" | "settings"
 
 const tabs: Array<{
   id: ProjectTab
@@ -32,7 +34,6 @@ const tabs: Array<{
   icon: React.ComponentType<{ className?: string }>
 }> = [
   { id: "board", label: "Board", icon: Kanban },
-  { id: "docs", label: "Docs", icon: BookOpenText },
   { id: "settings", label: "Settings", icon: Gear },
 ]
 
@@ -165,43 +166,14 @@ export function ProjectShell({ projectId, onBack }: ProjectShellProps) {
       <div className="min-w-0">
         {activeTab === "board" ? (
           <ProjectBoard project={project} workspace={activeWorkspace} />
-        ) : activeTab === "docs" ? (
-          <PlaceholderModule
-            icon={BookOpenText}
-            title="Project docs"
-            description="Structured project knowledge will live here."
-          />
         ) : (
-          <PlaceholderModule
-            icon={Gear}
-            title="Project settings"
-            description="Configuration will stay separate from delivery work."
+          <ProjectSettings
+            key={project.id}
+            project={project}
+            onProjectChange={setProject}
+            onDeleted={onBack}
           />
         )}
-      </div>
-    </div>
-  )
-}
-
-function PlaceholderModule({
-  description,
-  icon: Icon,
-  title,
-}: {
-  description: string
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-}) {
-  return (
-    <div className="grid min-h-72 place-items-center rounded-md border border-dashed border-zinc-950/15 bg-white/54 px-4 py-12 text-center dark:border-white/15 dark:bg-white/[0.035]">
-      <div className="max-w-md">
-        <span className="mx-auto grid size-11 place-items-center rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-          <Icon className="size-5" />
-        </span>
-        <h2 className="mt-4 text-base font-semibold">{title}</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
       </div>
     </div>
   )

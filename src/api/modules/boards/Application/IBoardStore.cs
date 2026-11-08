@@ -44,13 +44,30 @@ public interface IBoardStore
     DateTimeOffset createdAt,
     CancellationToken cancellationToken);
 
+  /// <summary>
+  /// Applies <paramref name="update"/> and moves the list to its position,
+  /// renumbering the others. Returns <c>null</c> when the list is not found.
+  /// </summary>
   Task<ProjectBoard?> UpdateListAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
     Guid listId,
-    string title,
+    BoardListUpdate update,
     DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
+  /// <summary>
+  /// Deletes the list, after moving its cards with <paramref name="transfer"/>
+  /// when it has any. Returns <c>null</c> when the list is not found.
+  /// </summary>
+  Task<ProjectBoard?> DeleteListAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid listId,
+    BoardCardTransfer? transfer,
+    DateTimeOffset deletedAt,
     CancellationToken cancellationToken);
 
   Task<ProjectBoardCard?> FindCardAsync(
@@ -174,6 +191,26 @@ public sealed record BoardCardCompletion(
 {
   public static BoardCardCompletion Open { get; } = new(false, null, null);
 }
+
+/// <summary>
+/// The new state of a list. <see cref="CardCompletion"/>, when set, is given
+/// to the list's cards whose completion differs from it, as moving them into
+/// a list with the new status would.
+/// </summary>
+public sealed record BoardListUpdate(
+  string Title,
+  BoardTaskStatus TaskStatus,
+  int Position,
+  BoardCardCompletion? CardCompletion);
+
+/// <summary>
+/// Where a deleted list's cards go. They keep their order at the end of the
+/// target list, and <see cref="Completion"/> is given to those whose
+/// completion differs from it.
+/// </summary>
+public sealed record BoardCardTransfer(
+  Guid TargetListId,
+  BoardCardCompletion Completion);
 
 public sealed record BoardListSeed(
   string Title,

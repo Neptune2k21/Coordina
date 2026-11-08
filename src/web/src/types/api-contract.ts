@@ -842,6 +842,80 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/planning-preferences": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get my planning preferences
+     * @description Returns the signed-in user's planning preferences for the board, or the defaults when none are saved.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardPlanningPreferencesResponse"]
+          }
+        }
+      }
+    }
+    /**
+     * Save my planning preferences
+     * @description Replaces the signed-in user's planning preferences for the board. Fields left out take their default.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardPlanningRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardPlanningPreferencesResponse"]
+          }
+        }
+      }
+    }
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/lists": {
     parameters: {
       query?: never
@@ -896,10 +970,43 @@ export interface paths {
     get?: never
     put?: never
     post?: never
-    delete?: never
+    /**
+     * Delete board list
+     * @description Deletes a list. Its cards move to the list given by moveCardsTo, which is required when it has cards.
+     */
+    delete: {
+      parameters: {
+        query?: {
+          moveCardsTo?: string
+        }
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          listId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardResponse"]
+          }
+        }
+      }
+    }
     options?: never
     head?: never
-    /** Update board list title */
+    /**
+     * Update board list
+     * @description Renames a list, changes its task status or moves it. A status change completes or reopens its cards, as moving them would.
+     */
     patch: {
       parameters: {
         query?: never
@@ -1550,6 +1657,20 @@ export interface components {
       updatedAt: string
       cards: components["schemas"]["BoardCardResponse"][]
     }
+    BoardPlanningPreferencesResponse: {
+      /** Format: int32 */
+      availableMinutes: number
+      context: null | string
+      preferAssigned: boolean
+      includeUnassigned: boolean
+    }
+    BoardPlanningRequest: {
+      /** Format: int32 */
+      availableMinutes?: null | number
+      context?: null | string
+      preferAssigned?: null | boolean
+      includeUnassigned?: null | boolean
+    }
     BoardResponse: {
       /** Format: uuid */
       id: string
@@ -1720,7 +1841,11 @@ export interface components {
       isCompleted: null | boolean
     }
     UpdateBoardListRequest: {
-      title: null | string
+      title?: null | string
+      /** @enum {null|string} */
+      taskStatus?: "TODO" | "IN_PROGRESS" | "DONE" | null
+      /** Format: int32 */
+      position?: null | number
     }
     UpdateProjectRequest: {
       name?: null | string
