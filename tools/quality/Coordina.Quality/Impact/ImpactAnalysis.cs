@@ -30,6 +30,11 @@ internal static class ImpactAnalysis
       [Suite.GraphEngine, Suite.Api, Suite.EndToEnd],
       "graph engine, which the API calls through native interop"),
     new(
+      path => path.StartsWith("tools/analyzers/", StringComparison.Ordinal)
+        || path.StartsWith("tests/analyzers/", StringComparison.Ordinal),
+      [Suite.Api],
+      "Roslyn analyzers, which run when the API builds"),
+    new(
       path => path == "contracts/graph-engine-abi.json",
       [Suite.GraphEngine, Suite.Api],
       "native ABI contract, which the graph engine and the API both check"),
