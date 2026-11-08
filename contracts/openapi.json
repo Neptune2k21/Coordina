@@ -1792,6 +1792,37 @@
           }
         }
       }
+    },
+    "/me/work": {
+      "get": {
+        "tags": [
+          "Work"
+        ],
+        "summary": "Get my work",
+        "description": "Ranks the signed-in user\u0027s cards across the workspace\u0027s active projects: what they are working on, what they can start next, and what is blocked. Each card keeps the score and reasons of its board\u0027s planning view.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyWorkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2946,6 +2977,113 @@
           }
         }
       },
+      "MyWorkItemResponse": {
+        "required": [
+          "project",
+          "boardId",
+          "dueDate",
+          "isUnassigned",
+          "plan"
+        ],
+        "type": "object",
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/MyWorkProjectResponse"
+          },
+          "boardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "isUnassigned": {
+            "type": "boolean"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/BoardGraphPlanItemResponse"
+          }
+        }
+      },
+      "MyWorkProjectResponse": {
+        "required": [
+          "id",
+          "name",
+          "key",
+          "icon",
+          "color"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "key": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "icon": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "color": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MyWorkResponse": {
+        "required": [
+          "workspaceId",
+          "now",
+          "next",
+          "nextTotal",
+          "blocked"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "now": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyWorkItemResponse"
+            }
+          },
+          "next": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyWorkItemResponse"
+            }
+          },
+          "nextTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "blocked": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyWorkItemResponse"
+            }
+          }
+        }
+      },
       "ProjectResponse": {
         "required": [
           "id",
@@ -3320,6 +3458,9 @@
     },
     {
       "name": "Boards"
+    },
+    {
+      "name": "Work"
     }
   ]
 }

@@ -12,6 +12,7 @@ export const featureDependencies = {
   workspaces: ["auth"],
   board: ["auth", "workspaces"],
   projects: ["auth", "workspaces", "board"],
+  work: ["auth", "workspaces", "projects"],
 }
 
 const sharedFolders = ["components", "lib", "types"]

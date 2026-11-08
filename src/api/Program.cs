@@ -5,6 +5,7 @@ using Coordina.Api.Modules.Auth;
 using Coordina.Api.Modules.Boards;
 using Coordina.Api.Modules.Health;
 using Coordina.Api.Modules.Projects;
+using Coordina.Api.Modules.Work;
 using Coordina.Api.Modules.Workspaces;
 using Coordina.Api.Shared.OpenApi;
 
@@ -20,7 +21,8 @@ builder.Services.AddModules(
   new AuthModule(),
   new WorkspacesModule(),
   new ProjectsModule(),
-  new BoardsModule());
+  new BoardsModule(),
+  new WorkModule());
 
 var app = builder.Build();
 

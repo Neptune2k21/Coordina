@@ -51,19 +51,25 @@ internal static class BoardGraphResponseMapper
   private static BoardGraphPlanItemResponse[] ToPlanItems(
     BoardGraphAnalysis analysis) =>
     analysis.PlanItems
-      .Select(item => new BoardGraphPlanItemResponse(
-        ToCard(item.Card, analysis.NodeAnalyses, analysis.CriticalPathIds),
-        item.Score,
-        item.IsActionable,
-        item.BlockerCount,
-        item.Card.EstimatedMinutes,
-        item.FitsAvailableTime,
-        item.IsAssignedToMe,
-        item.IsContextMatch,
-        item.IsInProgress,
-        item.IsShortestAlternative,
-        item.Reasons))
+      .Select(item => ToPlanItem(item, analysis))
       .ToArray();
+
+  /// <summary>One recommendation as the board's planning view shows it, so other views rank it the same way.</summary>
+  public static BoardGraphPlanItemResponse ToPlanItem(
+    BoardWorkRecommendation item,
+    BoardGraphAnalysis analysis) =>
+    new(
+      ToCard(item.Card, analysis.NodeAnalyses, analysis.CriticalPathIds),
+      item.Score,
+      item.IsActionable,
+      item.BlockerCount,
+      item.Card.EstimatedMinutes,
+      item.FitsAvailableTime,
+      item.IsAssignedToMe,
+      item.IsContextMatch,
+      item.IsInProgress,
+      item.IsShortestAlternative,
+      item.Reasons);
 
   private static BoardGraphCardResponse ToCard(
     ProjectBoardCard card,

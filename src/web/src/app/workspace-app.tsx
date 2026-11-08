@@ -10,8 +10,8 @@ import {
 import { SaasShell } from "@/app/saas-shell"
 import { Card, CardContent } from "@/components/ui/card"
 import { ProjectShell, ProjectsPage } from "@/features/projects"
+import { MyWorkPage } from "@/features/work"
 import {
-  WorkspaceDashboard,
   WorkspaceOnboarding,
   WorkspaceProvider,
   WorkspaceSettingsPage,
@@ -107,7 +107,11 @@ function WorkspaceAppContent() {
       ) : isSettingsPage ? (
         <WorkspaceSettingsPage />
       ) : (
-        <WorkspaceDashboard />
+        <MyWorkPage
+          onOpenCard={(projectId, cardId) =>
+            navigate(`/app/projects/${projectId}?card=${cardId}`)
+          }
+        />
       )}
     </SaasShell>
   )
