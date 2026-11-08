@@ -46,6 +46,7 @@ internal static class ImpactAnalysis
       path => path.StartsWith("src/api/", StringComparison.Ordinal)
         || path.StartsWith("tests/api/", StringComparison.Ordinal)
         || path.StartsWith("tests/api-postgres/", StringComparison.Ordinal)
+        || path.StartsWith("tests/support/", StringComparison.Ordinal)
         || path.StartsWith(".config/", StringComparison.Ordinal),
       [Suite.Api, Suite.EndToEnd],
       "API; the web app only needs checking when contracts/openapi.json changes too"),

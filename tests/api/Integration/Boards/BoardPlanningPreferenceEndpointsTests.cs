@@ -6,15 +6,15 @@ namespace Coordina.Api.Tests.Integration.Boards;
 public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFactory factory)
   : ApiTest(factory)
 {
-  private string _workspaceId = string.Empty;
-  private string _projectId = string.Empty;
+  private const string PreferencesPath = "/planning-preferences";
+
 
   [Fact]
   public async Task Get_WithNothingSaved_ReturnsTheDefaults()
   {
-    var (owner, path) = await CreateBoardAsync();
+    var scope = await BoardScope.CreateAsync(Api, "BASIC");
 
-    var preferences = await Api.SendForAsync<PlanningPreferences>(HttpMethod.Get, path, owner.AccessToken);
+    var preferences = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Get, PreferencesPath);
 
     Assert.Equal(new PlanningPreferences(0, null, true, true), preferences);
   }
@@ -22,14 +22,10 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   [Fact]
   public async Task Save_IsReturnedByTheNextGet_AndBelongsToItsUser()
   {
-    var (owner, path) = await CreateBoardAsync();
+    var scope = await BoardScope.CreateAsync(Api, "BASIC");
 
-    var saved = await Api.SendForAsync<PlanningPreferences>(
-      HttpMethod.Put,
-      path,
-      owner.AccessToken,
-      new { availableMinutes = 120, context = " #deep work ", preferAssigned = false, includeUnassigned = false });
-    var read = await Api.SendForAsync<PlanningPreferences>(HttpMethod.Get, path, owner.AccessToken);
+    var saved = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { availableMinutes = 120, context = " #deep work ", preferAssigned = false, includeUnassigned = false });
+    var read = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Get, PreferencesPath);
 
     Assert.Equal(new PlanningPreferences(120, "deep-work", false, false), saved);
     Assert.Equal(saved, read);
@@ -38,11 +34,10 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   [Fact]
   public async Task Save_LeavingFieldsOut_ResetsThemToTheDefaults()
   {
-    var (owner, path) = await CreateBoardAsync();
-    await Api.SendForAsync<PlanningPreferences>(
-      HttpMethod.Put, path, owner.AccessToken, new { availableMinutes = 60, preferAssigned = false });
+    var scope = await BoardScope.CreateAsync(Api, "BASIC");
+    await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { availableMinutes = 60, preferAssigned = false });
 
-    var saved = await Api.SendForAsync<PlanningPreferences>(HttpMethod.Put, path, owner.AccessToken, new { });
+    var saved = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { });
 
     Assert.Equal(new PlanningPreferences(0, null, true, true), saved);
   }
@@ -52,9 +47,9 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   [InlineData(100000)]
   public async Task Save_OutOfRangeMinutes_ReturnsValidationProblem(int availableMinutes)
   {
-    var (owner, path) = await CreateBoardAsync();
+    var scope = await BoardScope.CreateAsync(Api, "BASIC");
 
-    var response = await Api.SendAsync(HttpMethod.Put, path, owner.AccessToken, new { availableMinutes });
+    var response = await scope.SendAsync(HttpMethod.Put, PreferencesPath, new { availableMinutes });
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -62,11 +57,11 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   [Fact]
   public async Task Save_DoesNotChangeAnotherMembersPreferences()
   {
-    var (owner, path) = await CreateBoardAsync();
-    var member = await Api.AddMemberAsync(owner.AccessToken, _workspaceId);
+    var scope = await BoardScope.CreateAsync(Api, "BASIC");
+    var member = await scope.AddMemberAsync();
 
-    await Api.SendForAsync<PlanningPreferences>(HttpMethod.Put, path, owner.AccessToken, new { availableMinutes = 240 });
-    var membersView = await Api.SendForAsync<PlanningPreferences>(HttpMethod.Get, path, member.AccessToken);
+    await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { availableMinutes = 240 });
+    var membersView = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Get, PreferencesPath, accessToken: member.AccessToken);
 
     Assert.Equal(0, membersView.AvailableMinutes);
   }
@@ -74,27 +69,13 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   [Fact]
   public async Task Get_ForAnUnknownBoard_ReturnsNotFound()
   {
-    var (owner, _) = await CreateBoardAsync();
+    var scope = await BoardScope.CreateAsync(Api, "BASIC");
 
-    var response = await Api.SendAsync(HttpMethod.Get, PathFor(Guid.NewGuid().ToString()), owner.AccessToken);
+    var response = await Api.SendAsync(
+      HttpMethod.Get, $"{scope.ProjectPath}/boards/{Guid.NewGuid()}{PreferencesPath}", scope.Owner.AccessToken);
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
   }
-
-  private async Task<(AuthResponse Owner, string Path)> CreateBoardAsync()
-  {
-    var owner = await Api.RegisterAsync("Planner");
-    var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Planning Team");
-    var project = await Api.CreateProjectAsync(owner.AccessToken, workspace.Id, "Planning");
-    var board = await Api.CreateBoardAsync(owner.AccessToken, workspace.Id, project.Id, "BASIC", null, "Planning board");
-
-    _workspaceId = workspace.Id;
-    _projectId = project.Id;
-    return (owner, PathFor(board.Id));
-  }
-
-  private string PathFor(string boardId) =>
-    $"/workspaces/{_workspaceId}/projects/{_projectId}/boards/{boardId}/planning-preferences";
 
   private sealed record PlanningPreferences(
     int AvailableMinutes,

@@ -21,48 +21,6 @@
     },
     {
       "rule": "CQ4001",
-      "path": "src/web/src/features/projects/components/project-create-dialog.tsx",
-      "message": "This block is repeated in src/web/src/features/projects/components/project-edit-dialog.tsx.",
-      "count": 2
-    },
-    {
-      "rule": "CQ4001",
-      "path": "src/web/src/features/projects/components/project-edit-dialog.tsx",
-      "message": "This block is repeated in src/web/src/features/projects/components/project-create-dialog.tsx.",
-      "count": 2
-    },
-    {
-      "rule": "CQ4001",
-      "path": "tests/api-postgres/Support/ApiClient.cs",
-      "message": "This block is repeated in tests/api/Support/ApiTestClient.cs.",
-      "count": 1
-    },
-    {
-      "rule": "CQ4001",
-      "path": "tests/api/Integration/Boards/BoardEndpointsTests.cs",
-      "message": "This block is repeated elsewhere in this file.",
-      "count": 16
-    },
-    {
-      "rule": "CQ4001",
-      "path": "tests/api/Integration/Projects/ProjectEndpointsTests.cs",
-      "message": "This block is repeated in tests/api/Integration/Workspaces/WorkspaceEndpointsTests.cs.",
-      "count": 1
-    },
-    {
-      "rule": "CQ4001",
-      "path": "tests/api/Integration/Workspaces/WorkspaceEndpointsTests.cs",
-      "message": "This block is repeated in tests/api/Integration/Projects/ProjectEndpointsTests.cs.",
-      "count": 1
-    },
-    {
-      "rule": "CQ4001",
-      "path": "tests/api/Support/ApiTestClient.cs",
-      "message": "This block is repeated in tests/api-postgres/Support/ApiClient.cs.",
-      "count": 1
-    },
-    {
-      "rule": "CQ4001",
       "path": "tests/graph-engine/graph_engine_tests.cpp",
       "message": "This block is repeated elsewhere in this file.",
       "count": 8

@@ -1,5 +1,5 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Coordina.Testing;
 
 namespace Coordina.Api.Tests.Support;
 
@@ -30,37 +30,23 @@ public sealed class ApiTestClient(HttpClient http)
       password = Password
     });
 
-    return await ReadSuccessAsync<AuthResponse>(response);
+    return await AuthorizedRequests.ReadSuccessAsync<AuthResponse>(response);
   }
 
-  public async Task<HttpResponseMessage> SendAsync(
+  public Task<HttpResponseMessage> SendAsync(
     HttpMethod method,
     string path,
     string accessToken,
-    object? body = null)
-  {
-    using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
-    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-    if (body is not null)
-    {
-      request.Content = JsonContent.Create(body);
-    }
-
-    return await http.SendAsync(request);
-  }
+    object? body = null) =>
+    http.SendAuthorizedAsync(method, path, accessToken, body);
 
   /// <summary>Sends a request that must succeed and returns its JSON body.</summary>
-  public async Task<T> SendForAsync<T>(
+  public Task<T> SendForAsync<T>(
     HttpMethod method,
     string path,
     string accessToken,
-    object? body = null)
-  {
-    using var response = await SendAsync(method, path, accessToken, body);
-
-    return await ReadSuccessAsync<T>(response);
-  }
+    object? body = null) =>
+    http.SendAuthorizedForAsync<T>(method, path, accessToken, body);
 
   public Task<WorkspaceResponse> CreateWorkspaceAsync(
     string accessToken,
@@ -162,20 +148,4 @@ public sealed class ApiTestClient(HttpClient http)
       HttpMethod.Get,
       $"/workspaces/{workspaceId}/projects/{projectId}/board",
       accessToken);
-
-  private static async Task<T> ReadSuccessAsync<T>(HttpResponseMessage response)
-  {
-    if (!response.IsSuccessStatusCode)
-    {
-      var body = await response.Content.ReadAsStringAsync();
-      Assert.Fail(
-        $"{response.RequestMessage?.Method} {response.RequestMessage?.RequestUri} "
-        + $"returned {(int)response.StatusCode}: {body}");
-    }
-
-    var payload = await response.Content.ReadFromJsonAsync<T>();
-    Assert.NotNull(payload);
-
-    return payload;
-  }
 }

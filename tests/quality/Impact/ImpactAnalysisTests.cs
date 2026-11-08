@@ -10,6 +10,7 @@ public sealed class ImpactAnalysisTests
   [InlineData("src/web/src/features/board/board-api.ts", "web,e2e")]
   [InlineData("src/api/modules/boards/Application/BoardRules.cs", "api,e2e")]
   [InlineData("tests/api-postgres/Integration/Boards/BoardTests.cs", "api,e2e")]
+  [InlineData("tests/support/AuthorizedRequests.cs", "api,e2e")]
   [InlineData("src/graph-engine/src/core/graph_types.cpp", "graph-engine,api,e2e")]
   [InlineData("tools/quality/Coordina.Quality/Program.cs", "quality")]
   [InlineData(".githooks/pre-commit", "quality")]

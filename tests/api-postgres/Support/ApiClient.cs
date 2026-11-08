@@ -1,5 +1,5 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Coordina.Testing;
 
 namespace Coordina.Api.Postgres.Tests.Support;
 
@@ -22,39 +22,19 @@ public sealed class ApiClient(HttpClient client)
     return new TestUser(payload.AccessToken, payload.User.Id);
   }
 
-  public async Task<HttpResponseMessage> SendAsync(
+  public Task<HttpResponseMessage> SendAsync(
     HttpMethod method,
     string path,
     string accessToken,
-    object? body = null)
-  {
-    using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
-    request.Headers.Authorization = new AuthenticationHeaderValue(
-      "Bearer",
-      accessToken);
+    object? body = null) =>
+    client.SendAuthorizedAsync(method, path, accessToken, body);
 
-    if (body is not null)
-    {
-      request.Content = JsonContent.Create(body);
-    }
-
-    return await client.SendAsync(request);
-  }
-
-  public async Task<T> SendForAsync<T>(
+  public Task<T> SendForAsync<T>(
     HttpMethod method,
     string path,
     string accessToken,
-    object? body = null)
-  {
-    using var response = await SendAsync(method, path, accessToken, body);
-    response.EnsureSuccessStatusCode();
-
-    var payload = await response.Content.ReadFromJsonAsync<T>();
-    Assert.NotNull(payload);
-
-    return payload;
-  }
+    object? body = null) =>
+    client.SendAuthorizedForAsync<T>(method, path, accessToken, body);
 
   private sealed record AuthResponse(string AccessToken, UserResponse User);
 

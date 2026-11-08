@@ -131,10 +131,8 @@ public sealed class ProjectEndpointsTests(ApiTestApplicationFactory factory)
   public async Task ProjectOwner_CanEditAndArchiveProject()
   {
     var owner = await Api.RegisterAsync();
-    var member = await Api.RegisterAsync();
     var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Launch Team");
-    var invite = await Api.CreateInviteAsync(owner.AccessToken, workspace.Id);
-    await Api.JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var member = await Api.AddMemberAsync(owner.AccessToken, workspace.Id);
     var project = await Api.CreateProjectAsync(
       owner.AccessToken,
       workspace.Id,
@@ -167,10 +165,8 @@ public sealed class ProjectEndpointsTests(ApiTestApplicationFactory factory)
   public async Task Member_WhoIsNotProjectOwner_CannotModifyProject()
   {
     var owner = await Api.RegisterAsync();
-    var member = await Api.RegisterAsync();
     var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Private Team");
-    var invite = await Api.CreateInviteAsync(owner.AccessToken, workspace.Id);
-    await Api.JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var member = await Api.AddMemberAsync(owner.AccessToken, workspace.Id);
     var project = await Api.CreateProjectAsync(
       owner.AccessToken,
       workspace.Id,
