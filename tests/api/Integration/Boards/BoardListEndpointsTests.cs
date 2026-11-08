@@ -7,10 +7,7 @@ namespace Coordina.Api.Tests.Integration.Boards;
 public sealed class BoardListEndpointsTests(ApiTestApplicationFactory factory)
   : ApiTest(factory)
 {
-  private string _accessToken = string.Empty;
-  private string _workspaceId = string.Empty;
-  private string _projectId = string.Empty;
-  private string _boardPath = string.Empty;
+  private BoardScope _scope = null!;
 
   [Fact]
   public async Task UpdateList_Position_MovesItAndRenumbersTheOthers()
@@ -178,40 +175,31 @@ public sealed class BoardListEndpointsTests(ApiTestApplicationFactory factory)
 
   private async Task<BoardResponse> CreateBoardAsync(params string[] listTitles)
   {
-    var owner = await Api.RegisterAsync("List Tester");
-    var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "List Team");
-    var project = await Api.CreateProjectAsync(owner.AccessToken, workspace.Id, "Lists");
-    var board = await Api.CreateBoardAsync(owner.AccessToken, workspace.Id, project.Id, "CUSTOM", listTitles, "Lists board");
-
-    _accessToken = owner.AccessToken;
-    _workspaceId = workspace.Id;
-    _projectId = project.Id;
-    _boardPath = $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}";
-    return board;
+    _scope = await BoardScope.CreateAsync(Api, "CUSTOM", listTitles);
+    return _scope.Board;
   }
 
-  private Task<BoardResponse> GetBoardAsync() =>
-    Api.GetDefaultBoardAsync(_accessToken, _workspaceId, _projectId);
+  private Task<BoardResponse> GetBoardAsync() => _scope.GetBoardAsync();
 
   private Task<BoardResponse> AddListAsync(string title, string taskStatus) =>
-    Api.SendForAsync<BoardResponse>(HttpMethod.Post, $"{_boardPath}/lists", _accessToken, new { title, taskStatus });
+    _scope.SendForAsync<BoardResponse>(HttpMethod.Post, "/lists", new { title, taskStatus });
 
   private Task<BoardResponse> CreateCardAsync(BoardResponse board, string listTitle, string title) =>
-    Api.SendForAsync<BoardResponse>(HttpMethod.Post, $"{ListPath(board, listTitle)}/cards", _accessToken, new { title });
+    _scope.SendForAsync<BoardResponse>(HttpMethod.Post, $"{ListPath(board, listTitle)}/cards", new { title });
 
   private Task<BoardResponse> PatchListAsync(BoardResponse board, string title, object body) =>
-    Api.SendForAsync<BoardResponse>(HttpMethod.Patch, ListPath(board, title), _accessToken, body);
+    _scope.SendForAsync<BoardResponse>(HttpMethod.Patch, ListPath(board, title), body);
 
   private Task<BoardResponse> DeleteListAsync(BoardResponse board, string title, string? moveCardsTo) =>
-    Api.SendForAsync<BoardResponse>(
+    _scope.SendForAsync<BoardResponse>(
       HttpMethod.Delete,
-      moveCardsTo is null ? ListPath(board, title) : $"{ListPath(board, title)}?moveCardsTo={moveCardsTo}",
-      _accessToken);
+      moveCardsTo is null ? ListPath(board, title) : $"{ListPath(board, title)}?moveCardsTo={moveCardsTo}");
 
   private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? body = null) =>
-    Api.SendAsync(method, path, _accessToken, body);
+    _scope.SendAsync(method, path, body);
 
-  private string ListPath(BoardResponse board, string title) => $"{_boardPath}/lists/{ListNamed(board, title).Id}";
+  // Relative to the board, as BoardScope sends it.
+  private static string ListPath(BoardResponse board, string title) => $"/lists/{ListNamed(board, title).Id}";
 
   private static BoardListResponse ListNamed(BoardResponse board, string title) =>
     board.Lists.Single(list => list.Title == title);

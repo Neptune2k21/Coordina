@@ -45,10 +45,8 @@ public sealed class WorkspaceEndpointsTests(ApiTestApplicationFactory factory)
   public async Task DeleteWorkspace_ByMember_ReturnsForbidden()
   {
     var owner = await Api.RegisterAsync();
-    var member = await Api.RegisterAsync();
     var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Launch Team");
-    var invite = await Api.CreateInviteAsync(owner.AccessToken, workspace.Id);
-    await Api.JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var member = await Api.AddMemberAsync(owner.AccessToken, workspace.Id);
 
     var response = await Api.SendAsync(
       HttpMethod.Delete,
@@ -170,10 +168,8 @@ public sealed class WorkspaceEndpointsTests(ApiTestApplicationFactory factory)
   public async Task CreateInvite_ByMember_ReturnsForbidden()
   {
     var owner = await Api.RegisterAsync();
-    var member = await Api.RegisterAsync();
     var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Owner Invites");
-    var invite = await Api.CreateInviteAsync(owner.AccessToken, workspace.Id);
-    await Api.JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var member = await Api.AddMemberAsync(owner.AccessToken, workspace.Id);
 
     var response = await Api.SendAsync(
       HttpMethod.Post,
@@ -187,10 +183,8 @@ public sealed class WorkspaceEndpointsTests(ApiTestApplicationFactory factory)
   public async Task Members_CanBeListedAndRemovedByOwner()
   {
     var owner = await Api.RegisterAsync();
-    var member = await Api.RegisterAsync();
     var workspace = await Api.CreateWorkspaceAsync(owner.AccessToken, "Members");
-    var invite = await Api.CreateInviteAsync(owner.AccessToken, workspace.Id);
-    await Api.JoinWorkspaceAsync(member.AccessToken, invite.Code);
+    var member = await Api.AddMemberAsync(owner.AccessToken, workspace.Id);
 
     var listResponse = await Api.SendAsync(
       HttpMethod.Get,

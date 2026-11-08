@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\api\Coordina.Api.csproj" />
+    <ProjectReference Include="..\support\Coordina.Testing.csproj" />
   </ItemGroup>
 
 </Project>
