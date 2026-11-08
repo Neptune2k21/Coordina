@@ -157,6 +157,13 @@ When adding backend behavior:
 10. Add integration tests for endpoint behavior.
 11. Add migrations when persistence changes.
 
+When a class that implements one interface grows past 500 lines, split it
+into `partial` files by area, named `<Type>.<Area>.cs`, instead of inventing
+helper classes. The board stores do this: `PostgresBoardStore.cs` holds the
+board and the helpers the areas share, and `PostgresBoardStore.Cards.cs`,
+`.Lists.cs` and so on hold one area each. Only a `partial` type may use that
+naming (`CQ1101`).
+
 ### Architecture rules
 
 The layering and module conventions are Roslyn analyzers
