@@ -38,7 +38,7 @@ const tabs: Array<{
 ]
 
 export function ProjectShell({ projectId, onBack }: ProjectShellProps) {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
   const { activeWorkspace, activeWorkspaceId } = useWorkspaces()
   const [activeTab, setActiveTab] = useState<ProjectTab>("board")
   const [project, setProject] = useState<Project | null>(null)
@@ -61,17 +61,13 @@ export function ProjectShell({ projectId, onBack }: ProjectShellProps) {
     } catch (requestError) {
       if (requestError instanceof ApiError) {
         setError(requestError.message)
-
-        if (requestError.status === 401) {
-          signOut()
-        }
       } else {
         setError("Unable to load project.")
       }
     } finally {
       setIsLoading(false)
     }
-  }, [activeWorkspaceId, projectId, session, signOut])
+  }, [activeWorkspaceId, projectId, session])
 
   useEffect(() => {
     queueMicrotask(() => {

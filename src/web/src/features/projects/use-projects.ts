@@ -19,7 +19,7 @@ export type ProjectAction = {
 }
 
 export function useProjects() {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
   const { activeWorkspace, activeWorkspaceId } = useWorkspaces()
   const [projects, setProjects] = useState<Project[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -40,16 +40,12 @@ export function useProjects() {
     (requestError: unknown, fallback: string) => {
       if (requestError instanceof ApiError) {
         setError(requestError.message)
-
-        if (requestError.status === 401) {
-          signOut()
-        }
         return
       }
 
       setError(fallback)
     },
-    [signOut]
+    []
   )
 
   const loadProjects = useCallback(async () => {

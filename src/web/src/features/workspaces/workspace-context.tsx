@@ -45,7 +45,7 @@ type WorkspaceContextValue = {
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null)
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<
     string | null
@@ -98,19 +98,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       } else {
         setError("Unable to load workspaces.")
       }
-
-      if (
-        typeof requestError === "object" &&
-        requestError !== null &&
-        "status" in requestError &&
-        requestError.status === 401
-      ) {
-        signOut()
-      }
     } finally {
       setIsLoading(false)
     }
-  }, [reconcileActiveWorkspace, session, signOut])
+  }, [reconcileActiveWorkspace, session])
 
   useEffect(() => {
     queueMicrotask(() => void refresh())

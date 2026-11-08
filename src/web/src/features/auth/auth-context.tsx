@@ -13,11 +13,16 @@ import {
   readStoredSession,
   storeSession,
 } from "@/features/auth/auth-session"
+import { onSessionRejected } from "@/lib/api"
 import type { AuthSession } from "@/types/auth"
+
+const sessionExpiredNotice = "Your session expired. Sign in again."
 
 type AuthContextValue = {
   session: AuthSession | null
   isLoading: boolean
+  /** Why the user was signed out without asking, shown on the sign-in page. */
+  notice: string | null
   setSession: (session: AuthSession) => void
   signOut: () => void
 }
@@ -31,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       isLoading: Boolean(storedSession),
       session: storedSession,
+      notice: null as string | null,
     }
   })
 
@@ -46,14 +52,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setState({
           isLoading: false,
           session: refreshedSession,
+          notice: null,
         })
       })
       .catch(() => {
         clearStoredSession()
-        setState({
-          isLoading: false,
-          session: null,
-        })
+        setState((current) => ({ ...current, isLoading: false, session: null }))
       })
   }, [state.isLoading, state.session])
 
@@ -62,26 +66,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState({
       isLoading: false,
       session: nextSession,
+      notice: null,
     })
   }, [])
 
-  const signOut = useCallback(() => {
+  const endSession = useCallback((notice: string | null) => {
     clearStoredSession()
     localStorage.removeItem("coordina.activeWorkspaceId")
     setState({
       isLoading: false,
       session: null,
+      notice,
     })
   }, [])
+
+  const signOut = useCallback(() => endSession(null), [endSession])
+
+  // Every authenticated request reports a 401 here, so an expired session
+  // ends once, in one place, whatever screen the user is on.
+  useEffect(
+    () => onSessionRejected(() => endSession(sessionExpiredNotice)),
+    [endSession]
+  )
 
   const value = useMemo(
     () => ({
       session: state.session,
       isLoading: state.isLoading,
+      notice: state.notice,
       setSession,
       signOut,
     }),
-    [setSession, signOut, state.isLoading, state.session]
+    [setSession, signOut, state.isLoading, state.notice, state.session]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -8,7 +8,7 @@ import type { MyWork } from "@/types/work"
 
 /** The signed-in user's ranked work in the active workspace. */
 export function useMyWork() {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
   const { activeWorkspaceId } = useWorkspaces()
   const [work, setWork] = useState<MyWork | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -39,17 +39,13 @@ export function useMyWork() {
             ? requestError.message
             : "Your work could not be loaded."
         )
-
-        if (requestError instanceof ApiError && requestError.status === 401) {
-          signOut()
-        }
       })
       .finally(() => isCurrent && setIsLoading(false))
 
     return () => {
       isCurrent = false
     }
-  }, [accessToken, activeWorkspaceId, signOut])
+  }, [accessToken, activeWorkspaceId])
 
   return { work, isLoading, error }
 }
