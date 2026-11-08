@@ -19,6 +19,7 @@ public sealed class ImpactAnalysisTests
   [InlineData("Makefile", "quality,graph-engine,api,web,e2e")]
   [InlineData(".github/workflows/quality.yml", "quality,graph-engine,api,web,e2e")]
   [InlineData("src/web/README.md", "web,e2e")]
+  [InlineData("src/web/pnpm-lock.yaml", "quality,web,e2e")]
   public void Change_SelectsTheSuitesItCanBreak(string path, string expected)
   {
     var plan = ImpactAnalysis.Analyze([path]);

@@ -50,6 +50,10 @@ internal static class ImpactAnalysis
       [Suite.Api, Suite.EndToEnd],
       "API; the web app only needs checking when contracts/openapi.json changes too"),
     new(
+      path => path is "src/web/package.json" or "src/web/pnpm-lock.yaml",
+      [Suite.Quality, Suite.Web, Suite.EndToEnd],
+      "web dependencies, which include the jscpd and ESLint the quality tool runs"),
+    new(
       path => path.StartsWith("src/web/", StringComparison.Ordinal),
       [Suite.Web, Suite.EndToEnd],
       "web app")

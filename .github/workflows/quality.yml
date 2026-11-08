@@ -104,7 +104,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The tool runs jscpd and ESLint from the web app's dependencies.
       - uses: ./.github/actions/setup
+        with:
+          web: "true"
       - run: make suite name=quality
 
   graph-engine:
@@ -124,7 +127,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # api-test runs the whole solution, the quality tool's tests included,
+      # and those need jscpd and ESLint from the web app's dependencies.
       - uses: ./.github/actions/setup
+        with:
+          web: "true"
       # The PostgreSQL tests start their own container with Testcontainers.
       - run: make suite name=api
 
