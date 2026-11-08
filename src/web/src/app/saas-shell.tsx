@@ -3,6 +3,7 @@ import {
   Gear,
   Kanban,
   List,
+  ListChecks,
   SignOut,
   UserCircle,
 } from "@phosphor-icons/react"
@@ -32,6 +33,7 @@ export function SaasShell({
   onNavigate,
 }: SaasShellProps) {
   const { session, signOut } = useAuth()
+  const isMyWorkPage = currentPath === "/app"
   const isProjectsPage = currentPath.startsWith("/app/projects")
   const isProjectDetailPage = /^\/app\/projects\/[^/]+$/.test(currentPath)
   const isSettingsPage = currentPath.startsWith("/app/workspace-settings")
@@ -79,6 +81,19 @@ export function SaasShell({
         <Separator className="bg-zinc-950/[0.08] dark:bg-white/10" />
         <nav className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="grid gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              className={`h-11 justify-start rounded-2xl px-3 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-950/[0.065] dark:hover:bg-white/[0.12] ${
+                isMyWorkPage
+                  ? "bg-zinc-950/[0.045] shadow-[inset_0_0_0_1px_rgba(9,9,11,0.03)] dark:bg-white/[0.08]"
+                  : "text-muted-foreground"
+              }`}
+              onClick={() => onNavigate("/app")}
+            >
+              <ListChecks className="size-4" />
+              My work
+            </Button>
             <Button
               type="button"
               variant="ghost"

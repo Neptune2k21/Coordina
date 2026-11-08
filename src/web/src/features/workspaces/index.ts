@@ -1,4 +1,3 @@
-export { WorkspaceDashboard } from "@/features/workspaces/components/workspace-dashboard"
 export { WorkspaceOnboarding } from "@/features/workspaces/components/workspace-onboarding"
 export { WorkspaceSettingsPage } from "@/features/workspaces/components/workspace-settings-page"
 export { WorkspaceSwitcher } from "@/features/workspaces/components/workspace-switcher"

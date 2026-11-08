@@ -25,7 +25,10 @@ test("user can register, sign out and sign in", async ({ page }) => {
     .getByRole("button", { name: /^create workspace$/i })
     .click()
 
-  await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "My work" })).toBeVisible()
+  await expect(
+    page.getByText(`Your cards across ${workspaceName}`)
+  ).toBeVisible()
   await page.getByRole("button", { name: "User actions" }).click()
   await expect(page.getByRole("menuitem", { name: /sign out/i })).toBeVisible()
 
@@ -38,5 +41,8 @@ test("user can register, sign out and sign in", async ({ page }) => {
     .getByRole("button", { name: /sign in to coordina/i })
     .click()
 
-  await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "My work" })).toBeVisible()
+  await expect(
+    page.getByText(`Your cards across ${workspaceName}`)
+  ).toBeVisible()
 })

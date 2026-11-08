@@ -124,6 +124,25 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     }
   }, [accessToken, boardId, project.id, workspace.id])
 
+  // A link from My work opens its card: /app/projects/{id}?card={cardId}.
+  useEffect(() => {
+    const linkedCardId = new URLSearchParams(window.location.search).get("card")
+
+    if (!board || !linkedCardId) {
+      return
+    }
+
+    if (
+      board.lists.some((list) =>
+        list.cards.some((card) => card.id === linkedCardId)
+      )
+    ) {
+      queueMicrotask(() => setSelectedCardId(linkedCardId))
+    }
+
+    window.history.replaceState({}, "", window.location.pathname)
+  }, [board])
+
   const selectedCard = useMemo(
     () =>
       board?.lists

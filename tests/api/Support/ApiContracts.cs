@@ -190,3 +190,24 @@ public sealed record BoardCardDependencyAnalysisResponse(
   IReadOnlyCollection<BoardGraphCardResponse> SuggestedDependencies,
   IReadOnlyCollection<BoardGraphCardResponse> ImpactedDependents,
   IReadOnlyCollection<BoardGraphCardResponse> DirectlyUnlockedDependents);
+
+public sealed record MyWorkResponse(
+  string WorkspaceId,
+  IReadOnlyCollection<MyWorkItemResponse> Now,
+  IReadOnlyCollection<MyWorkItemResponse> Next,
+  int NextTotal,
+  IReadOnlyCollection<MyWorkItemResponse> Blocked);
+
+public sealed record MyWorkItemResponse(
+  MyWorkProjectResponse Project,
+  string BoardId,
+  DateOnly? DueDate,
+  bool IsUnassigned,
+  BoardGraphPlanItemResponse Plan);
+
+public sealed record MyWorkProjectResponse(
+  string Id,
+  string Name,
+  string? Key,
+  string? Icon,
+  string? Color);

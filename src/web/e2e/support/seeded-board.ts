@@ -56,8 +56,8 @@ export async function seedBoard(
   return { accessToken, board, email, projectId: project.id, projectPath }
 }
 
-/** Signs in through the form, like a user would, and opens the seeded project. */
-export async function openSeededProject(page: Page, seeded: SeededBoard) {
+/** Signs in through the form, like a user would, and lands on My work. */
+export async function signIn(page: Page, seeded: SeededBoard) {
   await page.goto("/login")
   await page.getByLabel("Email").fill(seeded.email)
   await page.getByLabel("Password").fill(password)
@@ -66,6 +66,11 @@ export async function openSeededProject(page: Page, seeded: SeededBoard) {
     .getByRole("button", { name: /sign in to coordina/i })
     .click()
   await page.waitForURL(/\/app/)
+}
+
+/** Signs in and opens the seeded project. */
+export async function openSeededProject(page: Page, seeded: SeededBoard) {
+  await signIn(page, seeded)
   await page.goto(`/app/projects/${seeded.projectId}`)
 }
 
