@@ -97,7 +97,7 @@ git rebase upstream/master
 | 1 approval from a code owner | See `.github/CODEOWNERS` |
 | New commits dismiss approvals | A reviewer approves what is actually merged |
 | Conversations resolved | Every review thread is closed before merging |
-| `Format, lint, test and build` passes | The full quality gate runs in CI |
+| `CI OK` passes | Every CI job the change needs passed (see [Quality Checks](#quality-checks)) |
 | `Conventional title` passes | The PR title follows the commit style below |
 | Branch up to date | The branch is rebased on the latest `master` |
 | Squash merge only | One pull request becomes one commit on `master` |
@@ -246,9 +246,10 @@ both give the same answer.
 | Command | What it does |
 | --- | --- |
 | `make check` | Checks the files you changed since `origin/master`, then lists the suites they affect |
-| `make check-all` | Checks the whole repository. Part of `make lint`, so CI runs it |
+| `make check-all` | Checks the whole repository. Part of `make lint`; CI runs it on every pull request |
 | `make affected` | Explains which suites your change needs, and why |
 | `make verify` | Runs only those suites. `make verify skip=e2e` leaves out the ones that need the database |
+| `make suite name=api` | Runs one suite, exactly as its CI job does |
 | `make quality-rules` | Lists every rule with the reason it exists |
 | `make hooks` | Enables git hooks: staged files and the commit message are checked before each commit |
 
@@ -271,6 +272,25 @@ shown so you can decide.
 
 Run `make check` while you work instead of the whole `make quality`, then
 `make verify` before pushing.
+
+### How CI runs
+
+CI uses the same impact analysis, so a pull request only runs what it can
+break:
+
+1. **Plan** runs `quality affected` against `master` and lists the suites the
+   change needs in the run summary.
+2. **Quality rules** (`quality check --all`) always runs.
+3. Each suite (`quality`, `graph-engine`, `api`, `web`, `e2e`) is a job that
+   runs only when the plan includes it. It runs `make suite name=<suite>`, so it
+   uses the same make targets as `make verify`.
+4. **CI OK** passes when no job failed or was cancelled. A suite the change did
+   not need is skipped, and that is fine. It is the only CI check branch
+   protection requires, so adding or splitting a job does not change the
+   protection rules.
+
+Pushes to `master` run every suite. Documentation-only changes run only the
+quality rules.
 
 On pull requests, problems show as annotations on the changed lines. On
 `master`, CI also writes the results as SARIF (`quality check --all --sarif

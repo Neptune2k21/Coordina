@@ -1,4 +1,4 @@
-.PHONY: help graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify quality-baseline quality-rules quality-test hooks contract web-contract-check
+.PHONY: help graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -175,6 +175,9 @@ affected:
 
 verify:
 	$(QUALITY) verify $(if $(skip),$(foreach suite,$(skip),--skip $(suite)))
+
+suite:
+	$(QUALITY) verify --only $(name)
 
 quality-baseline:
 	$(QUALITY) baseline

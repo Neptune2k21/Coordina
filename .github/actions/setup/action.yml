@@ -1,0 +1,46 @@
+name: Set up Coordina
+description: Installs what a CI job needs. .NET is always installed, because every job runs the quality tool.
+
+inputs:
+  web:
+    description: Install Node.js, pnpm and the web app's dependencies.
+    default: "false"
+  playwright:
+    description: Install the Playwright browser (needs web).
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Setup pnpm
+      if: inputs.web == 'true'
+      uses: pnpm/action-setup@v6
+      with:
+        version: 10.17.1
+
+    - name: Setup Node.js
+      if: inputs.web == 'true'
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        cache: pnpm
+        cache-dependency-path: src/web/pnpm-lock.yaml
+
+    - name: Install web dependencies
+      if: inputs.web == 'true'
+      shell: bash
+      run: pnpm --dir src/web install --frozen-lockfile
+
+    - name: Install Playwright browser
+      if: inputs.playwright == 'true'
+      shell: bash
+      run: pnpm --dir src/web exec playwright install --with-deps chromium
+
+    - name: Prepare CI environment
+      shell: bash
+      run: cp .env.example .env

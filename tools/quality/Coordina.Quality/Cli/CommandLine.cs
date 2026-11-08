@@ -31,6 +31,8 @@ internal static class CommandLine
                                    Show which suites a change needs, and why.
       quality verify [--all] [--base <ref>] [--skip <suite>...] [--dry-run]
                                    Run only the suites a change needs.
+      quality verify --only <suite> [--dry-run]
+                                   Run one suite, as a CI job does.
       quality baseline             Record today's errors so only new ones fail.
       quality rules                List every rule and why it exists.
 
@@ -154,17 +156,23 @@ internal static class CommandLine
   private static int Verify(CommandOptions options, TextWriter output, string workingDirectory)
   {
     var repository = GitRepository.Discover(workingDirectory);
+
+    if (options.Only is not null)
+    {
+      var suite = SuiteNamed(options.Only);
+      var single = ImpactAnalysis.Only(suite, "--only");
+
+      WritePlan(single, output);
+      return new VerifyRunner(repository.Root, output).Run(single, options.DryRun);
+    }
+
     var plan = options.All
       ? ImpactAnalysis.Everything("--all")
       : ImpactAnalysis.Analyze(repository.ChangedFiles(ResolveBase(repository, options)));
-    var unknown = options.Skip
-      .Where(name => Suite.All.All(suite => suite.Name != name))
-      .ToArray();
 
-    if (unknown.Length > 0)
+    foreach (var name in options.Skip)
     {
-      throw new UsageException(
-        $"Unknown suite '{unknown[0]}'. Suites: {string.Join(", ", Suite.All.Select(suite => suite.Name))}.");
+      SuiteNamed(name);
     }
 
     var filtered = plan with
@@ -176,6 +184,11 @@ internal static class CommandLine
 
     return new VerifyRunner(repository.Root, output).Run(filtered, options.DryRun);
   }
+
+  private static Suite SuiteNamed(string name) =>
+    Suite.All.FirstOrDefault(suite => suite.Name == name)
+      ?? throw new UsageException(
+        $"Unknown suite '{name}'. Suites: {string.Join(", ", Suite.All.Select(suite => suite.Name))}.");
 
   private static int WriteBaseline(TextWriter output, string workingDirectory)
   {

@@ -10,8 +10,8 @@ internal sealed record Suite(string Name, string Description, IReadOnlyList<stri
 
   public static Suite Web { get; } = new(
     "web",
-    "Web format check, lint, typecheck, tests and build",
-    ["web-format-check", "web-lint", "web-typecheck", "web-test", "web-build"]);
+    "Web format check, API types, lint, typecheck, tests and build",
+    ["web-format-check", "web-contract-check", "web-lint", "web-typecheck", "web-test", "web-build"]);
 
   public static Suite GraphEngine { get; } = new(
     "graph-engine",

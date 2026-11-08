@@ -50,6 +50,10 @@ internal static class ImpactAnalysis
       [Suite.Api, Suite.EndToEnd],
       "API; the web app only needs checking when contracts/openapi.json changes too"),
     new(
+      path => path is "src/web/package.json" or "src/web/pnpm-lock.yaml",
+      [Suite.Quality, Suite.Web, Suite.EndToEnd],
+      "web dependencies, which include the jscpd and ESLint the quality tool runs"),
+    new(
       path => path.StartsWith("src/web/", StringComparison.Ordinal),
       [Suite.Web, Suite.EndToEnd],
       "web app")
@@ -82,6 +86,9 @@ internal static class ImpactAnalysis
       Suite.All.Where(reasons.ContainsKey).ToArray(),
       reasons.ToDictionary(pair => pair.Key, pair => (IReadOnlyCollection<string>)pair.Value));
   }
+
+  public static ImpactPlan Only(Suite suite, string reason) =>
+    new([suite], new Dictionary<Suite, IReadOnlyCollection<string>> { [suite] = [reason] });
 
   public static ImpactPlan Everything(string reason) =>
     new(Suite.All, Suite.All.ToDictionary(suite => suite, _ => (IReadOnlyCollection<string>)[reason]));
