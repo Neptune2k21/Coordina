@@ -10,6 +10,17 @@ public sealed class PostgresUserStore(CoordinaDbContext dbContext) : IUserStore
 {
   private DbSet<AuthUserEntity> AuthUsers => dbContext.Set<AuthUserEntity>();
 
+  public async Task<UserAccount?> FindByIdAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    var user = await AuthUsers
+      .AsNoTracking()
+      .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
+
+    return user is null ? null : ToDomain(user);
+  }
+
   public async Task<UserAccount?> FindByEmailAsync(
     string normalizedEmail,
     CancellationToken cancellationToken)

@@ -23,12 +23,20 @@ export class ApiError extends Error {
 
 type SessionRejectedListener = () => void
 
+/** Gets a new access token, or null when the session cannot be renewed. */
+type SessionRenewer = () => Promise<string | null>
+
 const sessionRejectedListeners = new Set<SessionRejectedListener>()
+let sessionRenewer: SessionRenewer | null = null
+let renewal: Promise<string | null> | null = null
+// A request retried after a renewal is not renewed again.
+const retriedRequests = new WeakSet<ApiRequestOptions>()
 
 /**
- * Calls `listener` whenever a request sent with an access token gets a 401:
- * the session expired or was revoked. Returns a function that unsubscribes.
- * Requests without a token, like signing in, never trigger it.
+ * Calls `listener` when a request sent with an access token gets a 401 and
+ * the session cannot be renewed: it expired or was revoked. Returns a
+ * function that unsubscribes. Requests without a token, like signing in,
+ * never trigger it.
  */
 export function onSessionRejected(listener: SessionRejectedListener) {
   sessionRejectedListeners.add(listener)
@@ -38,16 +46,39 @@ export function onSessionRejected(listener: SessionRejectedListener) {
   }
 }
 
+/**
+ * Lets a 401 on an authenticated request renew the session once and retry,
+ * so a short-lived access token expiring is invisible to the user. Pass null
+ * to stop.
+ */
+export function setSessionRenewer(renewer: SessionRenewer | null) {
+  sessionRenewer = renewer
+}
+
+// Requests that fail together share one renewal, so a token is refreshed once.
+function renewSession() {
+  if (!sessionRenewer) {
+    return Promise.resolve(null)
+  }
+
+  renewal ??= sessionRenewer().finally(() => {
+    renewal = null
+  })
+
+  return renewal
+}
+
 export async function apiRequest<T>(
   path: string,
-  {
+  options: ApiRequestOptions = {}
+): Promise<T> {
+  const {
     accessToken,
     errorMessage = "Request failed.",
     headers,
     unauthorizedMessage,
     ...init
-  }: ApiRequestOptions = {}
-): Promise<T> {
+  } = options
   const requestHeaders = new Headers(headers)
   requestHeaders.set("Content-Type", "application/json")
 
@@ -60,11 +91,22 @@ export async function apiRequest<T>(
     headers: requestHeaders,
   })
 
-  if (!response.ok) {
-    if (response.status === 401 && accessToken) {
-      sessionRejectedListeners.forEach((listener) => listener())
+  if (response.status === 401 && accessToken) {
+    const renewedToken = retriedRequests.has(options)
+      ? null
+      : await renewSession()
+
+    if (renewedToken) {
+      const retry = { ...options, accessToken: renewedToken }
+      retriedRequests.add(retry)
+
+      return apiRequest<T>(path, retry)
     }
 
+    sessionRejectedListeners.forEach((listener) => listener())
+  }
+
+  if (!response.ok) {
     throw await toApiError(response, errorMessage, unauthorizedMessage)
   }
 

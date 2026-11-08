@@ -23,6 +23,7 @@ public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>
     builder.ConfigureTestServices(services =>
     {
       services.Replace(ServiceDescriptor.Singleton<IUserStore, InMemoryUserStore>());
+      services.Replace(ServiceDescriptor.Singleton<IRefreshTokenStore, InMemoryRefreshTokenStore>());
       services.Replace(ServiceDescriptor.Singleton<IWorkspaceStore, InMemoryWorkspaceStore>());
       services.Replace(ServiceDescriptor.Singleton<IProjectStore, InMemoryProjectStore>());
       services.Replace(ServiceDescriptor.Singleton<IBoardStore, InMemoryBoardStore>());

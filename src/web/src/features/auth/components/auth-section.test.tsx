@@ -79,9 +79,9 @@ describe("AuthSection", () => {
       expect(window.location.pathname).toBe("/app")
     })
 
-    expect(localStorage.getItem("coordina.auth.session")).toContain(
-      "ada@coordina.test"
-    )
+    // The access token stays in memory; the refresh token is an HttpOnly cookie.
+    expect(JSON.stringify(localStorage)).not.toContain("token-123")
+    expect(JSON.stringify(sessionStorage)).not.toContain("token-123")
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

@@ -4,6 +4,10 @@ namespace Coordina.Api.Modules.Auth.Application;
 
 public interface IUserStore
 {
+  Task<UserAccount?> FindByIdAsync(
+    Guid userId,
+    CancellationToken cancellationToken);
+
   Task<UserAccount?> FindByEmailAsync(
     string normalizedEmail,
     CancellationToken cancellationToken);

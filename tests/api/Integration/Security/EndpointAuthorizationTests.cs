@@ -20,6 +20,9 @@ public sealed class EndpointAuthorizationTests(ApiTestApplicationFactory factory
     "GET /health/ready",
     "POST /auth/register",
     "POST /auth/login",
+    // These authenticate with the refresh cookie instead of a bearer token.
+    "POST /auth/refresh",
+    "POST /auth/logout",
     "GET /api-docs/*",
     "GET /openapi/*"
   ];

@@ -10,7 +10,10 @@ public sealed class AuthOptions
 
   public string SigningKey { get; init; } = string.Empty;
 
-  public int AccessTokenMinutes { get; init; } = 60;
+  /// <summary>Short on purpose: the refresh cookie renews it, and a stolen one expires soon.</summary>
+  public int AccessTokenMinutes { get; init; } = 15;
+
+  public int RefreshTokenDays { get; init; } = 14;
 
   public void Validate()
   {
@@ -22,6 +25,12 @@ public sealed class AuthOptions
     if (string.IsNullOrWhiteSpace(Audience))
     {
       throw new InvalidOperationException("Auth audience is required.");
+    }
+
+    if (AccessTokenMinutes < 1 || RefreshTokenDays < 1)
+    {
+      throw new InvalidOperationException(
+        "Auth token lifetimes must be at least one minute and one day.");
     }
 
     if (SigningKey.Length < 32)

@@ -10,12 +10,20 @@ public sealed class AuthService(
   IUserStore users,
   IPasswordHasher passwordHasher,
   IAccessTokenIssuer accessTokenIssuer,
+  IRefreshTokenIssuer refreshTokenIssuer,
+  IRefreshTokenStore refreshTokens,
   TimeProvider clock) : IAuthService
 {
   private const string DuplicateEmailMessage =
     "An account already exists with this email.";
 
-  public async Task<Result<AuthResponse>> RegisterAsync(
+  /// <summary>
+  /// Two tabs reloading together send the same token; the second one is a
+  /// race, not a theft, if it arrives within this window after the rotation.
+  /// </summary>
+  public static readonly TimeSpan RotationGracePeriod = TimeSpan.FromSeconds(10);
+
+  public async Task<Result<AuthSession>> RegisterAsync(
     RegisterRequest request,
     CancellationToken cancellationToken)
   {
@@ -48,11 +56,11 @@ public sealed class AuthService(
     var created = await users.CreateAsync(user, cancellationToken);
 
     return created
-      ? Result.Success(CreateAuthResponse(user))
+      ? Result.Success(await StartSessionAsync(user, Guid.NewGuid(), cancellationToken))
       : Error.Conflict(DuplicateEmailMessage);
   }
 
-  public async Task<Result<AuthResponse>> LoginAsync(
+  public async Task<Result<AuthSession>> LoginAsync(
     LoginRequest request,
     CancellationToken cancellationToken)
   {
@@ -73,17 +81,92 @@ public sealed class AuthService(
       return Error.Unauthorized();
     }
 
-    return Result.Success(CreateAuthResponse(user));
+    return Result.Success(await StartSessionAsync(user, Guid.NewGuid(), cancellationToken));
   }
 
-  private AuthResponse CreateAuthResponse(UserAccount user)
+  public async Task<Result<AuthSession>> RefreshAsync(
+    string? refreshToken,
+    CancellationToken cancellationToken)
   {
-    var token = accessTokenIssuer.Issue(user);
+    var stored = string.IsNullOrEmpty(refreshToken)
+      ? null
+      : await refreshTokens.FindByHashAsync(refreshTokenIssuer.Hash(refreshToken), cancellationToken);
+    var now = clock.GetUtcNow();
 
-    return new AuthResponse(
-      token.AccessToken,
-      token.ExpiresAt,
-      new CurrentUserResponse(user.Id.ToString(), user.Email, user.Name));
+    if (stored is null || stored.ExpiresAt <= now)
+    {
+      return Error.Unauthorized();
+    }
+
+    if (stored.RevokedAt is { } revokedAt)
+    {
+      var isRecentRotation = stored.ReplacedById is not null && now - revokedAt < RotationGracePeriod;
+
+      if (!isRecentRotation)
+      {
+        await refreshTokens.RevokeFamilyAsync(stored.FamilyId, now, cancellationToken);
+      }
+
+      return Error.Unauthorized();
+    }
+
+    var replacementId = Guid.NewGuid();
+
+    if (!await refreshTokens.TryRevokeAsync(stored.Id, now, replacementId, cancellationToken))
+    {
+      return Error.Unauthorized();
+    }
+
+    var user = await users.FindByIdAsync(stored.UserId, cancellationToken);
+
+    return user is null
+      ? Error.Unauthorized()
+      : Result.Success(await StartSessionAsync(user, stored.FamilyId, cancellationToken, replacementId));
+  }
+
+  public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)
+  {
+    if (string.IsNullOrEmpty(refreshToken))
+    {
+      return;
+    }
+
+    var stored = await refreshTokens.FindByHashAsync(refreshTokenIssuer.Hash(refreshToken), cancellationToken);
+
+    if (stored is not null)
+    {
+      await refreshTokens.RevokeFamilyAsync(stored.FamilyId, clock.GetUtcNow(), cancellationToken);
+    }
+  }
+
+  private async Task<AuthSession> StartSessionAsync(
+    UserAccount user,
+    Guid familyId,
+    CancellationToken cancellationToken,
+    Guid? refreshTokenId = null)
+  {
+    var access = accessTokenIssuer.Issue(user);
+    var refresh = refreshTokenIssuer.Issue();
+
+    await refreshTokens.AddAsync(
+      new RefreshToken(
+        refreshTokenId ?? Guid.NewGuid(),
+        user.Id,
+        familyId,
+        refresh.Hash,
+        clock.GetUtcNow(),
+        refresh.ExpiresAt,
+        null,
+        null),
+      cancellationToken);
+
+    return new AuthSession(
+      new AuthResponse(
+        access.AccessToken,
+        access.ExpiresAt,
+        new CurrentUserResponse(user.Id.ToString(), user.Email, user.Name)),
+      refresh.Token,
+      refresh.ExpiresAt);
   }
 
   private static ValidationErrors ValidateLogin(string? email, string? password) =>

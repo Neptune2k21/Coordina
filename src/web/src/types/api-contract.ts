@@ -49,7 +49,7 @@ export interface paths {
     put?: never
     /**
      * Create a workspace account
-     * @description Creates a user account and returns an access token.
+     * @description Creates a user account, returns an access token and sets the refresh cookie.
      */
     post: {
       parameters: {
@@ -92,7 +92,7 @@ export interface paths {
     put?: never
     /**
      * Sign in
-     * @description Authenticates a user and returns an access token.
+     * @description Authenticates a user, returns an access token and sets the refresh cookie.
      */
     post: {
       parameters: {
@@ -115,6 +115,82 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["AuthResponse"]
           }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/auth/refresh": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Refresh the session
+     * @description Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in. Requires the X-Requested-With header.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["AuthResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/auth/logout": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Sign out
+     * @description Revokes the sign-in of the refresh cookie and clears it. Requires the X-Requested-With header.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
         }
       }
     }

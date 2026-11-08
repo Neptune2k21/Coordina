@@ -53,6 +53,10 @@ export async function seedBoard(
     accessToken
   )
 
+  // Registering through page.request set the refresh cookie in the browser;
+  // tests sign in through the form instead, like a user would.
+  await page.context().clearCookies()
+
   return { accessToken, board, email, projectId: project.id, projectPath }
 }
 

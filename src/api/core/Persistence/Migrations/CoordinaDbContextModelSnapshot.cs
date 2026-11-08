@@ -61,6 +61,55 @@ namespace Coordina.Api.Core.Persistence.Migrations
                     b.ToTable("auth_users", (string)null);
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Auth.Infrastructure.RefreshTokenEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<Guid?>("ReplacedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaced_by_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("auth_refresh_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardCardAssigneeEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -613,6 +662,15 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("workspace_members", (string)null);
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Auth.Infrastructure.RefreshTokenEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Auth.Infrastructure.AuthUserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardCardAssigneeEntity", b =>

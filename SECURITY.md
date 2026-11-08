@@ -60,7 +60,11 @@ Current protections are foundation-level, not production hardening:
 | Area | Behavior |
 | --- | --- |
 | Password storage | PBKDF2 with per-password random salt |
-| Authentication | JWT bearer tokens |
+| Authentication | Short-lived JWT access tokens (15 minutes by default), kept in memory by the web app and never in `localStorage` or `sessionStorage` |
+| Sessions | A refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie scoped to `/auth`, stored server-side as a SHA-256 hash and rotated on every use |
+| Session theft | Reusing a refresh token that was already rotated revokes every token of that sign-in. A reuse within 10 seconds of the rotation is refused without revoking, so two tabs reloading together do not sign the user out |
+| Sign-out | `POST /auth/logout` revokes the sign-in on the server and clears the cookie |
+| CSRF | Only `/auth/refresh` and `/auth/logout` use the cookie. Besides `SameSite=Strict`, they require an `X-Requested-With` header, which other origins cannot send without failing the CORS preflight |
 | Workspace isolation | Queries are scoped by authenticated user membership |
 | Invite codes | One-time use, expiration-aware, stored as SHA-256 hashes |
 | Owner permissions | Invite creation, member removal, and workspace deletion require owner role |
@@ -77,6 +81,7 @@ When changing security-sensitive code:
 5. Add tests for access control behavior.
 6. Prefer explicit failure modes over broad exception handling.
 7. Keep dependencies current and review security advisories.
+8. Never store tokens in browser storage; the refresh token belongs in its cookie only.
 
 ## Secrets
 
@@ -87,6 +92,7 @@ Production deployments must use:
 | Secret | Requirement |
 | --- | --- |
 | `Auth__SigningKey` | High entropy, private, rotated when exposed |
+| `Auth__AccessTokenMinutes`, `Auth__RefreshTokenDays` | Access and refresh token lifetimes (15 minutes, 14 days by default) |
 | `POSTGRES_PASSWORD` | Unique per environment |
 | Database connection settings | Stored in the deployment secret manager |
 
@@ -96,7 +102,6 @@ The current project does not yet include:
 
 | Capability | Status |
 | --- | --- |
-| Refresh tokens | Not implemented |
 | Email verification | Not implemented |
 | Password reset | Not implemented |
 | Rate limiting | Not implemented |
