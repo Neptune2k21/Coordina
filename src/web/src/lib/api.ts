@@ -21,6 +21,23 @@ export class ApiError extends Error {
   }
 }
 
+type SessionRejectedListener = () => void
+
+const sessionRejectedListeners = new Set<SessionRejectedListener>()
+
+/**
+ * Calls `listener` whenever a request sent with an access token gets a 401:
+ * the session expired or was revoked. Returns a function that unsubscribes.
+ * Requests without a token, like signing in, never trigger it.
+ */
+export function onSessionRejected(listener: SessionRejectedListener) {
+  sessionRejectedListeners.add(listener)
+
+  return () => {
+    sessionRejectedListeners.delete(listener)
+  }
+}
+
 export async function apiRequest<T>(
   path: string,
   {
@@ -44,6 +61,10 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
+    if (response.status === 401 && accessToken) {
+      sessionRejectedListeners.forEach((listener) => listener())
+    }
+
     throw await toApiError(response, errorMessage, unauthorizedMessage)
   }
 

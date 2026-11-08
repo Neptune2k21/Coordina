@@ -32,7 +32,7 @@ import type {
 import type { Workspace } from "@/types/workspace"
 
 export function useProjectBoard(project: Project, workspace: Workspace) {
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
   const accessToken = session?.accessToken ?? null
   const sessionUserId = session?.user.id ?? null
   const isReadOnly = project.status === "COMPLETED"
@@ -46,21 +46,14 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
   const [planningPreferences, setPlanningPreferences] =
     useState<PlanningPreferences>(defaultPlanningPreferences)
 
-  const reportError = useCallback(
-    (requestError: unknown, fallback: string) => {
-      if (!(requestError instanceof ApiError)) {
-        setError(fallback)
-        return
-      }
+  const reportError = useCallback((requestError: unknown, fallback: string) => {
+    if (!(requestError instanceof ApiError)) {
+      setError(fallback)
+      return
+    }
 
-      setError(requestError.message)
-
-      if (requestError.status === 401) {
-        signOut()
-      }
-    },
-    [signOut]
-  )
+    setError(requestError.message)
+  }, [])
   const clearError = useCallback(() => setError(null), [])
 
   const scope = {

@@ -39,7 +39,7 @@ const previewCards = [
 export function AuthSection() {
   const [mode, setMode] = useState<AuthMode>("login")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { setSession } = useAuth()
+  const { notice, setSession } = useAuth()
 
   async function handleSubmit(values: AuthFormValues) {
     setIsSubmitting(true)
@@ -170,6 +170,14 @@ export function AuthSection() {
                 {mode === "login" ? "Welcome back" : "Start with Coordina"}
               </h2>
             </div>
+            {notice && mode === "login" ? (
+              <p
+                role="status"
+                className="mt-6 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200"
+              >
+                {notice}
+              </p>
+            ) : null}
             <AuthForm
               key={mode}
               mode={mode}
