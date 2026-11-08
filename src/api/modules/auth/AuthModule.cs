@@ -24,6 +24,8 @@ public sealed class AuthModule : IModule
     services.AddScoped<IUserStore, PostgresUserStore>();
     services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
     services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+    services.AddSingleton<IRefreshTokenIssuer, RandomRefreshTokenIssuer>();
+    services.AddScoped<IRefreshTokenStore, PostgresRefreshTokenStore>();
     services.AddScoped<IAuthService, AuthService>();
 
     var signingKey = new SymmetricSecurityKey(

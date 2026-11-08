@@ -24,7 +24,7 @@
           "Auth"
         ],
         "summary": "Create a workspace account",
-        "description": "Creates a user account and returns an access token.",
+        "description": "Creates a user account, returns an access token and sets the refresh cookie.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -55,7 +55,7 @@
           "Auth"
         ],
         "summary": "Sign in",
-        "description": "Authenticates a user and returns an access token.",
+        "description": "Authenticates a user, returns an access token and sets the refresh cookie.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -76,6 +76,41 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh the session",
+        "description": "Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in. Requires the X-Requested-With header.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign out",
+        "description": "Revokes the sign-in of the refresh cookie and clears it. Requires the X-Requested-With header.",
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         }
       }

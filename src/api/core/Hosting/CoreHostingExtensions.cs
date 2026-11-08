@@ -37,10 +37,12 @@ public static class CoreHostingExtensions
     {
       options.AddPolicy(WebAppCorsPolicy, policy =>
       {
+        // Credentials let the web app send and receive the refresh cookie.
         policy
           .WithOrigins(WebAppOrigins)
           .AllowAnyHeader()
-          .AllowAnyMethod();
+          .AllowAnyMethod()
+          .AllowCredentials();
       });
     });
 

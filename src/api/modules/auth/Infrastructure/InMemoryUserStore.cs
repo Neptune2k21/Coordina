@@ -8,6 +8,15 @@ public sealed class InMemoryUserStore : IUserStore
 {
   private readonly ConcurrentDictionary<string, UserAccount> _users = new();
 
+  public Task<UserAccount?> FindByIdAsync(
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    return Task.FromResult(_users.Values.SingleOrDefault(user => user.Id == userId));
+  }
+
   public Task<UserAccount?> FindByEmailAsync(
     string normalizedEmail,
     CancellationToken cancellationToken)

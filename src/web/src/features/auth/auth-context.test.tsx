@@ -1,12 +1,34 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AuthProvider, useAuth } from "@/features/auth/auth-context"
-import { authStorageKey } from "@/features/auth/auth-session"
 import { AuthSection } from "@/features/auth/components/auth-section"
 import { apiRequest } from "@/lib/api"
 
 const user = { id: "user-1", email: "ada@coordina.test", name: "Ada" }
+
+function session(accessToken: string) {
+  return { accessToken, expiresAt: "2026-11-08T10:00:00Z", user }
+}
+
+type Reply = { status: number; body?: unknown }
+
+/** Answers each path with the next of its replies, and records the requests. */
+function serve(routes: Record<string, Reply[]>) {
+  const fetchMock = vi.fn((url: string) => {
+    const path = new URL(url).pathname
+    const reply = routes[path]?.shift() ?? { status: 404 }
+
+    return Promise.resolve({
+      ok: reply.status < 400,
+      status: reply.status,
+      json: () => Promise.resolve(reply.body ?? {}),
+    })
+  })
+  vi.stubGlobal("fetch", fetchMock)
+
+  return fetchMock
+}
 
 function Screen() {
   const { isLoading, session } = useAuth()
@@ -15,7 +37,15 @@ function Screen() {
     return null
   }
 
-  return session ? <p>Signed in as {session.user.name}</p> : <AuthSection />
+  return session ? <p>Signed in with {session.accessToken}</p> : <AuthSection />
+}
+
+function renderApp() {
+  render(
+    <AuthProvider>
+      <Screen />
+    </AuthProvider>
+  )
 }
 
 describe("AuthProvider", () => {
@@ -25,31 +55,76 @@ describe("AuthProvider", () => {
     vi.unstubAllGlobals()
   })
 
-  it("signs the user out with a notice when their session expires", async () => {
-    localStorage.setItem(
-      authStorageKey,
-      JSON.stringify({ accessToken: "token", expiresAt: "2026-01-01", user })
-    )
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(user),
+  it("restores the session from the refresh cookie on load", async () => {
+    const fetchMock = serve({
+      "/auth/refresh": [{ status: 200, body: session("token-a") }],
     })
-    vi.stubGlobal("fetch", fetchMock)
-    render(
-      <AuthProvider>
-        <Screen />
-      </AuthProvider>
-    )
-    expect(await screen.findByText("Signed in as Ada")).toBeInTheDocument()
 
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 401,
-      json: () => Promise.resolve({}),
+    renderApp()
+
+    expect(
+      await screen.findByText("Signed in with token-a")
+    ).toBeInTheDocument()
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(init.credentials).toBe("include")
+    expect(new Headers(init.headers).get("X-Requested-With")).toBe(
+      "coordina-web"
+    )
+    expect(JSON.stringify(localStorage)).not.toContain("token-a")
+  })
+
+  it("starts signed out, without a notice, when there is no refresh cookie", async () => {
+    serve({ "/auth/refresh": [{ status: 401 }, { status: 401 }] })
+
+    renderApp()
+
+    expect(
+      await screen.findByRole("heading", { name: "Welcome back" })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  })
+
+  it("renews an expired access token and retries the request", async () => {
+    const fetchMock = serve({
+      "/auth/refresh": [
+        { status: 200, body: session("token-a") },
+        { status: 200, body: session("token-b") },
+      ],
+      "/projects": [{ status: 401 }, { status: 200, body: ["project"] }],
     })
+    renderApp()
+    await screen.findByText("Signed in with token-a")
+
+    let projects: unknown
     await act(async () => {
-      await apiRequest("/projects", { accessToken: "token" }).catch(
+      projects = await apiRequest("/projects", { accessToken: "token-a" })
+    })
+
+    expect(projects).toEqual(["project"])
+    const retried = fetchMock.mock.calls.at(-1) as unknown as [
+      string,
+      RequestInit,
+    ]
+    expect(new Headers(retried[1].headers).get("Authorization")).toBe(
+      "Bearer token-b"
+    )
+    expect(screen.getByText("Signed in with token-b")).toBeInTheDocument()
+  })
+
+  it("signs out with a notice when the session cannot be renewed", async () => {
+    serve({
+      "/auth/refresh": [
+        { status: 200, body: session("token-a") },
+        { status: 401 },
+        { status: 401 },
+      ],
+      "/projects": [{ status: 401 }],
+    })
+    renderApp()
+    await screen.findByText("Signed in with token-a")
+
+    await act(async () => {
+      await apiRequest("/projects", { accessToken: "token-a" }).catch(
         () => undefined
       )
     })
@@ -57,36 +132,23 @@ describe("AuthProvider", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Your session expired. Sign in again."
     )
-    expect(localStorage.getItem(authStorageKey)).toBeNull()
   })
 
   it("does not show the notice when a sign-in fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        json: () => Promise.resolve({}),
-      })
-    )
-    render(
-      <AuthProvider>
-        <Screen />
-      </AuthProvider>
-    )
+    serve({
+      "/auth/refresh": [{ status: 401 }, { status: 401 }],
+      "/auth/login": [{ status: 401 }],
+    })
+    renderApp()
+    await screen.findByRole("heading", { name: "Welcome back" })
 
     await act(async () => {
       await apiRequest("/auth/login", {
         method: "POST",
-        unauthorizedMessage: "Incorrect email or password.",
+        unauthorizedMessage: "Email or password is incorrect.",
       }).catch(() => undefined)
     })
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Welcome back" })
-      ).toBeInTheDocument()
-    )
     expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 })
