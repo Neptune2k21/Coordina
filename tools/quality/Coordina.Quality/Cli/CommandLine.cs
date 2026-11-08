@@ -23,8 +23,9 @@ internal static class CommandLine
     Coordina quality checks. The same rules run locally and in CI.
 
     Usage:
-      quality check [--all | --staged | --base <ref>] [--format console|github]
+      quality check [--all | --staged | --base <ref>] [--format console|github] [--sarif <file>]
                                    Check changed files (default: since --base, origin/master).
+                                   --sarif also writes the result for GitHub code scanning.
       quality commit-msg <file>    Check a commit message (used by the commit-msg hook).
       quality affected [--base <ref>] [--format console|github]
                                    Show which suites a change needs, and why.
@@ -104,6 +105,11 @@ internal static class CommandLine
       ? new GitHubReporter(output)
       : new ConsoleReporter(output);
     reporter.Report(result);
+
+    if (options.Sarif is not null)
+    {
+      File.WriteAllText(Path.GetFullPath(options.Sarif, workingDirectory), SarifReport.Write(result));
+    }
 
     if (!options.All && !options.Staged)
     {

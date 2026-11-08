@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Coordina.Quality.Cli;
 using Coordina.Quality.Tests.Support;
 
@@ -78,6 +79,40 @@ public sealed class CommandLineTests : IDisposable
       "::error file=src/web/src/features/board/BadName.ts,line=1,title=CQ2001 Web files and folders use kebab-case::",
       output,
       StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void Sarif_ListsNewAndKnownErrorsForCodeScanning()
+  {
+    Write("src/web/src/features/board/BadName.ts", "export const ok = 1\n");
+    Assert.Equal(CommandLine.Success, Run("baseline").ExitCode);
+    Write("src/web/src/features/board/AnotherBadName.ts", "export const ok = 1\n");
+
+    var (exitCode, _) = Run("check", "--all", "--sarif", "quality.sarif");
+
+    Assert.Equal(CommandLine.Failure, exitCode);
+    using var sarif = JsonDocument.Parse(File.ReadAllText(Path.Combine(_root, "quality.sarif")));
+    var run = sarif.RootElement.GetProperty("runs")[0];
+    var results = run.GetProperty("results").EnumerateArray()
+      .Select(result => (
+        Path: result.GetProperty("locations")[0].GetProperty("physicalLocation")
+          .GetProperty("artifactLocation").GetProperty("uri").GetString(),
+        Rule: result.GetProperty("ruleId").GetString(),
+        Level: result.GetProperty("level").GetString(),
+        State: result.GetProperty("baselineState").GetString()))
+      .ToArray();
+
+    Assert.Equal("2.1.0", sarif.RootElement.GetProperty("version").GetString());
+    Assert.Equal(
+      [
+        ("src/web/src/features/board/AnotherBadName.ts", "CQ2001", "error", "new"),
+        ("src/web/src/features/board/BadName.ts", "CQ2001", "error", "unchanged")
+      ],
+      results);
+    Assert.Equal(
+      ["CQ2001"],
+      run.GetProperty("tool").GetProperty("driver").GetProperty("rules").EnumerateArray()
+        .Select(rule => rule.GetProperty("id").GetString()));
   }
 
   [Fact]

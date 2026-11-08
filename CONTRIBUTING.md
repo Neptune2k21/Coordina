@@ -258,6 +258,12 @@ shown so you can decide.
 Run `make check` while you work instead of the whole `make quality`, then
 `make verify` before pushing.
 
+On pull requests, problems show as annotations on the changed lines. On
+`master`, CI also writes the results as SARIF (`quality check --all --sarif
+quality.sarif`) and uploads them to GitHub code scanning. The Security tab
+then lists every known problem under `coordina-quality`, the baseline
+included, and closes an alert when its fix reaches `master`.
+
 ### Known issues and exceptions
 
 `.quality/baseline.json` records the errors that existed when a rule was
