@@ -120,7 +120,7 @@ std::vector<WorkRecommendation> plan_work(
     const auto priority = priority_score(item.priority);
     const auto progress = progress_score(item.subtask_total, item.subtask_completed);
     const auto critical_bonus = is_critical ? 48U : 0U;
-    const auto effort = effort_fit(item.estimated_minutes, options.available_minutes);
+    const auto effort = effort_fit(item.size, options.max_size);
     const auto assignment = assignment_score(item.assignment, options);
     const auto momentum = momentum_score(item.is_in_progress);
     const auto context = context_score(item.is_context_match);
@@ -142,7 +142,7 @@ std::vector<WorkRecommendation> plan_work(
         .assignment_score = assignment,
         .momentum_score = momentum,
         .context_score = context,
-        .fits_available_time = effort.fits,
+        .fits_max_size = effort.fits,
         .is_assignment_match = item.assignment == Assignment::requester,
         .is_context_match = item.is_context_match,
         .is_in_progress = item.is_in_progress,

@@ -424,7 +424,7 @@ function normalizeCardUpdateInput(input: BoardCardInput) {
   return {
     ...normalizeCardInput(input),
     clearDueDate: input.dueDate === null || input.dueDate === "",
-    clearEstimatedMinutes: input.estimatedMinutes === null,
+    clearSize: input.size === null,
     priority: input.priority ?? "",
   }
 }

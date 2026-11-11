@@ -32,8 +32,7 @@ export function useBoardResource({
   onError,
   planning = defaultPlanningPreferences,
 }: UseBoardResourceOptions) {
-  const { availableMinutes, context, includeUnassigned, preferAssigned } =
-    planning
+  const { maxSize, context, includeUnassigned, preferAssigned } = planning
   const [board, setBoard] = useState<Board | null>(null)
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [boardGraph, setBoardGraph] = useState<BoardGraph | null>(null)
@@ -107,7 +106,7 @@ export function useBoardResource({
 
     boardApi
       .getBoardGraph(accessToken, workspaceId, projectId, board.id, {
-        availableMinutes,
+        maxSize,
         context,
         preferAssigned,
         includeUnassigned,
@@ -128,7 +127,7 @@ export function useBoardResource({
     }
   }, [
     accessToken,
-    availableMinutes,
+    maxSize,
     board,
     context,
     includeUnassigned,

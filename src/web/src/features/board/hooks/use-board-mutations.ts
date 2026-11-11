@@ -240,7 +240,7 @@ export function useBoardMutations({
         assigneeIds: card.assignees.map((assignee) => assignee.userId),
         description: card.description ?? "",
         dueDate: card.dueDate,
-        estimatedMinutes: card.estimatedMinutes,
+        size: card.size,
         labels: card.labels,
         priority: card.priority ?? "",
         title: `Copy of ${card.title}`,

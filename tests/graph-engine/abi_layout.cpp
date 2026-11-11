@@ -142,6 +142,15 @@ void print_enum(const char* name, const std::vector<EnumValue>& values)
   X(COORDINA_GRAPH_ASSIGNED_TO_REQUESTER) \
   X(COORDINA_GRAPH_ASSIGNED_TO_OTHERS)
 
+#define COORDINA_SIZE_VALUES(X) \
+  X(COORDINA_GRAPH_SIZE_NONE)   \
+  X(COORDINA_GRAPH_SIZE_XS)     \
+  X(COORDINA_GRAPH_SIZE_S)      \
+  X(COORDINA_GRAPH_SIZE_M)      \
+  X(COORDINA_GRAPH_SIZE_L)      \
+  X(COORDINA_GRAPH_SIZE_XL)     \
+  X(COORDINA_GRAPH_SIZE_XXL)
+
 #define COORDINA_EDGE_STATUS_VALUES(X)  \
   X(COORDINA_GRAPH_EDGE_ALLOWED)        \
   X(COORDINA_GRAPH_EDGE_MISSING_SOURCE) \
@@ -188,14 +197,14 @@ int main()
     COORDINA_FIELD(coordina_graph_work_item, subtask_total),
     COORDINA_FIELD(coordina_graph_work_item, subtask_completed),
     COORDINA_FIELD(coordina_graph_work_item, position),
-    COORDINA_FIELD(coordina_graph_work_item, estimated_minutes),
+    COORDINA_FIELD(coordina_graph_work_item, size),
     COORDINA_FIELD(coordina_graph_work_item, assignment),
     COORDINA_FIELD(coordina_graph_work_item, is_in_progress),
     COORDINA_FIELD(coordina_graph_work_item, is_context_match));
 
   COORDINA_STRUCT(
     coordina_graph_planning_options,
-    COORDINA_FIELD(coordina_graph_planning_options, available_minutes),
+    COORDINA_FIELD(coordina_graph_planning_options, max_size),
     COORDINA_FIELD(coordina_graph_planning_options, prefer_assigned),
     COORDINA_FIELD(coordina_graph_planning_options, include_unassigned));
 
@@ -213,7 +222,7 @@ int main()
     COORDINA_FIELD(coordina_graph_work_recommendation, assignment_score),
     COORDINA_FIELD(coordina_graph_work_recommendation, momentum_score),
     COORDINA_FIELD(coordina_graph_work_recommendation, context_score),
-    COORDINA_FIELD(coordina_graph_work_recommendation, fits_available_time),
+    COORDINA_FIELD(coordina_graph_work_recommendation, fits_max_size),
     COORDINA_FIELD(coordina_graph_work_recommendation, is_assignment_match),
     COORDINA_FIELD(coordina_graph_work_recommendation, is_context_match),
     COORDINA_FIELD(coordina_graph_work_recommendation, is_in_progress));
@@ -242,6 +251,7 @@ int main()
   first_entry = true;
 
   COORDINA_ENUM(coordina_graph_assignment, COORDINA_ASSIGNMENT_VALUES);
+  COORDINA_ENUM(coordina_graph_size, COORDINA_SIZE_VALUES);
   COORDINA_ENUM(coordina_graph_edge_status, COORDINA_EDGE_STATUS_VALUES);
   COORDINA_ENUM(coordina_graph_status, COORDINA_STATUS_VALUES);
 

@@ -10,7 +10,7 @@ public sealed record ProjectBoardCard(
   string? Description,
   BoardCardPriority? Priority,
   DateOnly? DueDate,
-  int? EstimatedMinutes,
+  CardSize? Size,
   IReadOnlyCollection<string> Labels,
   bool IsCompleted,
   DateTimeOffset? CompletedAt,

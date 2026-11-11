@@ -1,13 +1,14 @@
 using System.Text.RegularExpressions;
 using Coordina.Api.Core.Results;
 using Coordina.Api.Modules.Boards.Contracts;
+using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Shared.Validation;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
 public sealed partial record BoardPlanningPreferences(
   Guid UserId,
-  int AvailableMinutes,
+  CardSize? MaxSize,
   string? Context,
   bool PreferAssigned,
   bool IncludeUnassigned)
@@ -18,15 +19,9 @@ public sealed partial record BoardPlanningPreferences(
     BoardPlanningRequest request,
     Guid userId)
   {
-    var availableMinutes = request.AvailableMinutes ?? 0;
     var context = NormalizeContext(request.Context);
     var errors = new ValidationErrors()
-      .AddIf(
-        availableMinutes != 0
-          && availableMinutes is < BoardRules.MinEstimatedMinutes
-            or > BoardRules.MaxEstimatedMinutes,
-        "AvailableMinutes",
-        $"Available minutes must be 0 or between {BoardRules.MinEstimatedMinutes} and {BoardRules.MaxEstimatedMinutes}.")
+      .Code("MaxSize", request.MaxSize, "Size limit", out CardSize? maxSize)
       .AddIf(
         context?.Length > MaxContextLength,
         "Context",
@@ -36,7 +31,7 @@ public sealed partial record BoardPlanningPreferences(
       ? errors.ToError()
       : Result.Success(new BoardPlanningPreferences(
         userId,
-        availableMinutes,
+        maxSize,
         context,
         request.PreferAssigned ?? true,
         request.IncludeUnassigned ?? true));

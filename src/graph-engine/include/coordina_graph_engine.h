@@ -45,7 +45,7 @@ typedef struct coordina_graph_work_item
   uint32_t subtask_total;
   uint32_t subtask_completed;
   uint32_t position;
-  uint32_t estimated_minutes;
+  uint32_t size;
   uint32_t assignment;
   uint32_t is_in_progress;
   uint32_t is_context_match;
@@ -58,9 +58,22 @@ typedef enum coordina_graph_assignment
   COORDINA_GRAPH_ASSIGNED_TO_OTHERS = 2
 } coordina_graph_assignment;
 
+/* How big a card is, an order of magnitude rather than a duration. */
+typedef enum coordina_graph_size
+{
+  COORDINA_GRAPH_SIZE_NONE = 0,
+  COORDINA_GRAPH_SIZE_XS = 1,
+  COORDINA_GRAPH_SIZE_S = 2,
+  COORDINA_GRAPH_SIZE_M = 3,
+  COORDINA_GRAPH_SIZE_L = 4,
+  COORDINA_GRAPH_SIZE_XL = 5,
+  COORDINA_GRAPH_SIZE_XXL = 6
+} coordina_graph_size;
+
 typedef struct coordina_graph_planning_options
 {
-  uint32_t available_minutes;
+  /* The biggest size that fits the user's focus slot; NONE means any size. */
+  uint32_t max_size;
   uint32_t prefer_assigned;
   uint32_t include_unassigned;
 } coordina_graph_planning_options;
@@ -79,7 +92,7 @@ typedef struct coordina_graph_work_recommendation
   int32_t assignment_score;
   uint32_t momentum_score;
   uint32_t context_score;
-  uint32_t fits_available_time;
+  uint32_t fits_max_size;
   uint32_t is_assignment_match;
   uint32_t is_context_match;
   uint32_t is_in_progress;

@@ -5,6 +5,7 @@ import {
   sameLabels,
   sameStrings,
 } from "@/features/board/model/labels"
+import type { CardSize } from "@/features/board/model/card-size"
 import type { BoardCard, BoardCardInput, BoardCardPriority } from "@/types/task"
 
 export const maxCardLabels = 8
@@ -15,7 +16,7 @@ export type CardDraft = {
   description: string
   priority: BoardCardPriority | ""
   dueDate: string
-  estimatedMinutes: number | null
+  size: CardSize | null
   labels: string[]
   labelInput: string
   assigneeIds: string[]
@@ -28,7 +29,7 @@ export function draftFromCard(card: BoardCard | null): CardDraft {
     description: card?.description ?? "",
     priority: card?.priority ?? "",
     dueDate: card?.dueDate ?? "",
-    estimatedMinutes: card?.estimatedMinutes ?? null,
+    size: card?.size ?? null,
     labels: normalizeLabels(card?.labels ?? []),
     labelInput: "",
     assigneeIds: card?.assignees.map((assignee) => assignee.userId) ?? [],
@@ -46,7 +47,7 @@ export function hasDraftChanges(draft: CardDraft, card: BoardCard | null) {
     draft.description.trim() !== (card.description ?? "") ||
     draft.priority !== (card.priority ?? "") ||
     draft.dueDate !== (card.dueDate ?? "") ||
-    draft.estimatedMinutes !== card.estimatedMinutes ||
+    draft.size !== card.size ||
     draft.isCompleted !== card.isCompleted ||
     !sameLabels(
       normalizeLabels([...draft.labels, draft.labelInput]),
@@ -88,7 +89,7 @@ export function toCardInput(
     description: draft.description,
     priority: draft.priority,
     dueDate: draft.dueDate || null,
-    estimatedMinutes: draft.estimatedMinutes,
+    size: draft.size,
     labels,
     assigneeIds: draft.assigneeIds,
     isCompleted,

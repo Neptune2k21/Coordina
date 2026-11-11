@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   defaultPlanningPreferences,
-  formatMinutes,
   planningQuery,
 } from "@/features/board/model/planning-preferences"
 
@@ -11,28 +10,28 @@ describe("planningQuery", () => {
     expect(planningQuery(defaultPlanningPreferences)).toBe("")
   })
 
-  it("serializes focus time and context", () => {
+  it("serializes the focus slot and context", () => {
     expect(
       planningQuery({
         ...defaultPlanningPreferences,
-        availableMinutes: 60,
+        maxSize: "M",
         context: null,
       })
-    ).toBe("?availableMinutes=60")
+    ).toBe("?maxSize=M")
     expect(
       planningQuery({
         ...defaultPlanningPreferences,
-        availableMinutes: 0,
+        maxSize: null,
         context: "front end",
       })
     ).toBe("?context=front+end")
     expect(
       planningQuery({
         ...defaultPlanningPreferences,
-        availableMinutes: 30,
+        maxSize: "S",
         context: "backend",
       })
-    ).toBe("?availableMinutes=30&context=backend")
+    ).toBe("?maxSize=S&context=backend")
   })
 
   it("sends the assignment options only when they are turned off", () => {
@@ -43,14 +42,5 @@ describe("planningQuery", () => {
         includeUnassigned: false,
       })
     ).toBe("?preferAssigned=false&includeUnassigned=false")
-  })
-})
-
-describe("formatMinutes", () => {
-  it("formats minutes, hours, and mixed durations", () => {
-    expect(formatMinutes(15)).toBe("15m")
-    expect(formatMinutes(60)).toBe("1h")
-    expect(formatMinutes(90)).toBe("1h 30m")
-    expect(formatMinutes(480)).toBe("8h")
   })
 })

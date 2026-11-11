@@ -87,7 +87,7 @@ public sealed partial class InMemoryBoardStore
       card.Description,
       card.Priority,
       card.DueDate,
-      card.EstimatedMinutes,
+      card.Size,
       card.Labels,
       card.IsCompleted,
       card.CompletedAt,

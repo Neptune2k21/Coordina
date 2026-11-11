@@ -1,3 +1,4 @@
+import type { CardSize } from "@/features/board/model/card-size"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -74,25 +75,25 @@ describe("useBoardResource", () => {
     vi.mocked(workspaces.listWorkspaceMembers).mockResolvedValue([])
 
     const { rerender } = renderHook(
-      ({ availableMinutes }) =>
+      ({ maxSize }) =>
         useBoardResource({
           accessToken: "token",
           workspaceId: "workspace",
           projectId: "project",
           onError: vi.fn(),
-          planning: { ...defaultPlanningPreferences, availableMinutes },
+          planning: { ...defaultPlanningPreferences, maxSize },
         }),
-      { initialProps: { availableMinutes: 0 } }
+      { initialProps: { maxSize: null as CardSize | null } }
     )
     await waitFor(() => expect(boardApi.getBoardGraph).toHaveBeenCalledTimes(1))
 
-    rerender({ availableMinutes: 60 })
+    rerender({ maxSize: "S" })
     await waitFor(() => expect(boardApi.getBoardGraph).toHaveBeenCalledTimes(2))
 
     expect(boardApi.getDefaultBoard).toHaveBeenCalledTimes(1)
     expect(vi.mocked(boardApi.getBoardGraph).mock.calls[1][4]).toEqual({
       ...defaultPlanningPreferences,
-      availableMinutes: 60,
+      maxSize: "S",
       context: null,
     })
   })

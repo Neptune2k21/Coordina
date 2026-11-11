@@ -8,7 +8,7 @@ public sealed record GraphWorkItem<TNode>(
   int SubtaskTotal,
   int SubtaskCompleted,
   int Position,
-  int EstimatedMinutes = 0,
+  GraphSize Size = GraphSize.None,
   GraphAssignment Assignment = GraphAssignment.Unassigned,
   bool IsInProgress = false,
   bool IsContextMatch = false)
@@ -24,8 +24,20 @@ public enum GraphAssignment
   Others = 2
 }
 
+/// <summary>Mirrors <c>coordina_graph_size</c>; None means unsized, or no limit in options.</summary>
+public enum GraphSize
+{
+  None = 0,
+  Xs = 1,
+  S = 2,
+  M = 3,
+  L = 4,
+  Xl = 5,
+  Xxl = 6
+}
+
 public sealed record GraphPlanningOptions(
-  int AvailableMinutes = 0,
+  GraphSize MaxSize = GraphSize.None,
   bool PreferAssigned = true,
   bool IncludeUnassigned = true)
 {

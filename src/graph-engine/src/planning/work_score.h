@@ -26,7 +26,7 @@ std::uint32_t momentum_score(bool is_in_progress) noexcept;
 
 std::uint32_t context_score(bool is_context_match) noexcept;
 
-EffortFit effort_fit(std::uint32_t estimated_minutes, std::uint32_t available_minutes) noexcept;
+EffortFit effort_fit(CardSize size, CardSize max_size) noexcept;
 
 std::int32_t assignment_score(Assignment assignment, const PlanningOptions& options) noexcept;
 

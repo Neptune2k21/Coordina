@@ -62,9 +62,9 @@ public sealed class MyWorkPerformanceTests(PostgresContainerFixture postgres, IT
   private Task SeedCardsAsync(Guid workspaceId, Guid userId) =>
     Database.ExecuteAsync($"""
       INSERT INTO board_cards (id, board_id, list_id, workspace_id, project_id, title, labels,
-                               estimated_minutes, is_completed, completed_at, position, created_at, updated_at)
+                               size, is_completed, completed_at, position, created_at, updated_at)
       SELECT gen_random_uuid(), l.board_id, l.id, l.workspace_id, l.project_id,
-             'Card ' || n, ARRAY['load']::text[], 30 + (n % 4) * 30,
+             'Card ' || n, ARRAY['load']::text[], (ARRAY['XS', 'S', 'M', 'L'])[1 + n % 4],
              l.task_status = 'DONE', CASE WHEN l.task_status = 'DONE' THEN now() END,
              n, now(), now()
       FROM board_lists l

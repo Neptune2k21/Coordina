@@ -86,7 +86,7 @@ public sealed partial class PostgresBoardStore
       Description = mutation.Description,
       Priority = mutation.Priority,
       DueDate = mutation.DueDate,
-      EstimatedMinutes = mutation.EstimatedMinutes,
+      Size = mutation.Size,
       Labels = mutation.Labels.ToArray(),
       IsCompleted = mutation.IsCompleted,
       CompletedAt = mutation.CompletedAt,
@@ -325,7 +325,7 @@ public sealed partial class PostgresBoardStore
     card.Description = mutation.Description;
     card.Priority = mutation.Priority;
     card.DueDate = mutation.DueDate;
-    card.EstimatedMinutes = mutation.EstimatedMinutes;
+    card.Size = mutation.Size;
     card.Labels = mutation.Labels.ToArray();
     card.IsCompleted = mutation.IsCompleted;
     card.CompletedAt = mutation.CompletedAt;

@@ -6,8 +6,6 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 internal static class BoardRules
 {
-  public const int MinEstimatedMinutes = 5;
-  public const int MaxEstimatedMinutes = 2880;
   private const int MaxLabels = 12;
   private const int MaxCustomLists = 12;
   private const int MaxListTitleLength = 80;
@@ -48,7 +46,7 @@ internal static class BoardRules
               card.Description,
               card.Priority,
               card.DueInDays is { } days ? today.AddDays(days) : null,
-              card.EstimatedMinutes,
+              card.Size,
               card.Labels,
               card.Subtasks,
               card.DependsOn.Select(key => cardIds[key]).ToArray()))
@@ -119,12 +117,14 @@ internal static class BoardRules
     string? priorityCode,
     IReadOnlyCollection<string> labels,
     DateOnly? dueDate,
-    int? estimatedMinutes,
+    string? sizeCode,
     DateOnly today,
-    out BoardCardPriority? priority) =>
+    out BoardCardPriority? priority,
+    out CardSize? size) =>
     ValidateCardTitle(title)
       .MaxLength("Description", description, "Card description", 2000)
       .Code("Priority", priorityCode, "Card priority", out priority)
+      .Code("Size", sizeCode, "Card size", out size)
       .AddIf(
         labels.Any(label => label.Length > 32),
         "Labels",
@@ -132,11 +132,7 @@ internal static class BoardRules
       .AddIf(
         dueDate < today,
         "DueDate",
-        "Due date cannot be in the past.")
-      .AddIf(
-        estimatedMinutes is < MinEstimatedMinutes or > MaxEstimatedMinutes,
-        "EstimatedMinutes",
-        $"Effort must be between {MinEstimatedMinutes} and {MaxEstimatedMinutes} minutes.");
+        "Due date cannot be in the past.");
 
   public static string[] NormalizeLabels(string[]? labels) =>
     TextNormalizer.DistinctNonBlank(labels, MaxLabels);

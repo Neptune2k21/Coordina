@@ -7,6 +7,8 @@ type Schemas = components["schemas"]
 export type Board = Schemas["BoardResponse"]
 export type BoardList = Schemas["BoardListResponse"]
 export type BoardCard = Schemas["BoardCardResponse"]
+/** How big a card is: an order of magnitude, not a duration. */
+export type CardSize = NonNullable<BoardCard["size"]>
 export type BoardCardUser = Schemas["BoardCardUserResponse"]
 export type BoardCardAssignee = Schemas["BoardCardAssigneeResponse"]
 export type BoardCardComment = Schemas["BoardCardCommentResponse"]
@@ -37,7 +39,7 @@ export type BoardCardInput = {
   description?: string
   priority?: BoardCardPriority | ""
   dueDate?: string | null
-  estimatedMinutes?: number | null
+  size?: CardSize | null
   labels?: string[]
   assigneeIds?: string[]
   isCompleted?: boolean

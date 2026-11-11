@@ -18,7 +18,7 @@ const card = makeCard({
   description: "Shape the payload",
   priority: "HIGH",
   dueDate: "2026-11-02",
-  estimatedMinutes: 60,
+  size: "M",
   labels: ["backend", "review"],
   assignees: [
     { userId: "b", name: "B", email: null },
@@ -33,7 +33,7 @@ describe("draftFromCard", () => {
       description: "Shape the payload",
       priority: "HIGH",
       dueDate: "2026-11-02",
-      estimatedMinutes: 60,
+      size: "M",
       labels: ["backend", "review"],
       labelInput: "",
       assigneeIds: ["b", "a"],
@@ -69,9 +69,7 @@ describe("hasDraftChanges", () => {
 
     expect(hasDraftChanges({ ...draft, isCompleted: true }, card)).toBe(true)
     expect(hasDraftChanges({ ...draft, dueDate: "" }, card)).toBe(true)
-    expect(hasDraftChanges({ ...draft, estimatedMinutes: null }, card)).toBe(
-      true
-    )
+    expect(hasDraftChanges({ ...draft, size: null }, card)).toBe(true)
   })
 })
 
@@ -140,10 +138,9 @@ describe("toCardInput", () => {
   it("sends the effort estimate, including an explicit clear", () => {
     const draft = draftFromCard(card)
 
-    expect(toCardInput(draft, draft.labels, false).estimatedMinutes).toBe(60)
+    expect(toCardInput(draft, draft.labels, false).size).toBe("M")
     expect(
-      toCardInput({ ...draft, estimatedMinutes: null }, draft.labels, false)
-        .estimatedMinutes
+      toCardInput({ ...draft, size: null }, draft.labels, false).size
     ).toBeNull()
   })
 })

@@ -86,21 +86,20 @@ std::uint32_t unlock_score(const NodeAnalysis& analysis) noexcept
   return score > 220U ? 220U : static_cast<std::uint32_t>(score);
 }
 
-EffortFit effort_fit(std::uint32_t estimated_minutes, std::uint32_t available_minutes) noexcept
+EffortFit effort_fit(CardSize size, CardSize max_size) noexcept
 {
-  if (available_minutes == 0U)
+  if (max_size == CardSize::none)
   {
     return EffortFit{.score = 0, .fits = true};
   }
 
-  if (estimated_minutes == 0U)
+  if (size == CardSize::none)
   {
     return EffortFit{.score = 0, .fits = false};
   }
 
-  return estimated_minutes <= available_minutes
-    ? EffortFit{.score = fits_time_bonus, .fits = true}
-    : EffortFit{.score = too_long_penalty, .fits = false};
+  return fits_size_limit(size, max_size) ? EffortFit{.score = fits_time_bonus, .fits = true}
+                                         : EffortFit{.score = too_long_penalty, .fits = false};
 }
 
 std::int32_t assignment_score(Assignment assignment, const PlanningOptions& options) noexcept

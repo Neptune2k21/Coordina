@@ -26,6 +26,7 @@ public sealed partial class GraphEngineAbiTests
   private static readonly Dictionary<string, Type> Enums = new(StringComparer.Ordinal)
   {
     ["coordina_graph_assignment"] = typeof(GraphAssignment),
+    ["coordina_graph_size"] = typeof(GraphSize),
     ["coordina_graph_edge_status"] = typeof(GraphEdgeStatus),
     ["coordina_graph_status"] = NestedType("NativeGraphStatus")
   };

@@ -106,7 +106,9 @@ public sealed class BoardTemplateCatalogTests
     {
       Assert.InRange(card.Title.Length, 1, 180);
       Assert.InRange(card.Description.Length, 1, 2000);
-      Assert.InRange(card.EstimatedMinutes, 5, 2880);
+      Assert.True(Enum.IsDefined(card.Size));
+      // XXL means "split this card", which a template should already have done.
+      Assert.NotEqual(CardSize.Xxl, card.Size);
       Assert.InRange(card.Labels.Count, 0, 12);
       Assert.All(card.Labels, label => Assert.InRange(label.Length, 1, 32));
       Assert.All(card.Subtasks, title => Assert.InRange(title.Length, 1, 180));

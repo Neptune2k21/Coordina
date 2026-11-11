@@ -10,6 +10,7 @@ import { memo, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { cardSizeHints } from "@/features/board/model/card-size"
 import { isBlockedCard } from "@/features/board/model/board-selectors"
 import {
   dateBadgeClass,
@@ -273,6 +274,14 @@ const CompactCard = memo(function CompactCard({
           {card.priority ? (
             <span className="rounded-sm bg-zinc-950/5 px-1.5 py-0.5 font-semibold dark:bg-white/10">
               {card.priority}
+            </span>
+          ) : null}
+          {card.size ? (
+            <span
+              title={`Size ${card.size}: ${cardSizeHints[card.size]}`}
+              className="rounded-sm border border-zinc-950/10 px-1.5 py-0.5 font-semibold dark:border-white/15"
+            >
+              {card.size}
             </span>
           ) : null}
           {card.description ? (

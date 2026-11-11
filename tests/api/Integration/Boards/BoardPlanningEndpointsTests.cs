@@ -17,30 +17,31 @@ public sealed class BoardPlanningEndpointsTests(ApiTestApplicationFactory factor
     var todo = flow.ListId("Todo");
     await CreateCardAsync(flow, todo, "Long backend", new
     {
-      estimatedMinutes = 120,
+      size = "M",
       labels = BackendLabel,
       assigneeIds = new[] { flow.UserId }
     });
     await CreateCardAsync(flow, todo, "Quick backend", new
     {
-      estimatedMinutes = 30,
+      size = "XS",
       labels = BackendLabel,
       assigneeIds = new[] { flow.UserId }
     });
 
-    var graph = await GetGraphAsync(flow, "?availableMinutes=60&context=%23Backend");
+    var graph = await GetGraphAsync(flow, "?maxSize=S&context=%23Backend");
 
     var first = graph.PlanItems.First();
     Assert.Equal("Quick backend", first.Card.Title);
-    Assert.Equal(30, first.EstimatedMinutes);
-    Assert.True(first.FitsAvailableTime);
+    Assert.Equal("XS", first.Size);
+    Assert.True(first.FitsMaxSize);
     Assert.True(first.IsAssignedToMe);
     Assert.True(first.IsContextMatch);
     Assert.False(first.IsShortestAlternative);
-    Assert.Contains("Fits 60m focus", first.Reasons);
+    Assert.Contains("Fits your focus slot", first.Reasons);
     var longCard = graph.PlanItems.Single(item => item.Card.Title == "Long backend");
-    Assert.False(longCard.FitsAvailableTime);
-    Assert.Equal(60, graph.AvailableMinutes);
+    Assert.False(longCard.FitsMaxSize);
+    Assert.Contains("Bigger than S", longCard.Reasons);
+    Assert.Equal("S", graph.MaxSize);
     Assert.Equal("Backend", graph.Context);
   }
 
@@ -85,7 +86,7 @@ public sealed class BoardPlanningEndpointsTests(ApiTestApplicationFactory factor
       new { dependsOnCardId = blocker });
     dependency.EnsureSuccessStatusCode();
 
-    var graph = await GetGraphAsync(flow, "?availableMinutes=30");
+    var graph = await GetGraphAsync(flow, "?maxSize=XS");
 
     var first = graph.PlanItems.First();
     Assert.True(first.IsActionable);
@@ -98,15 +99,15 @@ public sealed class BoardPlanningEndpointsTests(ApiTestApplicationFactory factor
   {
     var flow = await CreateFlowAsync();
     var todo = flow.ListId("Todo");
-    await CreateCardAsync(flow, todo, "Two hours", new { estimatedMinutes = 120 });
-    await CreateCardAsync(flow, todo, "One hour", new { estimatedMinutes = 60 });
+    await CreateCardAsync(flow, todo, "A day", new { size = "M" });
+    await CreateCardAsync(flow, todo, "An afternoon", new { size = "S" });
     await CreateCardAsync(flow, todo, "Unknown", new { });
 
-    var graph = await GetGraphAsync(flow, "?availableMinutes=30");
+    var graph = await GetGraphAsync(flow, "?maxSize=XS");
 
-    Assert.DoesNotContain(graph.PlanItems, item => item.FitsAvailableTime);
+    Assert.DoesNotContain(graph.PlanItems, item => item.FitsMaxSize);
     var alternative = Assert.Single(graph.PlanItems, item => item.IsShortestAlternative);
-    Assert.Equal("One hour", alternative.Card.Title);
+    Assert.Equal("An afternoon", alternative.Card.Title);
   }
 
   [Fact]
@@ -124,8 +125,8 @@ public sealed class BoardPlanningEndpointsTests(ApiTestApplicationFactory factor
   }
 
   [Theory]
-  [InlineData("?availableMinutes=3")]
-  [InlineData("?availableMinutes=3000")]
+  [InlineData("?maxSize=HUGE")]
+  [InlineData("?maxSize=90")]
   [InlineData("?context=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
   public async Task InvalidPreferences_ReturnValidationProblem(string query)
   {
@@ -147,11 +148,11 @@ public sealed class BoardPlanningEndpointsTests(ApiTestApplicationFactory factor
 
     for (var index = 0; index < 5; index++)
     {
-      await CreateCardAsync(flow, todo, $"Card {index}", new { estimatedMinutes = 30 });
+      await CreateCardAsync(flow, todo, $"Card {index}", new { size = "XS" });
     }
 
-    var first = await GetGraphAsync(flow, "?availableMinutes=60");
-    var second = await GetGraphAsync(flow, "?availableMinutes=60");
+    var first = await GetGraphAsync(flow, "?maxSize=S");
+    var second = await GetGraphAsync(flow, "?maxSize=S");
 
     Assert.Equal(
       first.PlanItems.Select(item => item.Card.Id),

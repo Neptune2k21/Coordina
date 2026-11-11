@@ -11,14 +11,14 @@ public sealed class MyWorkEndpointsTests(ApiTestApplicationFactory factory)
   {
     var scope = await BoardScope.CreateAsync(Api);
     var todo = scope.FirstList.Id;
-    var database = await scope.AddCardAsync(todo, new { title = "Database migration", estimatedMinutes = 60 });
+    var database = await scope.AddCardAsync(todo, new { title = "Database migration", size = "XS" });
     var api = await scope.AddCardAsync(todo, new { title = "API endpoint", priority = "HIGH" });
-    var ui = await scope.AddCardAsync(todo, new { title = "Frontend panel", estimatedMinutes = 240 });
+    var ui = await scope.AddCardAsync(todo, new { title = "Frontend panel", size = "M" });
     await scope.AddDependencyAsync(api.Id, database.Id);
     await scope.AddDependencyAsync(ui.Id, api.Id);
-    await scope.SendForAsync<object>(HttpMethod.Put, "/planning-preferences", new { availableMinutes = 120 });
+    await scope.SendForAsync<object>(HttpMethod.Put, "/planning-preferences", new { maxSize = "S" });
 
-    var graph = await scope.SendForAsync<BoardGraphResponse>(HttpMethod.Get, "/graph?availableMinutes=120");
+    var graph = await scope.SendForAsync<BoardGraphResponse>(HttpMethod.Get, "/graph?maxSize=S");
     var work = await GetWorkAsync(scope);
 
     var planned = graph.PlanItems.ToDictionary(item => item.Card.Id);
@@ -27,8 +27,8 @@ public sealed class MyWorkEndpointsTests(ApiTestApplicationFactory factory)
     {
       var onBoard = planned[item.Plan.Card.Id];
       Assert.Equal(
-        (onBoard.Score, onBoard.IsActionable, onBoard.FitsAvailableTime, string.Join("|", onBoard.Reasons)),
-        (item.Plan.Score, item.Plan.IsActionable, item.Plan.FitsAvailableTime, string.Join("|", item.Plan.Reasons)));
+        (onBoard.Score, onBoard.IsActionable, onBoard.FitsMaxSize, string.Join("|", onBoard.Reasons)),
+        (item.Plan.Score, item.Plan.IsActionable, item.Plan.FitsMaxSize, string.Join("|", item.Plan.Reasons)));
     });
     Assert.Equal(
       graph.PlanItems.Select(item => item.Card.Id).Where(id => work.Next.Any(item => item.Plan.Card.Id == id)),

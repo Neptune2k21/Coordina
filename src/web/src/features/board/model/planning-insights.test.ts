@@ -17,7 +17,7 @@ describe("pickPlanFocus", () => {
         makePlanItem({ id: "c" }),
         makePlanItem({ id: "d" }),
       ],
-      0
+      null
     )
 
     expect(focus.primary?.card.id).toBe("a")
@@ -28,10 +28,10 @@ describe("pickPlanFocus", () => {
   it("only proposes items that fit the focus block", () => {
     const focus = pickPlanFocus(
       [
-        makePlanItem({ id: "long", fitsAvailableTime: false }),
-        makePlanItem({ id: "quick", fitsAvailableTime: true }),
+        makePlanItem({ id: "long", fitsMaxSize: false }),
+        makePlanItem({ id: "quick", fitsMaxSize: true }),
       ],
-      30
+      "S"
     )
 
     expect(focus.primary?.card.id).toBe("quick")
@@ -41,14 +41,14 @@ describe("pickPlanFocus", () => {
   it("falls back to the shortest ready alternative", () => {
     const focus = pickPlanFocus(
       [
-        makePlanItem({ id: "long", fitsAvailableTime: false }),
+        makePlanItem({ id: "long", fitsMaxSize: false }),
         makePlanItem({
           id: "shorter",
-          fitsAvailableTime: false,
+          fitsMaxSize: false,
           isShortestAlternative: true,
         }),
       ],
-      30
+      "S"
     )
 
     expect(focus.primary?.card.id).toBe("shorter")
@@ -57,8 +57,8 @@ describe("pickPlanFocus", () => {
 
   it("returns nothing when no ready item fits and no estimate exists", () => {
     const focus = pickPlanFocus(
-      [makePlanItem({ id: "unknown", fitsAvailableTime: false })],
-      30
+      [makePlanItem({ id: "unknown", fitsMaxSize: false })],
+      "S"
     )
 
     expect(focus.primary).toBeNull()
@@ -69,44 +69,44 @@ describe("getPlanTags", () => {
   it("builds tags from structured fields", () => {
     const labels = getPlanTags(
       makePlanItem({
-        estimatedMinutes: 30,
-        fitsAvailableTime: true,
+        size: "XS",
+        fitsMaxSize: true,
         isAssignedToMe: true,
         isContextMatch: true,
         isInProgress: true,
       }),
       {
         ...defaultPlanningPreferences,
-        availableMinutes: 60,
+        maxSize: "S",
         context: "backend",
       }
     ).map((tag) => tag.label)
 
     expect(labels).toEqual([
       "Ready to start",
-      "Fits 1h",
+      "Fits your focus slot",
       "Assigned to you",
       "In progress",
       "#backend",
     ])
   })
 
-  it("flags unknown effort only when a focus block is set", () => {
-    const item = makePlanItem({ fitsAvailableTime: false })
+  it("flags an unknown size only when a focus slot is set", () => {
+    const item = makePlanItem({ fitsMaxSize: false })
 
     expect(
       getPlanTags(item, {
         ...defaultPlanningPreferences,
-        availableMinutes: 30,
+        maxSize: "S",
         context: null,
       }).map((tag) => tag.label)
-    ).toContain("Effort unknown")
+    ).toContain("Size unknown")
     expect(
       getPlanTags(item, {
         ...defaultPlanningPreferences,
-        availableMinutes: 0,
+        maxSize: null,
         context: null,
       }).map((tag) => tag.label)
-    ).not.toContain("Effort unknown")
+    ).not.toContain("Size unknown")
   })
 })

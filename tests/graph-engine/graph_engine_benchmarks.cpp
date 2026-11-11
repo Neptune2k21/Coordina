@@ -54,7 +54,7 @@ BoardGraph build_board(std::size_t size)
     item.subtask_total = static_cast<std::uint32_t>(index % 4U);
     item.subtask_completed = static_cast<std::uint32_t>(index % 2U);
     item.position = static_cast<std::uint32_t>(index);
-    item.estimated_minutes = static_cast<std::uint32_t>((index % 6U) * 30U);
+    item.size = static_cast<std::uint32_t>(index % 7U);
     item.assignment = static_cast<std::uint32_t>(index % 3U);
     item.is_in_progress = index % 4U == 0U ? 1U : 0U;
     item.is_context_match = index % 5U == 0U ? 1U : 0U;

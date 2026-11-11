@@ -1,5 +1,6 @@
 using Coordina.Api.Core.Persistence;
 using Coordina.Api.Modules.Boards.Application;
+using Coordina.Api.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Coordina.Api.Modules.Boards.Infrastructure;
@@ -22,7 +23,7 @@ public sealed class PostgresBoardPlanningPreferenceStore(CoordinaDbContext dbCon
       ? null
       : new BoardPlanningPreferences(
         saved.UserId,
-        saved.AvailableMinutes,
+        saved.MaxSize,
         saved.Context,
         saved.PreferAssigned,
         saved.IncludeUnassigned);
@@ -37,15 +38,18 @@ public sealed class PostgresBoardPlanningPreferenceStore(CoordinaDbContext dbCon
   {
     ArgumentNullException.ThrowIfNull(preferences);
 
+    // Stored as its code, like the max_size column the EF model reads back.
+    var maxSize = preferences.MaxSize is null ? null : EnumCode.Format(preferences.MaxSize.Value);
+
     await dbContext.Database.ExecuteSqlInterpolatedAsync(
       $"""
       INSERT INTO board_planning_preferences
-        (board_id, user_id, available_minutes, context, prefer_assigned, include_unassigned, updated_at)
+        (board_id, user_id, max_size, context, prefer_assigned, include_unassigned, updated_at)
       VALUES
-        ({boardId}, {preferences.UserId}, {preferences.AvailableMinutes}, {preferences.Context},
+        ({boardId}, {preferences.UserId}, {maxSize}, {preferences.Context},
          {preferences.PreferAssigned}, {preferences.IncludeUnassigned}, {updatedAt})
       ON CONFLICT (board_id, user_id) DO UPDATE SET
-        available_minutes = EXCLUDED.available_minutes,
+        max_size = EXCLUDED.max_size,
         context = EXCLUDED.context,
         prefer_assigned = EXCLUDED.prefer_assigned,
         include_unassigned = EXCLUDED.include_unassigned,

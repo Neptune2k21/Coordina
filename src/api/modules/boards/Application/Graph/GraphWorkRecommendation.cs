@@ -13,7 +13,7 @@ public sealed record GraphWorkRecommendation<TNode>(
   int AssignmentScore,
   int MomentumScore,
   int ContextScore,
-  bool FitsAvailableTime,
+  bool FitsMaxSize,
   bool IsAssignmentMatch,
   bool IsContextMatch,
   bool IsInProgress)

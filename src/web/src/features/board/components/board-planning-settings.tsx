@@ -3,7 +3,10 @@ import { CircleNotch, FloppyDisk } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { usePlanningSettings } from "@/features/board/hooks/use-planning-settings"
-import { focusTimeOptions } from "@/features/board/model/planning-preferences"
+import {
+  type CardSize,
+  focusSlotOptions,
+} from "@/features/board/model/card-size"
 
 type BoardPlanningSettingsProps = {
   accessToken: string
@@ -31,16 +34,18 @@ export function BoardPlanningSettings(props: BoardPlanningSettingsProps) {
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-xs font-medium">
-          Focus time
+          Focus slot
           <select
-            value={preferences.availableMinutes}
+            value={preferences.maxSize ?? ""}
             onChange={(event) =>
-              change({ availableMinutes: Number(event.target.value) })
+              change({
+                maxSize: (event.target.value || null) as CardSize | null,
+              })
             }
             className="h-9 rounded-md border border-input bg-background px-3 text-sm font-normal shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-white/[0.06]"
           >
-            {focusTimeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
+            {focusSlotOptions.map((option) => (
+              <option key={option.label} value={option.value ?? ""}>
                 {option.label}
               </option>
             ))}

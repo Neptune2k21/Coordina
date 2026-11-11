@@ -211,7 +211,7 @@ public sealed record BoardCardMutation(
   string? Description,
   BoardCardPriority? Priority,
   DateOnly? DueDate,
-  int? EstimatedMinutes,
+  CardSize? Size,
   IReadOnlyCollection<string> Labels,
   IReadOnlyCollection<Guid> AssigneeIds,
   bool IsCompleted,
@@ -257,7 +257,7 @@ public sealed record BoardCardSeed(
   string? Description,
   BoardCardPriority? Priority,
   DateOnly? DueDate,
-  int? EstimatedMinutes,
+  CardSize? Size,
   IReadOnlyCollection<string> Labels,
   IReadOnlyCollection<string> Subtasks,
   IReadOnlyCollection<Guid> DependsOnCardIds);

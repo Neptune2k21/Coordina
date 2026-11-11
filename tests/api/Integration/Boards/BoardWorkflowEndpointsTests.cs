@@ -224,7 +224,7 @@ public sealed class BoardWorkflowEndpointsTests(ApiTestApplicationFactory factor
   }
 
   [Fact]
-  public async Task CardEffort_CanBeSetKeptAndCleared()
+  public async Task CardSize_CanBeSetKeptAndCleared()
   {
     var scope = await CreateScopeAsync();
     var board = await CreateBoardAsync(scope, "BASIC", null);
@@ -232,28 +232,28 @@ public sealed class BoardWorkflowEndpointsTests(ApiTestApplicationFactory factor
       scope,
       HttpMethod.Post,
       $"{BoardPath(scope, board)}/lists/{ListWithStatus(board, "TODO").Id}/cards",
-      new { title = "Estimate me", estimatedMinutes = 30 });
-    var card = FindCard(created, "Estimate me");
-    Assert.Equal(30, card.EstimatedMinutes);
+      new { title = "Size me", size = "xs" });
+    var card = FindCard(created, "Size me");
+    Assert.Equal("XS", card.Size);
 
-    var updated = await UpdateCardAsync(scope, board, card.Id, new { estimatedMinutes = 120 });
-    Assert.Equal(120, FindCard(updated, "Estimate me").EstimatedMinutes);
+    var updated = await UpdateCardAsync(scope, board, card.Id, new { size = "XL" });
+    Assert.Equal("XL", FindCard(updated, "Size me").Size);
 
-    var kept = await UpdateCardAsync(scope, board, card.Id, new { title = "Estimated" });
-    Assert.Equal(120, FindCard(kept, "Estimated").EstimatedMinutes);
+    var kept = await UpdateCardAsync(scope, board, card.Id, new { title = "Sized" });
+    Assert.Equal("XL", FindCard(kept, "Sized").Size);
 
     var cleared = await UpdateCardAsync(
       scope,
       board,
       card.Id,
-      new { clearEstimatedMinutes = true });
-    Assert.Null(FindCard(cleared, "Estimated").EstimatedMinutes);
+      new { clearSize = true });
+    Assert.Null(FindCard(cleared, "Sized").Size);
   }
 
   [Theory]
-  [InlineData(4)]
-  [InlineData(2881)]
-  public async Task CardEffort_OutOfRange_ReturnsValidationProblem(int minutes)
+  [InlineData("XXXL")]
+  [InlineData("30")]
+  public async Task CardSize_Unknown_ReturnsValidationProblem(string size)
   {
     var scope = await CreateScopeAsync();
     var board = await CreateBoardAsync(scope, "BASIC", null);
@@ -262,7 +262,7 @@ public sealed class BoardWorkflowEndpointsTests(ApiTestApplicationFactory factor
       HttpMethod.Post,
       $"{BoardPath(scope, board)}/lists/{ListWithStatus(board, "TODO").Id}/cards",
       scope.AccessToken,
-      new { title = "Too odd", estimatedMinutes = minutes });
+      new { title = "Too odd", size });
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }

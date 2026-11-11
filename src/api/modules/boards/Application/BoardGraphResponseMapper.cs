@@ -1,6 +1,7 @@
-using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Domain;
+using Coordina.Api.Shared.Enums;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
@@ -10,7 +11,7 @@ internal static class BoardGraphResponseMapper
     new(
       analysis.BoardId,
       analysis.IsAcyclic,
-      analysis.Preferences.AvailableMinutes,
+      analysis.Preferences.MaxSize is null ? null : EnumCode.Format(analysis.Preferences.MaxSize.Value),
       analysis.Preferences.Context,
       ToCards(analysis.ReadyCards, analysis),
       ToCards(analysis.UnblockedCards, analysis),
@@ -63,8 +64,8 @@ internal static class BoardGraphResponseMapper
       item.Score,
       item.IsActionable,
       item.BlockerCount,
-      item.Card.EstimatedMinutes,
-      item.FitsAvailableTime,
+      item.Card.Size is null ? null : EnumCode.Format(item.Card.Size.Value),
+      item.FitsMaxSize,
       item.IsAssignedToMe,
       item.IsContextMatch,
       item.IsInProgress,

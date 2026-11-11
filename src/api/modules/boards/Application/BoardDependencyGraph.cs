@@ -1,5 +1,6 @@
 using Coordina.Api.Modules.Boards.Application.Graph;
 using Coordina.Api.Modules.Boards.Domain;
+using Coordina.Api.Shared.Enums;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
@@ -46,7 +47,7 @@ internal static class BoardDependencyGraph
       graph.Edges,
       ToWorkItems(graph.Cards, today, inProgressListIds, preferences),
       new GraphPlanningOptions(
-        preferences.AvailableMinutes,
+        ToGraphSize(preferences.MaxSize),
         preferences.PreferAssigned,
         preferences.IncludeUnassigned));
     var nodeAnalyses = analysis.NodeAnalyses
@@ -198,11 +199,15 @@ internal static class BoardDependencyGraph
         card.Subtasks.Count,
         card.Subtasks.Count(subtask => subtask.IsCompleted),
         Math.Max(0, card.Position),
-        card.EstimatedMinutes ?? 0,
+        ToGraphSize(card.Size),
         AssignmentOf(card, preferences.UserId),
         inProgressListIds.Contains(card.ListId),
         preferences.MatchesContext(card.Labels)))
       .ToArray();
+
+  // CardSize has the engine's values; null is the engine's None.
+  private static GraphSize ToGraphSize(CardSize? size) =>
+    size is null ? GraphSize.None : (GraphSize)(int)size.Value;
 
   private static GraphAssignment AssignmentOf(ProjectBoardCard card, Guid userId)
   {
@@ -220,15 +225,15 @@ internal static class BoardDependencyGraph
     BoardWorkRecommendation[] planItems,
     BoardPlanningPreferences preferences)
   {
-    if (preferences.AvailableMinutes == 0
-      || planItems.Any(item => item.IsActionable && item.FitsAvailableTime))
+    if (preferences.MaxSize is null
+      || planItems.Any(item => item.IsActionable && item.FitsMaxSize))
     {
       return planItems;
     }
 
     var alternative = planItems
-      .Where(item => item.IsActionable && item.Card.EstimatedMinutes is not null)
-      .MinBy(item => item.Card.EstimatedMinutes);
+      .Where(item => item.IsActionable && item.Card.Size is not null)
+      .MinBy(item => item.Card.Size);
 
     return alternative is null
       ? planItems
@@ -250,7 +255,7 @@ internal static class BoardDependencyGraph
       recommendation.Score,
       recommendation.BlockerCount == 0,
       recommendation.BlockerCount,
-      recommendation.FitsAvailableTime,
+      recommendation.FitsMaxSize,
       recommendation.IsAssignmentMatch,
       recommendation.IsContextMatch,
       recommendation.IsInProgress,
@@ -270,13 +275,13 @@ internal static class BoardDependencyGraph
       ? "Ready now"
       : $"{recommendation.BlockerCount} blocker{Plural(recommendation.BlockerCount)}");
 
-    if (preferences.AvailableMinutes > 0)
+    if (preferences.MaxSize is { } maxSize)
     {
-      reasons.Add(card.EstimatedMinutes is null
-        ? "Effort unknown"
-        : recommendation.FitsAvailableTime
-          ? $"Fits {preferences.AvailableMinutes}m focus"
-          : $"Longer than {preferences.AvailableMinutes}m");
+      reasons.Add(card.Size is null
+        ? "Size unknown"
+        : recommendation.FitsMaxSize
+          ? "Fits your focus slot"
+          : $"Bigger than {EnumCode.Format(maxSize)}");
     }
 
     if (recommendation.IsAssignmentMatch)
@@ -385,7 +390,7 @@ internal sealed record BoardWorkRecommendation(
   int Score,
   bool IsActionable,
   int BlockerCount,
-  bool FitsAvailableTime,
+  bool FitsMaxSize,
   bool IsAssignedToMe,
   bool IsContextMatch,
   bool IsInProgress,
