@@ -8,6 +8,9 @@ inputs:
   playwright:
     description: Install the Playwright browser (needs web).
     default: "false"
+  cpp:
+    description: Install the pinned clang-format and clang-tidy (tools/clang/requirements.txt).
+    default: "false"
 
 runs:
   using: composite
@@ -40,6 +43,19 @@ runs:
       if: inputs.playwright == 'true'
       shell: bash
       run: pnpm --dir src/web exec playwright install --with-deps chromium
+
+    - name: Cache clang tools
+      if: inputs.cpp == 'true'
+      uses: actions/cache@v6
+      with:
+        path: .tools/clang
+        key: clang-tools-${{ runner.os }}-${{ hashFiles('tools/clang/requirements.txt') }}
+
+    # A no-op when the cache restored the pinned versions.
+    - name: Install clang tools
+      if: inputs.cpp == 'true'
+      shell: bash
+      run: make cpp-tools
 
     - name: Prepare CI environment
       shell: bash

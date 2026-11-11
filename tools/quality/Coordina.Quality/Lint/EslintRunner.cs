@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Coordina.Quality.Checks;
 
@@ -43,31 +42,18 @@ internal sealed class EslintRunner(string repositoryRoot)
       return [];
     }
 
-    var start = new ProcessStartInfo(Path.Combine(repositoryRoot, RelativeBinaryPath))
-    {
-      WorkingDirectory = Path.Combine(repositoryRoot, WebRoot),
-      RedirectStandardOutput = true,
-      RedirectStandardError = true
-    };
-
-    foreach (var argument in OutputArguments.Concat(targets))
-    {
-      start.ArgumentList.Add(argument);
-    }
-
-    using var process = Process.Start(start)
-      ?? throw new InvalidOperationException("Could not start ESLint.");
-    var errors = process.StandardError.ReadToEndAsync();
-    var json = process.StandardOutput.ReadToEnd();
-    process.WaitForExit();
+    var result = ToolProcess.Run(
+      Path.Combine(repositoryRoot, RelativeBinaryPath),
+      Path.Combine(repositoryRoot, WebRoot),
+      OutputArguments.Concat(targets));
 
     // 0 means clean and 1 means findings; anything else is ESLint failing to run.
-    if (process.ExitCode > 1)
+    if (result.ExitCode > 1)
     {
-      throw new InvalidOperationException($"ESLint failed: {errors.Result}");
+      throw new InvalidOperationException($"ESLint failed: {result.StandardError}");
     }
 
-    return Parse(json, repositoryRoot);
+    return Parse(result.StandardOutput, repositoryRoot);
   }
 
   /// <summary>Reads ESLint's JSON output into violations with repository-relative paths.</summary>
@@ -78,7 +64,7 @@ internal sealed class EslintRunner(string repositoryRoot)
 
     foreach (var file in document.RootElement.EnumerateArray())
     {
-      var path = Path.GetRelativePath(root, file.GetProperty("filePath").GetString()!).Replace('\\', '/');
+      var path = RepositoryPaths.Relative(root, file.GetProperty("filePath").GetString()!);
 
       foreach (var message in file.GetProperty("messages").EnumerateArray())
       {

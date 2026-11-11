@@ -1,4 +1,4 @@
-.PHONY: help graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
+.PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -18,12 +18,17 @@ GRAPH_ENGINE_SOURCES := $(GRAPH_ENGINE_DIR)/src/interop/coordina_graph_engine.cp
 GRAPH_ENGINE_FLAGS := -std=c++20 -O2 -fPIC -Wall -Wextra -Wpedantic -Werror -I$(GRAPH_ENGINE_DIR)/include -I$(GRAPH_ENGINE_DIR)/src
 GRAPH_ENGINE_SANITIZE_FLAGS := $(filter-out -O2,$(GRAPH_ENGINE_FLAGS)) -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all
 GRAPH_ENGINE_ABI := contracts/graph-engine-abi.json
+CLANG_TOOLS_DIR := .tools/clang
+CLANG_TOOLS_REQUIREMENTS := tools/clang/requirements.txt
+CLANG_FORMAT := $(CLANG_TOOLS_DIR)/clang_format/data/bin/clang-format
 
 help:
 	@echo "Commandes disponibles :"
 	@echo "  make dev          Lance l'API C# et le front React"
 	@echo "  make graph-engine-test Lance les tests natifs du moteur de graphe C++"
 	@echo "  make graph-engine-sanitize Lance les tests natifs sous AddressSanitizer et UBSan"
+	@echo "  make graph-engine-format Formate le C++ du moteur avec clang-format"
+	@echo "  make cpp-tools    Installe clang-format et clang-tidy aux versions de tools/clang/requirements.txt"
 	@echo "  make graph-engine-abi Regenere contracts/graph-engine-abi.json depuis le header C"
 	@echo "  make graph-engine-benchmark Mesure l'analyse de board native (sizes=\"100 1000\" optionnel)"
 	@echo "  make api          Lance l'API C#"
@@ -54,6 +59,19 @@ help:
 	@echo "  make docker-up    Lance les services Docker"
 	@echo "  make docker-down  Stoppe les services Docker"
 	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
+
+# clang-format and clang-tidy at the versions the quality tool expects, so
+# every machine formats and analyses the C++ the same way. The copy of the
+# requirements records what is installed; comparing contents rather than
+# dates survives a fresh checkout and the CI cache.
+cpp-tools:
+	@cmp -s $(CLANG_TOOLS_REQUIREMENTS) $(CLANG_TOOLS_DIR)/requirements.txt || { \
+		rm -rf $(CLANG_TOOLS_DIR) && \
+		python3 -m pip install --quiet --disable-pip-version-check --target $(CLANG_TOOLS_DIR) -r $(CLANG_TOOLS_REQUIREMENTS) && \
+		cp $(CLANG_TOOLS_REQUIREMENTS) $(CLANG_TOOLS_DIR)/requirements.txt; }
+
+graph-engine-format: cpp-tools
+	git ls-files -- '$(GRAPH_ENGINE_DIR)/*.cpp' '$(GRAPH_ENGINE_DIR)/*.h' 'tests/graph-engine/*.cpp' 'tests/graph-engine/*.h' | xargs $(CLANG_FORMAT) -i
 
 graph-engine-build:
 	mkdir -p $(GRAPH_ENGINE_OUT)
@@ -155,7 +173,7 @@ test: graph-engine-test graph-engine-sanitize graph-engine-benchmark-smoke api-t
 
 lint: api-format-check web-contract-check web-typecheck check-all
 
-format: api-format web-format
+format: api-format web-format graph-engine-format
 
 format-check: api-format-check web-format-check
 

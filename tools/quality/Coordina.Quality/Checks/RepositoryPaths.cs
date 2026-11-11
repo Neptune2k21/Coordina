@@ -40,6 +40,13 @@ internal static class RepositoryPaths
       || path.EndsWith(".h", StringComparison.Ordinal))
     && !IsGenerated(path);
 
+  /// <summary>
+  /// A path a tool printed, made relative to the repository root with forward
+  /// slashes, like every other path the checks report.
+  /// </summary>
+  public static string Relative(string repositoryRoot, string path) =>
+    (Path.IsPathRooted(path) ? Path.GetRelativePath(repositoryRoot, path) : path).Replace('\\', '/');
+
   public static bool IsCode(string path) =>
     IsCSharp(path) || IsWebSource(path) || IsGraphEngineSource(path);
 

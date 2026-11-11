@@ -122,4 +122,34 @@ public sealed class StructureRulesTests
   {
     Assert.Equal(expected, RuleHarness.Check(new GraphEngineFileNamingRule(), path, string.Empty).Length);
   }
+
+  [Theory]
+  [InlineData("  // NOLINTNEXTLINE(readability-suspicious-call-argument): the edge is reversed on purpose.")]
+  [InlineData("int x = 0; // NOLINT(misc-const-correctness): written by the C caller.")]
+  [InlineData("// NOLINTBEGIN(cppcoreguidelines-pro-type-vararg): printf writes the report.")]
+  [InlineData("// NOLINTEND(cppcoreguidelines-pro-type-vararg)")]
+  [InlineData("// Lint comments are written NOLINT(check): reason.")]
+  public void Nolint_WithChecksAndAReason_IsAllowed(string line)
+  {
+    Assert.Empty(RuleHarness.Check(new NolintReasonRule(), "src/graph-engine/src/core/graph_types.cpp", line));
+  }
+
+  [Theory]
+  [InlineData("int x = 0; // NOLINT", "Name the checks this silences: '// NOLINT(check-name): reason'.")]
+  [InlineData("x(); // see NOLINT above", "Name the checks this silences: '// NOLINT(check-name): reason'.")]
+  [InlineData("/* NOLINTNEXTLINE() */", "Name the checks this silences: '// NOLINTNEXTLINE(check-name): reason'.")]
+  [InlineData("// NOLINTNEXTLINE(bugprone-sizeof-expression)", "Say why after the checks: '// NOLINTNEXTLINE(bugprone-sizeof-expression): reason'.")]
+  [InlineData("// NOLINTBEGIN(cert-err33-c):  ", "Say why after the checks: '// NOLINTBEGIN(cert-err33-c): reason'.")]
+  public void Nolint_WithoutChecksOrReason_IsReported(string line, string expected)
+  {
+    Assert.Equal(
+      [expected],
+      RuleHarness.Messages(new NolintReasonRule(), "tests/graph-engine/abi_layout.cpp", line));
+  }
+
+  [Fact]
+  public void Nolint_OnlyAppliesToTheGraphEngine()
+  {
+    Assert.Empty(RuleHarness.Check(new NolintReasonRule(), "src/web/src/lib/utils.ts", "// NOLINT"));
+  }
 }

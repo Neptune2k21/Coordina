@@ -84,6 +84,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           web: "true"
+          cpp: "true"
 
       - name: Quality rules
         run: $QUALITY check --all --format github --sarif quality.sarif

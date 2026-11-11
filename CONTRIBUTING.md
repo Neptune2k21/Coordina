@@ -277,6 +277,27 @@ rules use TypeScript types, so they catch problems such as a promise passed
 where React expects a plain callback; that takes about 5 seconds. Errors fail the check; warnings, such as a file over 500 lines, are
 shown so you can decide.
 
+The graph engine's C++ goes through clang-format (`.clang-format`) and
+clang-tidy (`.clang-tidy`, relaxed for test code in
+`tests/graph-engine/.clang-tidy`). Both report like the other rules:
+`clang-format` for a line to reformat, `clang-tidy/<check>` for a finding, with
+a link to what the check looks for. Each release of these tools formats and
+analyses a little differently, so the quality tool only uses the versions
+pinned in `tools/clang/requirements.txt`:
+
+```bash
+make cpp-tools            # installs them into .tools/clang (needs python3 and pip)
+make graph-engine-format  # reformats every C++ file
+```
+
+clang-tidy only sees a header through a `.cpp` file that includes it, so `make
+check` reads the `#include` lines and analyses exactly the `.cpp` files that
+include a changed header, directly or not, in parallel. It reports findings in
+the files you changed only; changing one of the settings files checks the
+whole engine. Without the tools, `make check` says so and goes on, and CI
+fails. `compile_flags.txt` gives clang-tidy the standard and include folders,
+and editors that use clangd read it too.
+
 Run `make check` while you work instead of the whole `make quality`, then
 `make verify` before pushing.
 
@@ -297,7 +318,9 @@ break:
    protection rules.
 
 Pushes to `master` run every suite. Documentation-only changes run only the
-quality rules.
+quality rules, and so do changes to the C++ lint settings, which no build
+reads. A change limited to `tests/graph-engine` runs the graph-engine suite
+alone, since the API only loads the library built from `src/graph-engine`.
 
 On pull requests, problems show as annotations on the changed lines. On
 `master`, CI also writes the results as SARIF (`quality check --all --sarif
@@ -318,6 +341,14 @@ and the reason. The reason is required, so a reviewer can judge it:
 
 ```csharp
 // quality-ignore CQ1101: one file holds the whole wire contract.
+```
+
+clang-tidy findings use clang-tidy's own `NOLINT`, so the editor hides them
+too. `CQ3002` holds it to the same standard: it names the checks and gives a
+reason after a colon, on one line.
+
+```cpp
+// NOLINTNEXTLINE(readability-suspicious-call-argument): the new edge closes a cycle when target already reaches source.
 ```
 
 If a rule is wrong in general, change the rule in `tools/quality` in the same
