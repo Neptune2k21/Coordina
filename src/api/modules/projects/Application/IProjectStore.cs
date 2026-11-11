@@ -33,6 +33,14 @@ public interface IProjectStore
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken);
 
+  /// <summary>Gives every project of the workspace owned by one user to another.</summary>
+  Task ReassignOwnerAsync(
+    Guid workspaceId,
+    Guid fromUserId,
+    Guid toUserId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
   Task<bool> ArchiveInWorkspaceAsync(
     Guid workspaceId,
     Guid projectId,

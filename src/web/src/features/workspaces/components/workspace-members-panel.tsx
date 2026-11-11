@@ -1,4 +1,4 @@
-import { Crown, Trash, UsersThree } from "@phosphor-icons/react"
+import { Crown, SignOut, Trash, UsersThree } from "@phosphor-icons/react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -14,14 +14,26 @@ import { Separator } from "@/components/ui/separator"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "@/features/auth"
 import { useWorkspaces } from "@/features/workspaces/workspace-context"
-import type { WorkspaceMember } from "@/types/workspace"
+import type { WorkspaceMember, WorkspaceRole } from "@/types/workspace"
+
+const lastOwnerHint =
+  "You are the last owner. Make another member an owner before you leave or step down."
 
 export function WorkspaceMembersPanel() {
   const { session } = useAuth()
-  const { activeWorkspace, isMutating, listMembers, removeMember } =
-    useWorkspaces()
+  const {
+    activeWorkspace,
+    changeMemberRole,
+    isMutating,
+    leave,
+    listMembers,
+    removeMember,
+  } = useWorkspaces()
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [isConfirmingLeave, setIsConfirmingLeave] = useState(false)
+  const viewerIsOwner = activeWorkspace?.role === "OWNER"
+  const ownerCount = members.filter((member) => member.role === "OWNER").length
 
   useEffect(() => {
     if (!activeWorkspace) {
@@ -51,6 +63,49 @@ export function WorkspaceMembersPanel() {
       cancelled = true
     }
   }, [activeWorkspace, listMembers])
+
+  async function run(action: () => Promise<void>, fallback: string) {
+    setError(null)
+
+    try {
+      await action()
+    } catch (actionError) {
+      setError(actionError instanceof ApiError ? actionError.message : fallback)
+    }
+  }
+
+  function handleRoleChange(member: WorkspaceMember, role: WorkspaceRole) {
+    if (!activeWorkspace) {
+      return
+    }
+
+    void run(async () => {
+      const changed = await changeMemberRole(
+        activeWorkspace.id,
+        member.userId,
+        role
+      )
+      setMembers((current) =>
+        current.map((item) => (item.userId === changed.userId ? changed : item))
+      )
+    }, "The role could not be changed.")
+  }
+
+  function handleLeave() {
+    if (!activeWorkspace) {
+      return
+    }
+
+    if (!isConfirmingLeave) {
+      setIsConfirmingLeave(true)
+      return
+    }
+
+    void run(async () => {
+      await leave(activeWorkspace.id)
+    }, "You could not leave the workspace.")
+    setIsConfirmingLeave(false)
+  }
 
   async function handleRemove(member: WorkspaceMember) {
     if (!activeWorkspace) {
@@ -84,11 +139,15 @@ export function WorkspaceMembersPanel() {
           <CardTitle>Members</CardTitle>
         </div>
         <CardDescription>
-          Memberships are loaded from the workspace-scoped API.
+          Owners invite, promote and remove members. Anyone can leave; their
+          cards are unassigned and their projects go to an owner.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {error ? <FieldError>{error}</FieldError> : null}
+        {viewerIsOwner && ownerCount === 1 ? (
+          <p className="text-xs text-muted-foreground">{lastOwnerHint}</p>
+        ) : null}
         <div className="grid gap-2">
           {members.map((member) => (
             <div
@@ -118,7 +177,59 @@ export function WorkspaceMembersPanel() {
                     ) : null}
                     {member.role}
                   </span>
-                  {activeWorkspace?.role === "OWNER" &&
+                  {viewerIsOwner && member.userId !== session?.user.id ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={isMutating}
+                      onClick={() =>
+                        handleRoleChange(
+                          member,
+                          member.role === "OWNER" ? "MEMBER" : "OWNER"
+                        )
+                      }
+                    >
+                      {member.role === "OWNER" ? "Make member" : "Make owner"}
+                    </Button>
+                  ) : null}
+                  {member.userId === session?.user.id &&
+                  member.role === "OWNER" &&
+                  ownerCount > 1 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={isMutating}
+                      onClick={() => handleRoleChange(member, "MEMBER")}
+                    >
+                      Step down
+                    </Button>
+                  ) : null}
+                  {member.userId === session?.user.id ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={
+                        isMutating ||
+                        (member.role === "OWNER" && ownerCount === 1)
+                      }
+                      title={
+                        member.role === "OWNER" && ownerCount === 1
+                          ? lastOwnerHint
+                          : undefined
+                      }
+                      onClick={handleLeave}
+                    >
+                      <SignOut className="size-3.5" />
+                      {isConfirmingLeave ? "Confirm leave" : "Leave"}
+                    </Button>
+                  ) : null}
+                  {viewerIsOwner &&
                   member.role !== "OWNER" &&
                   member.userId !== session?.user.id ? (
                     <Button

@@ -4,6 +4,16 @@ namespace Coordina.Api.Modules.Workspaces.Application;
 
 public interface IWorkspaceStore
 {
+  /// <summary>
+  /// Runs <paramref name="action"/> as one transaction while no other caller
+  /// holds this lock for the workspace, so a rule that counts owners and the
+  /// membership change that depends on it cannot interleave with another one.
+  /// </summary>
+  Task<T> RunExclusiveAsync<T>(
+    Guid workspaceId,
+    Func<CancellationToken, Task<T>> action,
+    CancellationToken cancellationToken);
+
   Task<Workspace> CreateAsync(
     string name,
     Guid ownerUserId,
@@ -57,6 +67,13 @@ public interface IWorkspaceStore
     DateTimeOffset consumedAt,
     CancellationToken cancellationToken);
 
+  Task<bool> UpdateMemberRoleAsync(
+    Guid workspaceId,
+    Guid userId,
+    WorkspaceRole role,
+    CancellationToken cancellationToken);
+
+  /// <summary>Removes a membership of any role; the service decides who may leave.</summary>
   Task<bool> RemoveMemberAsync(
     Guid workspaceId,
     Guid userId,

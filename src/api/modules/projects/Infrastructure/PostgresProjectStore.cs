@@ -120,6 +120,22 @@ public sealed class PostgresProjectStore(CoordinaDbContext dbContext)
       : await FindInWorkspaceAsync(workspaceId, projectId, cancellationToken);
   }
 
+  public async Task ReassignOwnerAsync(
+    Guid workspaceId,
+    Guid fromUserId,
+    Guid toUserId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken)
+  {
+    await Projects
+      .Where(project => project.WorkspaceId == workspaceId
+        && project.ProjectOwnerId == fromUserId)
+      .ExecuteUpdateAsync(setters => setters
+        .SetProperty(project => project.ProjectOwnerId, toUserId)
+        .SetProperty(project => project.UpdatedAt, updatedAt),
+        cancellationToken);
+  }
+
   public async Task<bool> ArchiveInWorkspaceAsync(
     Guid workspaceId,
     Guid projectId,

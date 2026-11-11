@@ -2,6 +2,7 @@ using Coordina.Api.Core.Modules;
 using Coordina.Api.Modules.Boards.Application;
 using Coordina.Api.Modules.Boards.Application.Graph;
 using Coordina.Api.Modules.Boards.Infrastructure;
+using Coordina.Api.Modules.Workspaces.Application;
 
 namespace Coordina.Api.Modules.Boards;
 
@@ -19,6 +20,7 @@ public sealed class BoardsModule : IModule
     services.AddScoped<IBoardDependencyService, BoardDependencyService>();
     services.AddScoped<IBoardPlanningPreferenceStore, PostgresBoardPlanningPreferenceStore>();
     services.AddScoped<IBoardPlanningService, BoardPlanningService>();
+    services.AddScoped<IWorkspaceDepartureHandler, BoardAssigneeRemoval>();
     services.AddSingleton<IGraphEngine<Guid>, NativeGuidGraphEngine>();
   }
 

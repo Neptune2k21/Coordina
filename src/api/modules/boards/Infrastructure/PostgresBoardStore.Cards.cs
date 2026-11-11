@@ -277,6 +277,17 @@ public sealed partial class PostgresBoardStore
       cancellationToken);
   }
 
+  public async Task UnassignFromWorkspaceAsync(
+    Guid workspaceId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    await BoardCardAssignees
+      .Where(assignee => assignee.UserId == userId
+        && assignee.Card!.WorkspaceId == workspaceId)
+      .ExecuteDeleteAsync(cancellationToken);
+  }
+
   public async Task<bool> DeleteCardAsync(
     Guid workspaceId,
     Guid projectId,

@@ -18,6 +18,34 @@ public sealed class PostgresWorkspaceStore(CoordinaDbContext dbContext)
 
   private DbSet<WorkspaceInviteEntity> WorkspaceInvites => dbContext.Set<WorkspaceInviteEntity>();
 
+  public async Task<T> RunExclusiveAsync<T>(
+    Guid workspaceId,
+    Func<CancellationToken, Task<T>> action,
+    CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(action);
+
+    // Re-entrant like PostgresBoardStore.RunExclusiveAsync. The departure
+    // handlers of other modules write through the same context, so they join
+    // this transaction. The advisory key uses seed 1, boards use 0.
+    await using var transaction = dbContext.Database.CurrentTransaction is null
+      ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+      : null;
+
+    await dbContext.Database.ExecuteSqlInterpolatedAsync(
+      $"SELECT pg_advisory_xact_lock(hashtextextended({workspaceId.ToString()}, 1))",
+      cancellationToken);
+
+    var result = await action(cancellationToken);
+
+    if (transaction is not null)
+    {
+      await transaction.CommitAsync(cancellationToken);
+    }
+
+    return result;
+  }
+
   public async Task<Workspace> CreateAsync(
     string name,
     Guid ownerUserId,
@@ -282,6 +310,22 @@ public sealed class PostgresWorkspaceStore(CoordinaDbContext dbContext)
     return new ConsumeInviteOutcome(ConsumeInviteStatus.Consumed, workspace);
   }
 
+  public async Task<bool> UpdateMemberRoleAsync(
+    Guid workspaceId,
+    Guid userId,
+    WorkspaceRole role,
+    CancellationToken cancellationToken)
+  {
+    var updated = await WorkspaceMembers
+      .Where(member => member.WorkspaceId == workspaceId
+        && member.UserId == userId)
+      .ExecuteUpdateAsync(
+        updates => updates.SetProperty(member => member.Role, role),
+        cancellationToken);
+
+    return updated > 0;
+  }
+
   public async Task<bool> RemoveMemberAsync(
     Guid workspaceId,
     Guid userId,
@@ -289,8 +333,7 @@ public sealed class PostgresWorkspaceStore(CoordinaDbContext dbContext)
   {
     var deleted = await WorkspaceMembers
       .Where(member => member.WorkspaceId == workspaceId
-        && member.UserId == userId
-        && member.Role != WorkspaceRole.Owner)
+        && member.UserId == userId)
       .ExecuteDeleteAsync(cancellationToken);
 
     return deleted > 0;

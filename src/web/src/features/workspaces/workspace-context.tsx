@@ -9,10 +9,12 @@ import {
 
 import { useAuth } from "@/features/auth"
 import {
+  changeWorkspaceMemberRole,
   createWorkspaceInvite,
   createWorkspace,
   deleteWorkspace,
   joinWorkspace,
+  leaveWorkspace,
   listWorkspaceMembers,
   listWorkspaces,
   removeWorkspaceMember,
@@ -21,6 +23,7 @@ import type {
   Workspace,
   WorkspaceInvite,
   WorkspaceMember,
+  WorkspaceRole,
 } from "@/types/workspace"
 
 const activeWorkspaceStorageKey = "coordina.activeWorkspaceId"
@@ -32,9 +35,15 @@ type WorkspaceContextValue = {
   isLoading: boolean
   isMutating: boolean
   workspaces: Workspace[]
+  changeMemberRole: (
+    workspaceId: string,
+    memberUserId: string,
+    role: WorkspaceRole
+  ) => Promise<WorkspaceMember>
   create: (name: string) => Promise<Workspace>
   createInvite: (workspaceId: string) => Promise<WorkspaceInvite>
   join: (inviteCode: string) => Promise<Workspace>
+  leave: (workspaceId: string) => Promise<void>
   listMembers: (workspaceId: string) => Promise<WorkspaceMember[]>
   remove: (workspaceId: string) => Promise<void>
   removeMember: (workspaceId: string, memberUserId: string) => Promise<void>
@@ -212,6 +221,63 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [session]
   )
 
+  const changeMemberRole = useCallback(
+    async (workspaceId: string, memberUserId: string, role: WorkspaceRole) => {
+      if (!session) {
+        throw new Error("Sign in before changing a member's role.")
+      }
+
+      setIsMutating(true)
+
+      try {
+        const member = await changeWorkspaceMemberRole(
+          session.accessToken,
+          workspaceId,
+          memberUserId,
+          role
+        )
+
+        // Stepping down changes what this user may do in the workspace.
+        if (memberUserId === session.user.id) {
+          setWorkspaces((current) =>
+            current.map((workspace) =>
+              workspace.id === workspaceId
+                ? { ...workspace, role: member.role }
+                : workspace
+            )
+          )
+        }
+
+        return member
+      } finally {
+        setIsMutating(false)
+      }
+    },
+    [session]
+  )
+
+  const leave = useCallback(
+    async (workspaceId: string) => {
+      if (!session) {
+        throw new Error("Sign in before leaving a workspace.")
+      }
+
+      setIsMutating(true)
+
+      try {
+        await leaveWorkspace(session.accessToken, workspaceId)
+        const nextWorkspaces = workspaces.filter(
+          (workspace) => workspace.id !== workspaceId
+        )
+        setWorkspaces(nextWorkspaces)
+        reconcileActiveWorkspace(nextWorkspaces)
+      } finally {
+        setIsMutating(false)
+      }
+    },
+    [reconcileActiveWorkspace, session, workspaces]
+  )
+
   const remove = useCallback(
     async (workspaceId: string) => {
       if (!session) {
@@ -241,12 +307,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     () => ({
       activeWorkspace,
       activeWorkspaceId,
+      changeMemberRole,
       create,
       createInvite,
       error,
       isLoading,
       isMutating,
       join,
+      leave,
       listMembers,
       refresh,
       remove,
@@ -257,12 +325,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [
       activeWorkspace,
       activeWorkspaceId,
+      changeMemberRole,
       create,
       createInvite,
       error,
       isLoading,
       isMutating,
       join,
+      leave,
       listMembers,
       refresh,
       remove,

@@ -3,6 +3,7 @@ import type {
   Workspace,
   WorkspaceInvite,
   WorkspaceMember,
+  WorkspaceRole,
 } from "@/types/workspace"
 
 export async function listWorkspaces(accessToken: string) {
@@ -55,6 +56,31 @@ export async function listWorkspaceMembers(
   return apiRequest<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`, {
     accessToken,
     errorMessage: "Unable to load workspace members.",
+  })
+}
+
+export async function changeWorkspaceMemberRole(
+  accessToken: string,
+  workspaceId: string,
+  memberUserId: string,
+  role: WorkspaceRole
+) {
+  return apiRequest<WorkspaceMember>(
+    `/workspaces/${workspaceId}/members/${memberUserId}`,
+    {
+      accessToken,
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+      errorMessage: "The role could not be changed.",
+    }
+  )
+}
+
+export async function leaveWorkspace(accessToken: string, workspaceId: string) {
+  await apiRequest<void>(`/workspaces/${workspaceId}/leave`, {
+    accessToken,
+    method: "POST",
+    errorMessage: "You could not leave the workspace.",
   })
 }
 

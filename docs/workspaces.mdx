@@ -15,6 +15,8 @@ GET    /workspaces/{workspaceId}
 POST   /workspaces/join         { "inviteCode": "A1B2C3D4E5F6" }
 POST   /workspaces/{workspaceId}/invites
 GET    /workspaces/{workspaceId}/members
+PATCH  /workspaces/{workspaceId}/members/{memberUserId}  { "role": "OWNER" }
+POST   /workspaces/{workspaceId}/leave
 DELETE /workspaces/{workspaceId}/members/{memberUserId}
 DELETE /workspaces/{workspaceId}
 ```
@@ -26,6 +28,35 @@ DELETE /workspaces/{workspaceId}
 - Join requires a valid one-time invitation code.
 - Workspace creation auto-creates an `OWNER` membership.
 - Invite creation requires workspace ownership.
-- Member removal requires workspace ownership.
+- Role changes and member removal require workspace ownership. An owner is
+  removed by making them a `MEMBER` first.
 - Workspace deletion requires workspace ownership.
 - Frontend state is never trusted for authorization.
+
+## Roles and ownership
+
+A workspace always keeps at least one `OWNER`:
+
+- Demoting the last owner, or the last owner leaving, returns `409` with
+  the reason. When nobody else is left, delete the workspace instead.
+- To hand a workspace over, make another member `OWNER`, then step down
+  (`PATCH` your own membership to `MEMBER`) or leave.
+- Membership changes for one workspace run one at a time, under a lock that
+  the owner check is part of. Two owners demoting each other at the same
+  moment leave one owner: the second request finds it is no longer allowed
+  and gets `403`.
+
+## Leaving or being removed
+
+`POST /workspaces/{workspaceId}/leave` lets any member leave. Leaving and being
+removed have the same effect, in one transaction:
+
+| Data | What happens |
+| --- | --- |
+| Card assignments in the workspace | Dropped |
+| Projects the member owned | Go to the owner who removed them, or, when they left, to the longest-standing owner |
+| Comments and completed work | Kept, with their author |
+
+Modules higher in the dependency chain take part by implementing
+`IWorkspaceDepartureHandler`, which the workspaces module calls without
+referencing them.

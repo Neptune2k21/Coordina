@@ -7,10 +7,22 @@ namespace Coordina.Api.Modules.Workspaces.Infrastructure;
 public sealed class InMemoryWorkspaceStore : IWorkspaceStore
 {
   private readonly ConcurrentDictionary<Guid, WorkspaceRecord> _workspaces = new();
-  private readonly ConcurrentDictionary<(Guid WorkspaceId, Guid UserId), WorkspaceRole>
+  private readonly ConcurrentDictionary<(Guid WorkspaceId, Guid UserId), MembershipRecord>
     _memberships = new();
   private readonly ConcurrentDictionary<Guid, InviteRecord> _invites = new();
   private readonly Lock _inviteLock = new();
+
+  // Only the fast tests use this store, and they do not race on a workspace.
+  // Concurrency is covered against PostgreSQL in tests/api-postgres.
+  public Task<T> RunExclusiveAsync<T>(
+    Guid workspaceId,
+    Func<CancellationToken, Task<T>> action,
+    CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(action);
+
+    return action(cancellationToken);
+  }
 
   public Task<Workspace> CreateAsync(
     string name,
@@ -22,7 +34,7 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
 
     var record = new WorkspaceRecord(Guid.NewGuid(), name, createdAt);
     _workspaces[record.Id] = record;
-    _memberships[(record.Id, ownerUserId)] = WorkspaceRole.Owner;
+    _memberships[(record.Id, ownerUserId)] = new MembershipRecord(WorkspaceRole.Owner, createdAt);
 
     return Task.FromResult(ToWorkspace(record, WorkspaceRole.Owner));
   }
@@ -38,7 +50,7 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
       .Select(membership => _workspaces.TryGetValue(
         membership.Key.WorkspaceId,
         out var workspace)
-          ? ToWorkspace(workspace, membership.Value)
+          ? ToWorkspace(workspace, membership.Value.Role)
           : null)
       .OfType<Workspace>()
       .OrderBy(workspace => workspace.Name)
@@ -55,12 +67,12 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
     cancellationToken.ThrowIfCancellationRequested();
 
     if (!_workspaces.TryGetValue(workspaceId, out var workspace)
-      || !_memberships.TryGetValue((workspaceId, userId), out var role))
+      || !_memberships.TryGetValue((workspaceId, userId), out var membership))
     {
       return Task.FromResult<Workspace?>(null);
     }
 
-    return Task.FromResult<Workspace?>(ToWorkspace(workspace, role));
+    return Task.FromResult<Workspace?>(ToWorkspace(workspace, membership.Role));
   }
 
   public Task<WorkspaceRole?> FindUserRoleAsync(
@@ -71,8 +83,8 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
     cancellationToken.ThrowIfCancellationRequested();
 
     return Task.FromResult(
-      _memberships.TryGetValue((workspaceId, userId), out var role)
-        ? role
+      _memberships.TryGetValue((workspaceId, userId), out var membership)
+        ? membership.Role
         : (WorkspaceRole?)null);
   }
 
@@ -96,13 +108,14 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
 
     var members = _memberships
       .Where(membership => membership.Key.WorkspaceId == workspaceId)
-      .OrderBy(membership => membership.Value == WorkspaceRole.Owner ? 0 : 1)
+      .OrderBy(membership => membership.Value.Role == WorkspaceRole.Owner ? 0 : 1)
+      .ThenBy(membership => membership.Value.JoinedAt)
       .Select(membership => new WorkspaceMember(
         membership.Key.UserId,
         null,
         null,
-        membership.Value,
-        _workspaces[workspaceId].CreatedAt))
+        membership.Value.Role,
+        membership.Value.JoinedAt))
       .ToArray();
 
     return Task.FromResult<IReadOnlyCollection<WorkspaceMember>>(members);
@@ -117,7 +130,7 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
     cancellationToken.ThrowIfCancellationRequested();
 
     var workspace = _workspaces[workspaceId];
-    _memberships.TryAdd((workspaceId, userId), WorkspaceRole.Member);
+    _memberships.TryAdd((workspaceId, userId), new MembershipRecord(WorkspaceRole.Member, joinedAt));
 
     return Task.FromResult(ToWorkspace(workspace, WorkspaceRole.Member));
   }
@@ -176,7 +189,9 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
           new ConsumeInviteOutcome(ConsumeInviteStatus.Unavailable));
       }
 
-      if (!_memberships.TryAdd((invite.WorkspaceId, userId), WorkspaceRole.Member))
+      if (!_memberships.TryAdd(
+        (invite.WorkspaceId, userId),
+        new MembershipRecord(WorkspaceRole.Member, consumedAt)))
       {
         return Task.FromResult(
           new ConsumeInviteOutcome(ConsumeInviteStatus.AlreadyMember));
@@ -190,18 +205,27 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
     }
   }
 
+  public Task<bool> UpdateMemberRoleAsync(
+    Guid workspaceId,
+    Guid userId,
+    WorkspaceRole role,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    var key = (workspaceId, userId);
+
+    return Task.FromResult(
+      _memberships.TryGetValue(key, out var membership)
+      && _memberships.TryUpdate(key, membership with { Role = role }, membership));
+  }
+
   public Task<bool> RemoveMemberAsync(
     Guid workspaceId,
     Guid userId,
     CancellationToken cancellationToken)
   {
     cancellationToken.ThrowIfCancellationRequested();
-
-    if (_memberships.TryGetValue((workspaceId, userId), out var role)
-      && role == WorkspaceRole.Owner)
-    {
-      return Task.FromResult(false);
-    }
 
     return Task.FromResult(_memberships.TryRemove((workspaceId, userId), out _));
   }
@@ -229,6 +253,10 @@ public sealed class InMemoryWorkspaceStore : IWorkspaceStore
 
   private static WorkspaceInvite ToInvite(InviteRecord record) =>
     new(record.Id, record.WorkspaceId, record.ExpiresAt, record.ConsumedAt);
+
+  private sealed record MembershipRecord(
+    WorkspaceRole Role,
+    DateTimeOffset JoinedAt);
 
   private sealed record WorkspaceRecord(
     Guid Id,
