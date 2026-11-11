@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Coordina.Api.Core.Http;
 using Coordina.Api.Core.Persistence;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Scalar.AspNetCore;
@@ -48,6 +49,7 @@ public static class CoreHostingExtensions
       services.AddPostgres(configuration);
     }
 
+    services.AddAuthRateLimiting(configuration, environment);
     services.AddAuthorization();
     services.AddOpenApi();
 
@@ -66,6 +68,8 @@ public static class CoreHostingExtensions
     }
 
     app.UseCors(WebAppCorsPolicy);
+    // After CORS, so the browser can read a 429 and show its message.
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapOpenApi().AllowAnonymous();

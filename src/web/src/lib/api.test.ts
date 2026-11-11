@@ -53,6 +53,21 @@ describe("apiRequest", () => {
     unsubscribe()
   })
 
+  it("shows how long to wait when sign-in attempts are limited", async () => {
+    respondWith(429, {
+      title: "Too Many Requests",
+      status: 429,
+      detail: "Too many attempts. Try again in 42 seconds.",
+    })
+
+    await expect(
+      apiRequest("/auth/login", {
+        method: "POST",
+        unauthorizedMessage: "Incorrect email or password.",
+      })
+    ).rejects.toThrow("Too many attempts. Try again in 42 seconds.")
+  })
+
   it("does not treat other errors as a rejected session", async () => {
     const listener = vi.fn()
     const unsubscribe = onSessionRejected(listener)

@@ -65,6 +65,7 @@ Current protections are foundation-level, not production hardening:
 | Session theft | Reusing a refresh token that was already rotated revokes every token of that sign-in. A reuse within 10 seconds of the rotation is refused without revoking, so two tabs reloading together do not sign the user out |
 | Sign-out | `POST /auth/logout` revokes the sign-in on the server and clears the cookie |
 | CSRF | Only `/auth/refresh` and `/auth/logout` use the cookie. Besides `SameSite=Strict`, they require an `X-Requested-With` header, which other origins cannot send without failing the CORS preflight |
+| Password guessing and sign-up spam | `POST /auth/login` and `POST /auth/register` share a limit per client IP: 10 attempts per minute by default (`RateLimiting__Auth__PermitLimit`, `RateLimiting__Auth__WindowSeconds`). Beyond it, the API answers `429` with a `Retry-After` header. `/auth/refresh` is not limited: its token cannot be guessed, and limiting it would sign out people who share an address |
 | Workspace isolation | Queries are scoped by authenticated user membership |
 | Invite codes | One-time use, expiration-aware, stored as SHA-256 hashes |
 | Owner permissions | Invite creation, member removal, and workspace deletion require owner role |
@@ -104,7 +105,7 @@ The current project does not yet include:
 | --- | --- |
 | Email verification | Not implemented |
 | Password reset | Not implemented |
-| Rate limiting | Not implemented |
+| Rate limiting behind a reverse proxy | The limit uses the connection's address. Behind a proxy or load balancer, every client shares the proxy's address until forwarded headers are configured for that proxy |
 | Audit logging | Not implemented |
 | Production deployment hardening | Not documented yet |
 

@@ -49,7 +49,7 @@ export interface paths {
     put?: never
     /**
      * Create a workspace account
-     * @description Creates a user account, returns an access token and sets the refresh cookie.
+     * @description Creates a user account, returns an access token and sets the refresh cookie. Limited per client IP, with login: 429 with Retry-After beyond the limit.
      */
     post: {
       parameters: {
@@ -73,6 +73,15 @@ export interface paths {
             "application/json": components["schemas"]["AuthResponse"]
           }
         }
+        /** @description Too Many Requests */
+        429: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/problem+json": components["schemas"]["ProblemDetails"]
+          }
+        }
       }
     }
     delete?: never
@@ -92,7 +101,7 @@ export interface paths {
     put?: never
     /**
      * Sign in
-     * @description Authenticates a user, returns an access token and sets the refresh cookie.
+     * @description Authenticates a user, returns an access token and sets the refresh cookie. Limited per client IP, with register: 429 with Retry-After beyond the limit.
      */
     post: {
       parameters: {
@@ -114,6 +123,15 @@ export interface paths {
           }
           content: {
             "application/json": components["schemas"]["AuthResponse"]
+          }
+        }
+        /** @description Too Many Requests */
+        429: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/problem+json": components["schemas"]["ProblemDetails"]
           }
         }
       }
@@ -1936,6 +1954,14 @@ export interface components {
       /** Format: int32 */
       nextTotal: number
       blocked: components["schemas"]["MyWorkItemResponse"][]
+    }
+    ProblemDetails: {
+      type?: null | string
+      title?: null | string
+      /** Format: int32 */
+      status?: null | number
+      detail?: null | string
+      instance?: null | string
     }
     ProjectResponse: {
       /** Format: uuid */
