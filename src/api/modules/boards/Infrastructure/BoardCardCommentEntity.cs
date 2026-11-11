@@ -7,6 +7,7 @@ public sealed class BoardCardCommentEntity
   public Guid UserId { get; set; }
   public required string Body { get; set; }
   public DateTimeOffset CreatedAt { get; set; }
+  public DateTimeOffset? EditedAt { get; set; }
 
   public BoardCardEntity? Card { get; set; }
 }

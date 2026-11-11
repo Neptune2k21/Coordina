@@ -37,6 +37,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     board,
     boardGraph,
     boardLabels,
+    canDeleteAnyComment,
     canDeleteCards,
     canShowPlanningPanel,
     cardCount,
@@ -51,9 +52,11 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     handleCreateList,
     handleCreateSubtask,
     handleDeleteCard,
+    handleDeleteComment,
     handleDeleteDependency,
     handleDeleteSubtask,
     handleDuplicateCard,
+    handleEditComment,
     handleMoveCard,
     handleQuickAdd,
     handleRenameList,
@@ -74,6 +77,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     notice,
     planningPreferences,
     quickAddListId,
+    sessionUserId,
     selectedCard,
     setDraggingCardId,
     setIsAddingList,
@@ -292,6 +296,8 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
 
       <CardSidePanel
         canDelete={canDeleteCards}
+        canDeleteAnyComment={canDeleteAnyComment}
+        currentUserId={sessionUserId}
         card={selectedCard}
         dependencyAnalysis={dependencyAnalysis}
         dependencyCandidates={dependencyCandidates}
@@ -305,9 +311,11 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
         onClose={() => setSelectedCardId(null)}
         onCreateSubtask={handleCreateSubtask}
         onDelete={(card) => void handleDeleteCard(card)}
+        onDeleteComment={handleDeleteComment}
         onDeleteDependency={handleDeleteDependency}
         onDeleteSubtask={handleDeleteSubtask}
         onDuplicate={(card) => void handleDuplicateCard(card)}
+        onEditComment={handleEditComment}
         onSave={handleSaveCard}
         onUpdateSubtask={handleUpdateSubtask}
       />

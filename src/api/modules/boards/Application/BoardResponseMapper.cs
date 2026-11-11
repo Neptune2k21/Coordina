@@ -86,7 +86,8 @@ internal static class BoardResponseMapper
           comment.CardId,
           ToUserResponse(comment.Author),
           comment.Body,
-          comment.CreatedAt))
+          comment.CreatedAt,
+          comment.EditedAt))
         .ToArray(),
       card.Subtasks
         .OrderBy(subtask => subtask.Position)

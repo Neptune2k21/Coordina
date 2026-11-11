@@ -12,6 +12,7 @@ import {
 import type {
   Board,
   BoardCard,
+  BoardCardComment,
   BoardCardInput,
   BoardCardSubtask,
   BoardCreationInput,
@@ -369,6 +370,47 @@ export function useBoardMutations({
     )
   }
 
+  function editComment(
+    card: BoardCard,
+    comment: BoardCardComment,
+    body: string
+  ) {
+    return replaceBoardFrom(
+      (token, boardId) =>
+        boardApi.updateCardComment(
+          token,
+          workspaceId,
+          projectId,
+          boardId,
+          card.id,
+          comment.id,
+          body
+        ),
+      {
+        failureMessage: "Comment could not be edited.",
+        notice: "Comment edited",
+      }
+    )
+  }
+
+  function deleteComment(card: BoardCard, comment: BoardCardComment) {
+    return removeThenReload(
+      (token, boardId) =>
+        boardApi.deleteCardComment(
+          token,
+          workspaceId,
+          projectId,
+          boardId,
+          card.id,
+          comment.id
+        ),
+      {
+        failureMessage: "Comment could not be deleted.",
+        notice: "Comment deleted",
+      }
+    )
+  }
+
   function createSubtask(card: BoardCard, title: string) {
     return replaceBoardFrom(
       (token, boardId) =>
@@ -463,6 +505,8 @@ export function useBoardMutations({
 
   return {
     addComment,
+    deleteComment,
+    editComment,
     addDependency,
     createBoard,
     createList,

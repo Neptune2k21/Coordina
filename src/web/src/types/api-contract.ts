@@ -1379,6 +1379,82 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}/comments/{commentId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete card comment
+     * @description Deletes the comment. Only the author or a workspace OWNER can delete (403 for others).
+     */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          cardId: string
+          commentId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+      }
+    }
+    options?: never
+    head?: never
+    /**
+     * Edit card comment
+     * @description Replaces the comment's text and records editedAt. Only the author can edit (403 for others).
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          cardId: string
+          commentId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateBoardCardCommentRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardResponse"]
+          }
+        }
+      }
+    }
+    trace?: never
+  }
   "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}/subtasks": {
     parameters: {
       query?: never
@@ -1649,6 +1725,8 @@ export interface components {
       body: string
       /** Format: date-time */
       createdAt: string
+      /** Format: date-time */
+      editedAt: null | string
     }
     BoardCardDependencyAnalysisResponse: {
       /** Format: uuid */
@@ -1989,6 +2067,9 @@ export interface components {
       name: string
       email: string
       password: string
+    }
+    UpdateBoardCardCommentRequest: {
+      body: null | string
     }
     UpdateBoardCardRequest: {
       title: null | string

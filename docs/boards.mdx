@@ -177,6 +177,9 @@ Board access is verified through the parent project and workspace.
 | Move card | Authenticated workspace member and target list in the same board |
 | Assign card | Every assignee must be a workspace member |
 | Delete card | Workspace `OWNER` or project owner |
+| Comment on a card | Authenticated workspace member |
+| Edit a comment | Its author only (`403` for anyone else, owners included); records `editedAt` |
+| Delete a comment | Its author or a workspace `OWNER` (`403` otherwise) |
 | Cross-project access | Hidden behind `404` responses |
 | Non-member access | Hidden behind `404` responses |
 
@@ -191,3 +194,6 @@ Completed projects remain read-only for board mutations, matching the project li
 - Completed projects are read-only for board mutations (`409`).
 - Assignees must be workspace members.
 - Deleting a card requires a workspace owner or project owner.
+- Only its author edits a comment, so it keeps saying what they wrote; its
+  author or a workspace owner deletes it. An edited comment carries `editedAt`,
+  shown as "(edited)".

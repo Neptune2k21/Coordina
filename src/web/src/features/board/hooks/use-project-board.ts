@@ -161,6 +161,8 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
   const canDeleteCards =
     !isReadOnly &&
     (workspace.role === "OWNER" || project.projectOwnerId === sessionUserId)
+  // Authors edit and delete their comments; workspace owners delete any.
+  const canDeleteAnyComment = !isReadOnly && workspace.role === "OWNER"
   const canShowPlanningPanel = cardCount > 0
   const handleSelectCard = useCallback((card: BoardCard) => {
     setSelectedCardId(card.id)
@@ -221,6 +223,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     board,
     boardGraph: resource.boardGraph,
     boardLabels,
+    canDeleteAnyComment,
     canDeleteCards,
     canShowPlanningPanel,
     cardCount,
@@ -235,9 +238,11 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     handleCreateList,
     handleCreateSubtask: mutations.createSubtask,
     handleDeleteCard,
+    handleDeleteComment: mutations.deleteComment,
     handleDeleteDependency: mutations.deleteDependency,
     handleDeleteSubtask: mutations.deleteSubtask,
     handleDuplicateCard,
+    handleEditComment: mutations.editComment,
     handleMoveCard,
     handleQuickAdd,
     handleRenameList,
@@ -258,6 +263,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     notice: mutations.notice,
     planningPreferences,
     quickAddListId,
+    sessionUserId,
     selectedCard,
     setDraggingCardId,
     setIsAddingList,

@@ -33,7 +33,8 @@ public sealed record ProjectBoardCardComment(
   Guid CardId,
   ProjectBoardCardUser Author,
   string Body,
-  DateTimeOffset CreatedAt);
+  DateTimeOffset CreatedAt,
+  DateTimeOffset? EditedAt);
 
 public sealed record ProjectBoardCardSubtask(
   Guid Id,

@@ -116,6 +116,34 @@ public interface IBoardStore
     DateTimeOffset createdAt,
     CancellationToken cancellationToken);
 
+  /// <summary>The comment, when it belongs to that card of that board; its author has only an id.</summary>
+  Task<ProjectBoardCardComment?> FindCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    CancellationToken cancellationToken);
+
+  Task<ProjectBoard?> UpdateCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    string body,
+    DateTimeOffset editedAt,
+    CancellationToken cancellationToken);
+
+  Task<bool> DeleteCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
   Task<ProjectBoard?> CreateCardSubtaskAsync(
     Guid workspaceId,
     Guid projectId,

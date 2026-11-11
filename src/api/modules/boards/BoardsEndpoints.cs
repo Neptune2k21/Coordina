@@ -82,6 +82,16 @@ public static class BoardsEndpoints
       .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Add card comment");
 
+    boardGroup.MapPatch("/cards/{cardId:guid}/comments/{commentId:guid}", UpdateCardComment)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
+      .WithSummary("Edit card comment")
+      .WithDescription("Replaces the comment's text and records editedAt. Only the author can edit (403 for others).");
+
+    boardGroup.MapDelete("/cards/{cardId:guid}/comments/{commentId:guid}", DeleteCardComment)
+      .Produces(StatusCodes.Status204NoContent)
+      .WithSummary("Delete card comment")
+      .WithDescription("Deletes the comment. Only the author or a workspace OWNER can delete (403 for others).");
+
     boardGroup.MapPost("/cards/{cardId:guid}/subtasks", CreateCardSubtask)
       .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Create card subtask");
@@ -382,6 +392,52 @@ public static class BoardsEndpoints
       cancellationToken);
 
     return result.ToOkResult();
+  }
+
+  private static async Task<IResult> UpdateCardComment(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    UpdateBoardCardCommentRequest request,
+    CurrentUser user,
+    IBoardCollaborationService boardCollaboration,
+    CancellationToken cancellationToken)
+  {
+    var result = await boardCollaboration.UpdateCardCommentAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      commentId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> DeleteCardComment(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    CurrentUser user,
+    IBoardCollaborationService boardCollaboration,
+    CancellationToken cancellationToken)
+  {
+    var result = await boardCollaboration.DeleteCardCommentAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      cardId,
+      commentId,
+      user.Id,
+      cancellationToken);
+
+    return result.ToNoContentResult();
   }
 
   private static async Task<IResult> CreateCardSubtask(

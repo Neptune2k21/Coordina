@@ -50,7 +50,8 @@ public sealed partial class InMemoryBoardStore
     Guid CardId,
     Guid UserId,
     string Body,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? EditedAt = null);
 
   private sealed record SubtaskRecord(
     Guid Id,

@@ -32,6 +32,9 @@ public sealed class BoardCardCommentEntityConfiguration
       .HasColumnName("created_at")
       .IsRequired();
 
+    builder.Property(comment => comment.EditedAt)
+      .HasColumnName("edited_at");
+
     builder.HasIndex(comment => comment.CardId);
     builder.HasIndex(comment => comment.UserId);
     builder.HasIndex(comment => new { comment.CardId, comment.CreatedAt });

@@ -27,6 +27,7 @@ import { CardSubtasksSection } from "@/features/board/components/card-subtasks-s
 import { useCardPanelForm } from "@/features/board/hooks/use-card-panel-form"
 import type {
   BoardCard,
+  BoardCardComment,
   BoardCardDependencyAnalysis,
   BoardCardInput,
   BoardCardSubtask,
@@ -36,7 +37,9 @@ import type { WorkspaceMember } from "@/types/workspace"
 type CardSidePanelProps = {
   availableLabels: string[]
   canDelete: boolean
+  canDeleteAnyComment: boolean
   card: BoardCard | null
+  currentUserId: string | null
   dependencyAnalysis: BoardCardDependencyAnalysis | null
   dependencyCandidates: BoardCard[]
   isLoadingDependencyAnalysis: boolean
@@ -48,12 +51,18 @@ type CardSidePanelProps = {
   onClose: () => void
   onCreateSubtask: (card: BoardCard, title: string) => Promise<void>
   onDelete: (card: BoardCard) => void
+  onDeleteComment: (card: BoardCard, comment: BoardCardComment) => Promise<void>
   onDeleteDependency: (
     card: BoardCard,
     dependsOnCardId: string
   ) => Promise<void>
   onDeleteSubtask: (card: BoardCard, subtask: BoardCardSubtask) => Promise<void>
   onDuplicate: (card: BoardCard) => void
+  onEditComment: (
+    card: BoardCard,
+    comment: BoardCardComment,
+    body: string
+  ) => Promise<void>
   onSave: (card: BoardCard, input: BoardCardInput) => Promise<void>
   onUpdateSubtask: (
     card: BoardCard,
@@ -65,7 +74,9 @@ type CardSidePanelProps = {
 export function CardSidePanel({
   availableLabels,
   canDelete,
+  canDeleteAnyComment,
   card,
+  currentUserId,
   dependencyAnalysis,
   dependencyCandidates,
   isLoadingDependencyAnalysis,
@@ -77,9 +88,11 @@ export function CardSidePanel({
   onClose,
   onCreateSubtask,
   onDelete,
+  onDeleteComment,
   onDeleteDependency,
   onDeleteSubtask,
   onDuplicate,
+  onEditComment,
   onSave,
   onUpdateSubtask,
 }: CardSidePanelProps) {
@@ -156,10 +169,14 @@ export function CardSidePanel({
             />
             <CardCommentsSection
               addComment={addComment}
+              canDeleteAnyComment={canDeleteAnyComment}
               card={card}
               commentInput={commentInput}
+              currentUserId={currentUserId}
               isReadOnly={isReadOnly}
               isSaving={isSaving}
+              onDeleteComment={onDeleteComment}
+              onEditComment={onEditComment}
               setCommentInput={setCommentInput}
             />
           </div>

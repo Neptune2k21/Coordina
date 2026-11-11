@@ -14,6 +14,25 @@ public interface IBoardCollaborationService
     Guid userId,
     CancellationToken cancellationToken);
 
+  Task<Result<BoardResponse>> UpdateCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    UpdateBoardCardCommentRequest request,
+    Guid userId,
+    CancellationToken cancellationToken);
+
+  Task<Result> DeleteCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    Guid userId,
+    CancellationToken cancellationToken);
+
   Task<Result<BoardResponse>> CreateCardSubtaskAsync(
     Guid workspaceId,
     Guid projectId,

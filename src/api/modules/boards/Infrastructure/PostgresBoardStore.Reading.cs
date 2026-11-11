@@ -144,7 +144,8 @@ public sealed partial class PostgresBoardStore
           comment.CardId,
           new ProjectBoardCardUser(user.Id, user.Name, user.Email),
           comment.Body,
-          comment.CreatedAt))
+          comment.CreatedAt,
+          comment.EditedAt))
       .ToArrayAsync(cancellationToken);
 
     return comments.OrderBy(comment => comment.CreatedAt).ToLookup(comment => comment.CardId);
