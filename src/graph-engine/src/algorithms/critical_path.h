@@ -7,8 +7,7 @@
 
 namespace coordina::graph
 {
-std::vector<NodeId> critical_path(
-  const GraphSnapshot& graph);
+std::vector<NodeId> critical_path(const GraphSnapshot& graph);
 
 std::vector<NodeId> critical_path(
   const GraphSnapshot& graph,

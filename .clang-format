@@ -1,0 +1,72 @@
+# C++ layout for the graph engine, checked by 'make check' and fixed by
+# 'make graph-engine-format'. The tool pins the version in
+# tools/clang/requirements.txt, because each release formats slightly
+# differently.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+ColumnLimit: 100
+IndentWidth: 2
+ContinuationIndentWidth: 2
+
+# Braces on their own line, except around extern "C".
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: true
+  BeforeWhile: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+IndentExternBlock: NoIndent
+NamespaceIndentation: None
+FixNamespaceComments: false
+IndentCaseLabels: true
+
+# A call or declaration that does not fit breaks after the parenthesis and
+# puts one argument per line. Conditions keep their parenthesis.
+AlignAfterOpenBracket: false
+BreakAfterOpenBracketFunction: true
+BreakAfterOpenBracketBracedList: true
+BreakBeforeCloseBracketBracedList: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: false
+BinPackParameters: OnePerLine
+PenaltyReturnTypeOnItsOwnLine: 1000
+Cpp11BracedListStyle: FunctionCall
+
+# Operators start the continuation line, so a long condition reads down the left.
+BreakBeforeTernaryOperators: true
+BreakBeforeBinaryOperators: NonAssignment
+AlignOperands: DontAlign
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+AlignTrailingComments: false
+AlignEscapedNewlines: Left
+# A NOLINT comment stays on one line, or it would silence the wrong line.
+CommentPragmas: '^ (IWYU pragma:|NOLINT)'
+IncludeBlocks: Preserve
+SortIncludes: true
+KeepEmptyLines:
+  AtStartOfBlock: false
+MaxEmptyLinesToKeep: 1

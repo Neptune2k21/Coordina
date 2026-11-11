@@ -9,7 +9,7 @@
 
 namespace coordina::graph
 {
-enum class Assignment : std::uint32_t
+enum class Assignment : std::uint8_t
 {
   unassigned = 0U,
   requester = 1U,
@@ -18,13 +18,13 @@ enum class Assignment : std::uint32_t
 
 struct WorkItem
 {
-  NodeId node;
-  bool is_completed;
-  std::uint32_t priority;
-  std::int32_t due_days;
-  std::uint32_t subtask_total;
-  std::uint32_t subtask_completed;
-  std::uint32_t position;
+  NodeId node{};
+  bool is_completed = false;
+  std::uint32_t priority = 0U;
+  std::int32_t due_days = 0;
+  std::uint32_t subtask_total = 0U;
+  std::uint32_t subtask_completed = 0U;
+  std::uint32_t position = 0U;
   std::uint32_t estimated_minutes = 0U;
   Assignment assignment = Assignment::unassigned;
   bool is_in_progress = false;
@@ -40,14 +40,14 @@ struct PlanningOptions
 
 struct WorkRecommendation
 {
-  NodeId node;
-  std::uint32_t score;
-  std::uint32_t blocker_count;
-  std::uint32_t unlock_score;
-  std::uint32_t urgency_score;
-  std::uint32_t priority_score;
-  std::uint32_t progress_score;
-  bool is_critical_path;
+  NodeId node{};
+  std::uint32_t score = 0U;
+  std::uint32_t blocker_count = 0U;
+  std::uint32_t unlock_score = 0U;
+  std::uint32_t urgency_score = 0U;
+  std::uint32_t priority_score = 0U;
+  std::uint32_t progress_score = 0U;
+  bool is_critical_path = false;
   std::int32_t effort_score = 0;
   std::int32_t assignment_score = 0;
   std::uint32_t momentum_score = 0U;

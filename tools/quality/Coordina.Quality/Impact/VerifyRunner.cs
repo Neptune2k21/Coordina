@@ -10,7 +10,7 @@ internal sealed class VerifyRunner(string repositoryRoot, TextWriter output)
   {
     if (plan.Suites.Count == 0)
     {
-      output.WriteLine("Nothing to verify: only documentation changed.");
+      output.WriteLine("Nothing to verify: no suite covers these changes. 'make check' still applies the quality rules.");
       return 0;
     }
 

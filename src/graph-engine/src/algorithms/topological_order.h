@@ -7,11 +7,9 @@
 
 namespace coordina::graph
 {
-std::vector<NodeId> dependency_first_topological_order(
-  const GraphSnapshot& graph);
+std::vector<NodeId> dependency_first_topological_order(const GraphSnapshot& graph);
 
-std::vector<NodeId> ready_nodes(
-  const GraphSnapshot& graph);
+std::vector<NodeId> ready_nodes(const GraphSnapshot& graph);
 
 bool is_acyclic(const GraphSnapshot& graph);
 }

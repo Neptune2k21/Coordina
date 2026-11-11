@@ -4,10 +4,7 @@
 
 namespace coordina::graph
 {
-coordina_graph_edge_status evaluate_edge(
-  const GraphSnapshot& graph,
-  NodeId source,
-  NodeId target)
+coordina_graph_edge_status evaluate_edge(const GraphSnapshot& graph, NodeId source, NodeId target)
 {
   if (!graph.contains(source))
   {
@@ -29,6 +26,7 @@ coordina_graph_edge_status evaluate_edge(
     return COORDINA_GRAPH_EDGE_DUPLICATE;
   }
 
+  // NOLINTNEXTLINE(readability-suspicious-call-argument): the new edge closes a cycle when target already reaches source.
   if (has_path(graph, target, source))
   {
     return COORDINA_GRAPH_EDGE_CYCLE;

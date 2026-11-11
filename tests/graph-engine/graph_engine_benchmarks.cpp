@@ -11,7 +11,7 @@
 
 namespace
 {
-using clock_type = std::chrono::steady_clock;
+using ClockType = std::chrono::steady_clock;
 
 struct BoardGraph
 {
@@ -49,9 +49,8 @@ BoardGraph build_board(std::size_t size)
     item.node = node(index);
     item.is_completed = index % 7U == 0U ? 1U : 0U;
     item.priority = static_cast<std::uint32_t>(index % 4U);
-    item.due_days = index % 5U == 0U
-      ? std::numeric_limits<std::int32_t>::max()
-      : static_cast<std::int32_t>(index % 30U) - 5;
+    item.due_days = index % 5U == 0U ? std::numeric_limits<std::int32_t>::max()
+                                     : static_cast<std::int32_t>(index % 30U) - 5;
     item.subtask_total = static_cast<std::uint32_t>(index % 4U);
     item.subtask_completed = static_cast<std::uint32_t>(index % 2U);
     item.position = static_cast<std::uint32_t>(index);
@@ -68,7 +67,7 @@ BoardGraph build_board(std::size_t size)
 struct Buffers
 {
   explicit Buffers(std::size_t size)
-    : ready(size), order(size), critical(size), analyses(size), recommendations(size)
+      : ready(size), order(size), critical(size), analyses(size), recommendations(size)
   {
   }
 
@@ -86,24 +85,46 @@ std::size_t run_primitive_sequence(
 {
   const auto node_count = graph.nodes.size();
   const auto edge_count = graph.edges.size();
-  std::size_t written = static_cast<std::size_t>(coordina_graph_is_acyclic(
-    graph.nodes.data(), node_count, graph.edges.data(), edge_count));
+  auto written = static_cast<std::size_t>(
+    coordina_graph_is_acyclic(graph.nodes.data(), node_count, graph.edges.data(), edge_count));
   written += coordina_graph_ready_nodes(
-    graph.nodes.data(), node_count, graph.edges.data(), edge_count,
-    buffers.ready.data(), buffers.ready.size());
+    graph.nodes.data(),
+    node_count,
+    graph.edges.data(),
+    edge_count,
+    buffers.ready.data(),
+    buffers.ready.size());
   written += coordina_graph_topological_sort(
-    graph.nodes.data(), node_count, graph.edges.data(), edge_count,
-    buffers.order.data(), buffers.order.size());
+    graph.nodes.data(),
+    node_count,
+    graph.edges.data(),
+    edge_count,
+    buffers.order.data(),
+    buffers.order.size());
   written += coordina_graph_analyze_nodes(
-    graph.nodes.data(), node_count, graph.edges.data(), edge_count,
-    buffers.analyses.data(), buffers.analyses.size());
+    graph.nodes.data(),
+    node_count,
+    graph.edges.data(),
+    edge_count,
+    buffers.analyses.data(),
+    buffers.analyses.size());
   written += coordina_graph_critical_path(
-    graph.nodes.data(), node_count, graph.edges.data(), edge_count,
-    buffers.critical.data(), buffers.critical.size());
+    graph.nodes.data(),
+    node_count,
+    graph.edges.data(),
+    edge_count,
+    buffers.critical.data(),
+    buffers.critical.size());
   written += coordina_graph_plan_work(
-    graph.nodes.data(), node_count, graph.edges.data(), edge_count,
-    graph.items.data(), graph.items.size(), &options,
-    buffers.recommendations.data(), buffers.recommendations.size());
+    graph.nodes.data(),
+    node_count,
+    graph.edges.data(),
+    edge_count,
+    graph.items.data(),
+    graph.items.size(),
+    &options,
+    buffers.recommendations.data(),
+    buffers.recommendations.size());
   return written;
 }
 
@@ -127,10 +148,14 @@ std::size_t run_batch(
 {
   auto output = batch_output(buffers);
   const auto status = coordina_graph_analyze_board(
-    graph.nodes.data(), graph.nodes.size(),
-    graph.edges.data(), graph.edges.size(),
-    graph.items.data(), graph.items.size(),
-    &options, &output);
+    graph.nodes.data(),
+    graph.nodes.size(),
+    graph.edges.data(),
+    graph.edges.size(),
+    graph.items.data(),
+    graph.items.size(),
+    &options,
+    &output);
 
   if (status != COORDINA_GRAPH_OK)
   {
@@ -141,17 +166,20 @@ std::size_t run_batch(
   return output.recommendation_count;
 }
 
-bool same_ranking(
-  const BoardGraph& graph,
-  const coordina_graph_planning_options& options)
+bool same_ranking(const BoardGraph& graph, const coordina_graph_planning_options& options)
 {
   Buffers primitive(graph.nodes.size());
   Buffers batch(graph.nodes.size());
   const auto primitive_count = coordina_graph_plan_work(
-    graph.nodes.data(), graph.nodes.size(),
-    graph.edges.data(), graph.edges.size(),
-    graph.items.data(), graph.items.size(), &options,
-    primitive.recommendations.data(), primitive.recommendations.size());
+    graph.nodes.data(),
+    graph.nodes.size(),
+    graph.edges.data(),
+    graph.edges.size(),
+    graph.items.data(),
+    graph.items.size(),
+    &options,
+    primitive.recommendations.data(),
+    primitive.recommendations.size());
   const auto batch_count = run_batch(graph, options, batch);
 
   if (primitive_count != batch_count)
@@ -181,14 +209,13 @@ double median_milliseconds(int runs, Work work)
 
   for (int run = 0; run < runs; ++run)
   {
-    const auto started = clock_type::now();
+    const auto started = ClockType::now();
     work();
-    const auto elapsed = std::chrono::duration<double, std::milli>(
-      clock_type::now() - started);
+    const auto elapsed = std::chrono::duration<double, std::milli>(ClockType::now() - started);
     samples.push_back(elapsed.count());
   }
 
-  std::sort(samples.begin(), samples.end());
+  std::ranges::sort(samples);
   return samples[samples.size() / 2U];
 }
 
@@ -221,22 +248,31 @@ int main(int argc, char** argv)
   std::printf("engine %s\n", coordina_graph_version());
   std::printf(
     "%8s %8s %14s %10s %8s %7s\n",
-    "nodes", "edges", "primitive_ms", "batch_ms", "speedup", "parity");
+    "nodes",
+    "edges",
+    "primitive_ms",
+    "batch_ms",
+    "speedup",
+    "parity");
 
   for (const auto size : sizes)
   {
     const auto graph = build_board(size);
     Buffers buffers(size);
     volatile std::size_t sink = 0U;
-    const auto primitive = median_milliseconds(runs_for(size), [&]
-    {
-      sink = sink + run_primitive_sequence(graph, options, buffers);
-    });
+    const auto primitive = median_milliseconds(
+      runs_for(size),
+      [&]
+      {
+        sink = sink + run_primitive_sequence(graph, options, buffers);
+      });
 
-    const auto batch = median_milliseconds(runs_for(size), [&]
-    {
-      sink = sink + run_batch(graph, options, buffers);
-    });
+    const auto batch = median_milliseconds(
+      runs_for(size),
+      [&]
+      {
+        sink = sink + run_batch(graph, options, buffers);
+      });
     const auto parity = same_ranking(graph, options);
 
     std::printf(

@@ -17,16 +17,16 @@
 
 namespace
 {
-struct any_field
+struct AnyField
 {
   template <typename T>
   operator T() const noexcept;
 };
 
 template <typename T, std::size_t... Indexes>
-constexpr bool is_initializable_with(std::index_sequence<Indexes...>)
+constexpr bool is_initializable_with(std::index_sequence<Indexes...> /*indexes*/)
 {
-  return requires { T{((void)Indexes, any_field{})...}; };
+  return requires { T{((void)Indexes, AnyField{})...}; };
 }
 
 // Counts an aggregate's fields: the most initializers its braces accept.
@@ -43,19 +43,20 @@ constexpr std::size_t field_count()
   }
 }
 
-struct field_layout
+struct FieldLayout
 {
   const char* name;
   std::size_t offset;
   std::size_t size;
 };
 
-struct enum_value
+struct EnumValue
 {
   const char* name;
   long long value;
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables): this program prints one JSON document, and the flag says whether the current array has an entry yet.
 bool first_entry = true;
 
 void open_entry()
@@ -64,13 +65,13 @@ void open_entry()
   first_entry = false;
 }
 
-void print_struct(
-  const char* name,
-  std::size_t size,
-  const std::vector<field_layout>& fields)
+void print_struct(const char* name, std::size_t size, const std::vector<FieldLayout>& fields)
 {
   open_entry();
-  std::printf("    {\n      \"name\": \"%s\",\n      \"size\": %zu,\n      \"fields\": [", name, size);
+  std::printf(
+    "    {\n      \"name\": \"%s\",\n      \"size\": %zu,\n      \"fields\": [",
+    name,
+    size);
 
   for (std::size_t index = 0; index < fields.size(); ++index)
   {
@@ -85,7 +86,7 @@ void print_struct(
   std::printf("\n      ]\n    }");
 }
 
-void print_enum(const char* name, const std::vector<enum_value>& values)
+void print_enum(const char* name, const std::vector<EnumValue>& values)
 {
   open_entry();
   std::printf("    {\n      \"name\": \"%s\",\n      \"values\": [", name);
@@ -104,35 +105,36 @@ void print_enum(const char* name, const std::vector<enum_value>& values)
 }
 
 #define COORDINA_FIELD(type, field) \
-  field_layout{#field, offsetof(type, field), sizeof(type::field)}
+  (FieldLayout{#field, offsetof(type, field), sizeof(type::field)})
 
-#define COORDINA_STRUCT(type, ...)                                \
-  do                                                              \
-  {                                                               \
-    static_assert(                                                \
-      field_count<type>() == std::array{__VA_ARGS__}.size(),      \
-      "List every field of " #type " in abi_layout.cpp");         \
-    print_struct(#type, sizeof(type), {__VA_ARGS__});             \
+#define COORDINA_STRUCT(type, ...)                           \
+  do                                                         \
+  {                                                          \
+    static_assert(                                           \
+      field_count<type>() == std::array{__VA_ARGS__}.size(), \
+      "List every field of " #type " in abi_layout.cpp");    \
+    print_struct(#type, sizeof(type), {__VA_ARGS__});        \
   } while (false)
 
 #define COORDINA_ENUM_CASE(value) \
   case value:                     \
     return #value;
 
-#define COORDINA_ENUM_ENTRY(value) enum_value{#value, value},
+#define COORDINA_ENUM_ENTRY(value) EnumValue{#value, value},
 
 // The switch has no default, so -Wswitch rejects a value missing from the list.
-#define COORDINA_ENUM(type, values)                     \
-  do                                                    \
-  {                                                     \
-    [[maybe_unused]] auto listed = [](type value) {     \
-      switch (value)                                    \
-      {                                                 \
-        values(COORDINA_ENUM_CASE)                      \
-      }                                                 \
-      return "";                                        \
-    };                                                  \
-    print_enum(#type, {values(COORDINA_ENUM_ENTRY)});   \
+#define COORDINA_ENUM(type, values)                   \
+  do                                                  \
+  {                                                   \
+    [[maybe_unused]] auto listed = [](type value)     \
+    {                                                 \
+      switch (value)                                  \
+      {                                               \
+        values(COORDINA_ENUM_CASE)                    \
+      }                                               \
+      return "";                                      \
+    };                                                \
+    print_enum(#type, {values(COORDINA_ENUM_ENTRY)}); \
   } while (false)
 
 #define COORDINA_ASSIGNMENT_VALUES(X)     \
@@ -140,18 +142,18 @@ void print_enum(const char* name, const std::vector<enum_value>& values)
   X(COORDINA_GRAPH_ASSIGNED_TO_REQUESTER) \
   X(COORDINA_GRAPH_ASSIGNED_TO_OTHERS)
 
-#define COORDINA_EDGE_STATUS_VALUES(X)       \
-  X(COORDINA_GRAPH_EDGE_ALLOWED)             \
-  X(COORDINA_GRAPH_EDGE_MISSING_SOURCE)      \
-  X(COORDINA_GRAPH_EDGE_MISSING_TARGET)      \
-  X(COORDINA_GRAPH_EDGE_SELF_REFERENCE)      \
-  X(COORDINA_GRAPH_EDGE_DUPLICATE)           \
-  X(COORDINA_GRAPH_EDGE_CYCLE)               \
+#define COORDINA_EDGE_STATUS_VALUES(X)  \
+  X(COORDINA_GRAPH_EDGE_ALLOWED)        \
+  X(COORDINA_GRAPH_EDGE_MISSING_SOURCE) \
+  X(COORDINA_GRAPH_EDGE_MISSING_TARGET) \
+  X(COORDINA_GRAPH_EDGE_SELF_REFERENCE) \
+  X(COORDINA_GRAPH_EDGE_DUPLICATE)      \
+  X(COORDINA_GRAPH_EDGE_CYCLE)          \
   X(COORDINA_GRAPH_EDGE_INVALID_ARGUMENT)
 
-#define COORDINA_STATUS_VALUES(X)      \
-  X(COORDINA_GRAPH_OK)                 \
-  X(COORDINA_GRAPH_INVALID_ARGUMENT)   \
+#define COORDINA_STATUS_VALUES(X)    \
+  X(COORDINA_GRAPH_OK)               \
+  X(COORDINA_GRAPH_INVALID_ARGUMENT) \
   X(COORDINA_GRAPH_INSUFFICIENT_CAPACITY)
 
 int main()

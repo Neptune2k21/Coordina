@@ -1,3 +1,5 @@
+using Coordina.Quality.Lint;
+
 namespace Coordina.Quality.Impact;
 
 /// <summary>
@@ -25,8 +27,15 @@ internal static class ImpactAnalysis
       [Suite.Quality],
       "quality tool"),
     new(
-      path => path.StartsWith("src/graph-engine/", StringComparison.Ordinal)
-        || path.StartsWith("tests/graph-engine/", StringComparison.Ordinal),
+      ClangTools.IsConfiguration,
+      [],
+      "C++ lint settings, which the quality rules apply on every change; no build reads them"),
+    new(
+      path => path.StartsWith("tests/graph-engine/", StringComparison.Ordinal),
+      [Suite.GraphEngine],
+      "native tests; the API only loads the library built from src/graph-engine"),
+    new(
+      path => path.StartsWith("src/graph-engine/", StringComparison.Ordinal),
       [Suite.GraphEngine, Suite.Api, Suite.EndToEnd],
       "graph engine, which the API calls through native interop"),
     new(

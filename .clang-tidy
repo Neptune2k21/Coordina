@@ -1,0 +1,64 @@
+# Static analysis for the graph engine, run by 'make check' as clang-tidy/...
+# rules. Every check family is on, except the checks below, each with why.
+# tests/graph-engine/.clang-tidy relaxes a few more for test code.
+#
+# A check that is wrong for one line is silenced on that line, with the reason:
+#   // NOLINTNEXTLINE(readability-suspicious-call-argument): the edge is reversed on purpose.
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -misc-include-cleaner,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length
+
+# Why those are off:
+# - easily-swappable-parameters: every graph function takes (source, target);
+#   the names and the tests carry that, not a wrapper type per argument.
+# - magic-numbers: scoring weights are named constants where they are reused,
+#   and a constant per literal would hide the formula.
+# - pointer-arithmetic, unchecked-container-access: the engine indexes vectors
+#   and the C ABI buffers in hot loops, with the bounds checked once before.
+# - include-cleaner: reports headers that come in transitively; the compiler
+#   already fails when a header is really missing.
+# - use-nodiscard: the engine is pure functions, so it would mark nearly all
+#   of them and the attribute would stop meaning anything.
+# - use-trailing-return-type, identifier-length: style the engine does not use.
+
+WarningsAsErrors: '*'
+
+# The public header is a C ABI (typedef, plain enums, C arrays), checked by the
+# ABI contract instead. Only the engine's own headers are analysed.
+HeaderFilterRegex: '.*/graph-engine/src/.*'
+
+CheckOptions:
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: lower_case
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-function-cognitive-complexity.Threshold: 25
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true

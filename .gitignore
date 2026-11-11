@@ -25,3 +25,6 @@ coverage.cobertura.xml
 
 # Quality results for code scanning
 *.sarif
+
+# Pinned tools installed by make (cpp-tools)
+.tools/

@@ -1,6 +1,7 @@
 using Coordina.Quality.Checks;
 using Coordina.Quality.Commits;
 using Coordina.Quality.Duplication;
+using Coordina.Quality.Lint;
 using Coordina.Quality.Rules.CSharp;
 using Coordina.Quality.Rules.Files;
 
@@ -24,7 +25,8 @@ internal static class RuleCatalog
     new FileLengthRule(),
     new MethodLengthRule(),
     new WebFileNamingRule(),
-    new GraphEngineFileNamingRule()
+    new GraphEngineFileNamingRule(),
+    new NolintReasonRule()
   ];
 
   /// <summary>Rules that are not file rules, listed by <c>quality rules</c> too.</summary>
@@ -32,6 +34,7 @@ internal static class RuleCatalog
   [
     Suppressions.Info,
     DuplicationRule.Info,
+    ClangFormatRunner.Info,
     .. CommitMessageChecker.Rules
   ];
 }

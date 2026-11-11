@@ -17,9 +17,7 @@ constexpr std::int64_t blocker_penalty = 70;
 
 bool node_less(NodeId left, NodeId right) noexcept
 {
-  return left.high != right.high
-    ? left.high < right.high
-    : left.low < right.low;
+  return left.high != right.high ? left.high < right.high : left.low < right.low;
 }
 
 std::uint32_t blocker_count(
@@ -47,9 +45,8 @@ std::uint32_t position_for(
   NodeId node)
 {
   const auto found = items_by_node.find(node);
-  return found == items_by_node.end()
-    ? std::numeric_limits<std::uint32_t>::max()
-    : found->second.position;
+  return found == items_by_node.end() ? std::numeric_limits<std::uint32_t>::max()
+                                      : found->second.position;
 }
 }
 
@@ -117,56 +114,45 @@ std::vector<WorkRecommendation> plan_work(
     }
 
     const auto blockers = blocker_count(graph, items_by_node, item.node);
-    const auto is_critical = critical_nodes.find(item.node) != critical_nodes.end();
+    const auto is_critical = critical_nodes.contains(item.node);
     const auto unlock = unlock_score(found_analysis->second);
     const auto urgency = urgency_score(item.due_days);
     const auto priority = priority_score(item.priority);
-    const auto progress = progress_score(
-      item.subtask_total,
-      item.subtask_completed);
+    const auto progress = progress_score(item.subtask_total, item.subtask_completed);
     const auto critical_bonus = is_critical ? 48U : 0U;
-    const auto effort = effort_fit(
-      item.estimated_minutes,
-      options.available_minutes);
+    const auto effort = effort_fit(item.estimated_minutes, options.available_minutes);
     const auto assignment = assignment_score(item.assignment, options);
     const auto momentum = momentum_score(item.is_in_progress);
     const auto context = context_score(item.is_context_match);
-    const auto score = static_cast<std::int64_t>(10U)
-      + unlock
-      + urgency
-      + priority
-      + progress
-      + critical_bonus
-      + momentum
-      + context
-      + effort.score
-      + assignment
-      - static_cast<std::int64_t>(blockers) * blocker_penalty;
+    const auto score = static_cast<std::int64_t>(10U) + unlock + urgency + priority + progress
+      + critical_bonus + momentum + context + effort.score + assignment
+      - (static_cast<std::int64_t>(blockers) * blocker_penalty);
 
-    recommendations.push_back(WorkRecommendation{
-      item.node,
-      clamp_score(score),
-      blockers,
-      unlock,
-      urgency,
-      priority,
-      progress,
-      is_critical,
-      effort.score,
-      assignment,
-      momentum,
-      context,
-      effort.fits,
-      item.assignment == Assignment::requester,
-      item.is_context_match,
-      item.is_in_progress,
-      score
-    });
+    recommendations.push_back(
+      WorkRecommendation{
+        .node = item.node,
+        .score = clamp_score(score),
+        .blocker_count = blockers,
+        .unlock_score = unlock,
+        .urgency_score = urgency,
+        .priority_score = priority,
+        .progress_score = progress,
+        .is_critical_path = is_critical,
+        .effort_score = effort.score,
+        .assignment_score = assignment,
+        .momentum_score = momentum,
+        .context_score = context,
+        .fits_available_time = effort.fits,
+        .is_assignment_match = item.assignment == Assignment::requester,
+        .is_context_match = item.is_context_match,
+        .is_in_progress = item.is_in_progress,
+        .rank_score = score
+      });
   }
 
-  std::sort(
-    recommendations.begin(),
-    recommendations.end(),
+  std::ranges::sort(
+    recommendations,
+
     [&items_by_node](const auto& left, const auto& right)
     {
       const auto left_actionable = left.blocker_count == 0U;

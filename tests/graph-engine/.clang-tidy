@@ -1,0 +1,32 @@
+# Test code calls the C ABI the way the API does, with C arrays and pointers,
+# checks with assert, and prints with printf. These checks would ask it to
+# stop doing exactly that.
+InheritParentConfig: true
+Checks: >
+  -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-macro-usage,
+  -cert-err33-c,
+  -concurrency-mt-unsafe,
+  -readability-function-cognitive-complexity,
+  -modernize-use-designated-initializers
+
+# Why, check by check:
+# - c-arrays, array-to-pointer-decay, constant-array-index: fixtures are C
+#   arrays passed to the C ABI, as the API passes them.
+# - pro-type-vararg, cert-err33-c: printf writes the ABI contract and the
+#   benchmark report; a failed write fails the diff or shows in the output.
+# - avoid-do-while, macro-usage: abi_layout.cpp lists struct fields with
+#   X-macros, so that a field missing from the list fails to compile.
+# - concurrency-mt-unsafe: the test programs are single-threaded.
+# - use-designated-initializers: fixtures are short C pairs such as
+#   {source, target}, where field names would only add noise.
+# - function-cognitive-complexity: each assert counts as a branch, so a test
+#   that checks many values looks complex when it is not.
+CheckOptions:
+  # COORDINA_FIELD measures pointer fields of the ABI structs on purpose.
+  bugprone-sizeof-expression.WarnOnSizeOfPointerToAggregate: false

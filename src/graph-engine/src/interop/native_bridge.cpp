@@ -33,8 +33,7 @@ bool has_invalid_pointer(
   const coordina_graph_edge* edges,
   std::size_t edge_count) noexcept
 {
-  return (node_count > 0U && nodes == nullptr)
-    || (edge_count > 0U && edges == nullptr);
+  return (node_count > 0U && nodes == nullptr) || (edge_count > 0U && edges == nullptr);
 }
 
 GraphSnapshot build_snapshot(
@@ -56,13 +55,11 @@ GraphSnapshot build_snapshot(
 
   for (std::size_t index = 0U; index < edge_count; ++index)
   {
-    native_edges.push_back(Edge{
-      to_node_id(edges[index].source),
-      to_node_id(edges[index].target)
-    });
+    native_edges.push_back(
+      Edge{.source = to_node_id(edges[index].source), .target = to_node_id(edges[index].target)});
   }
 
-  return GraphSnapshot(native_nodes, native_edges);
+  return {native_nodes, native_edges};
 }
 
 std::size_t write_nodes(
@@ -75,9 +72,7 @@ std::size_t write_nodes(
     return 0U;
   }
 
-  const auto count = nodes.size() < output_capacity
-    ? nodes.size()
-    : output_capacity;
+  const auto count = nodes.size() < output_capacity ? nodes.size() : output_capacity;
 
   for (std::size_t index = 0U; index < count; ++index)
   {
@@ -97,27 +92,24 @@ std::size_t write_node_analyses(
     return 0U;
   }
 
-  const auto count = analyses.size() < output_capacity
-    ? analyses.size()
-    : output_capacity;
+  const auto count = analyses.size() < output_capacity ? analyses.size() : output_capacity;
 
   for (std::size_t index = 0U; index < count; ++index)
   {
     output[index] = coordina_graph_node_analysis{
-      to_abi_node_id(analyses[index].node),
-      to_abi_count(analyses[index].dependency_count),
-      to_abi_count(analyses[index].dependent_count),
-      to_abi_count(analyses[index].dependency_depth),
-      to_abi_count(analyses[index].dependent_depth),
-      to_abi_count(analyses[index].transitive_dependent_count)
+      .node = to_abi_node_id(analyses[index].node),
+      .dependency_count = to_abi_count(analyses[index].dependency_count),
+      .dependent_count = to_abi_count(analyses[index].dependent_count),
+      .dependency_depth = to_abi_count(analyses[index].dependency_depth),
+      .dependent_depth = to_abi_count(analyses[index].dependent_depth),
+      .transitive_dependent_count = to_abi_count(analyses[index].transitive_dependent_count)
     };
   }
 
   return count;
 }
 
-PlanningOptions build_planning_options(
-  const coordina_graph_planning_options* options) noexcept
+PlanningOptions build_planning_options(const coordina_graph_planning_options* options) noexcept
 {
   if (options == nullptr)
   {
@@ -125,9 +117,9 @@ PlanningOptions build_planning_options(
   }
 
   return PlanningOptions{
-    options->available_minutes,
-    options->prefer_assigned != 0U,
-    options->include_unassigned != 0U
+    .available_minutes = options->available_minutes,
+    .prefer_assigned = options->prefer_assigned != 0U,
+    .include_unassigned = options->include_unassigned != 0U
   };
 }
 
@@ -140,19 +132,20 @@ std::vector<WorkItem> build_work_items(
 
   for (std::size_t index = 0U; index < work_item_count; ++index)
   {
-    native_work_items.push_back(WorkItem{
-      to_node_id(work_items[index].node),
-      work_items[index].is_completed != 0U,
-      work_items[index].priority,
-      work_items[index].due_days,
-      work_items[index].subtask_total,
-      work_items[index].subtask_completed,
-      work_items[index].position,
-      work_items[index].estimated_minutes,
-      to_assignment(work_items[index].assignment),
-      work_items[index].is_in_progress != 0U,
-      work_items[index].is_context_match != 0U
-    });
+    native_work_items.push_back(
+      WorkItem{
+        .node = to_node_id(work_items[index].node),
+        .is_completed = work_items[index].is_completed != 0U,
+        .priority = work_items[index].priority,
+        .due_days = work_items[index].due_days,
+        .subtask_total = work_items[index].subtask_total,
+        .subtask_completed = work_items[index].subtask_completed,
+        .position = work_items[index].position,
+        .estimated_minutes = work_items[index].estimated_minutes,
+        .assignment = to_assignment(work_items[index].assignment),
+        .is_in_progress = work_items[index].is_in_progress != 0U,
+        .is_context_match = work_items[index].is_context_match != 0U
+      });
   }
 
   return native_work_items;
@@ -168,29 +161,28 @@ std::size_t write_work_recommendations(
     return 0U;
   }
 
-  const auto count = recommendations.size() < output_capacity
-    ? recommendations.size()
-    : output_capacity;
+  const auto count =
+    recommendations.size() < output_capacity ? recommendations.size() : output_capacity;
 
   for (std::size_t index = 0U; index < count; ++index)
   {
     output[index] = coordina_graph_work_recommendation{
-      to_abi_node_id(recommendations[index].node),
-      recommendations[index].score,
-      recommendations[index].blocker_count,
-      recommendations[index].unlock_score,
-      recommendations[index].urgency_score,
-      recommendations[index].priority_score,
-      recommendations[index].progress_score,
-      recommendations[index].is_critical_path ? 1U : 0U,
-      recommendations[index].effort_score,
-      recommendations[index].assignment_score,
-      recommendations[index].momentum_score,
-      recommendations[index].context_score,
-      recommendations[index].fits_available_time ? 1U : 0U,
-      recommendations[index].is_assignment_match ? 1U : 0U,
-      recommendations[index].is_context_match ? 1U : 0U,
-      recommendations[index].is_in_progress ? 1U : 0U
+      .node = to_abi_node_id(recommendations[index].node),
+      .score = recommendations[index].score,
+      .blocker_count = recommendations[index].blocker_count,
+      .unlock_score = recommendations[index].unlock_score,
+      .urgency_score = recommendations[index].urgency_score,
+      .priority_score = recommendations[index].priority_score,
+      .progress_score = recommendations[index].progress_score,
+      .is_critical_path = recommendations[index].is_critical_path ? 1U : 0U,
+      .effort_score = recommendations[index].effort_score,
+      .assignment_score = recommendations[index].assignment_score,
+      .momentum_score = recommendations[index].momentum_score,
+      .context_score = recommendations[index].context_score,
+      .fits_available_time = recommendations[index].fits_available_time ? 1U : 0U,
+      .is_assignment_match = recommendations[index].is_assignment_match ? 1U : 0U,
+      .is_context_match = recommendations[index].is_context_match ? 1U : 0U,
+      .is_in_progress = recommendations[index].is_in_progress ? 1U : 0U
     };
   }
 

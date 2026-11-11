@@ -12,9 +12,7 @@ namespace coordina::graph
 class GraphSnapshot
 {
 public:
-  GraphSnapshot(
-    std::vector<NodeId> nodes,
-    std::vector<Edge> edges);
+  GraphSnapshot(const std::vector<NodeId>& nodes, const std::vector<Edge>& edges);
 
   const std::vector<NodeId>& nodes() const noexcept;
   const std::vector<Edge>& edges() const noexcept;

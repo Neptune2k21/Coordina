@@ -6,10 +6,7 @@
 
 namespace coordina::graph
 {
-coordina_graph_edge_status evaluate_edge(
-  const GraphSnapshot& graph,
-  NodeId source,
-  NodeId target);
+coordina_graph_edge_status evaluate_edge(const GraphSnapshot& graph, NodeId source, NodeId target);
 }
 
 #endif

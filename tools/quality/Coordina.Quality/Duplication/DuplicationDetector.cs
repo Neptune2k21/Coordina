@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Coordina.Quality.Checks;
+using Coordina.Quality.Lint;
 
 namespace Coordina.Quality.Duplication;
 
@@ -46,43 +46,26 @@ internal sealed class DuplicationDetector(string repositoryRoot)
 
     try
     {
-      var start = new ProcessStartInfo(Path.Combine(repositoryRoot, RelativeBinaryPath))
-      {
-        WorkingDirectory = repositoryRoot,
-        RedirectStandardOutput = true,
-        RedirectStandardError = true
-      };
-
-      foreach (var folder in ScannedFolders.Where(folder => Directory.Exists(Path.Combine(repositoryRoot, folder))))
-      {
-        start.ArgumentList.Add(folder);
-      }
-
-      foreach (var argument in new[]
-      {
-        "--format", "csharp,typescript,tsx,cpp",
-        "--ignore", string.Join(',', IgnoredGlobs),
-        "--min-tokens", MinTokens.ToString(CultureInfo.InvariantCulture),
-        "--absolute",
-        "--reporters", "json",
-        "--output", output.FullName,
-        "--silent"
-      })
-      {
-        start.ArgumentList.Add(argument);
-      }
-
-      using var process = Process.Start(start)
-        ?? throw new InvalidOperationException("Could not start jscpd.");
-      var errors = process.StandardError.ReadToEndAsync();
-      process.StandardOutput.ReadToEnd();
-      process.WaitForExit();
+      var folders = ScannedFolders.Where(folder => Directory.Exists(Path.Combine(repositoryRoot, folder)));
+      var result = ToolProcess.Run(
+        Path.Combine(repositoryRoot, RelativeBinaryPath),
+        repositoryRoot,
+        folders.Concat(
+        [
+          "--format", "csharp,typescript,tsx,cpp",
+          "--ignore", string.Join(',', IgnoredGlobs),
+          "--min-tokens", MinTokens.ToString(CultureInfo.InvariantCulture),
+          "--absolute",
+          "--reporters", "json",
+          "--output", output.FullName,
+          "--silent"
+        ]));
 
       var report = Path.Combine(output.FullName, "jscpd-report.json");
 
       if (!File.Exists(report))
       {
-        throw new InvalidOperationException($"jscpd wrote no report: {errors.Result}");
+        throw new InvalidOperationException($"jscpd wrote no report: {result.StandardError}");
       }
 
       return Parse(File.ReadAllText(report), repositoryRoot);
@@ -105,18 +88,13 @@ internal sealed class DuplicationDetector(string repositoryRoot)
 
     return duplicates.EnumerateArray()
       .Select(duplicate => new CodeClone(
-        Relative(duplicate.GetProperty("firstFile").GetProperty("name").GetString()!, repositoryRoot),
+        RepositoryPaths.Relative(repositoryRoot, duplicate.GetProperty("firstFile").GetProperty("name").GetString()!),
         duplicate.GetProperty("firstFile").GetProperty("start").GetInt32(),
-        Relative(duplicate.GetProperty("secondFile").GetProperty("name").GetString()!, repositoryRoot),
+        RepositoryPaths.Relative(repositoryRoot, duplicate.GetProperty("secondFile").GetProperty("name").GetString()!),
         duplicate.GetProperty("secondFile").GetProperty("start").GetInt32(),
         duplicate.GetProperty("lines").GetInt32()))
       .Where(clone => !RepositoryPaths.IsGenerated(clone.FirstPath)
         && !RepositoryPaths.IsGenerated(clone.SecondPath))
       .ToArray();
   }
-
-  private static string Relative(string path, string repositoryRoot) =>
-    Path.IsPathRooted(path)
-      ? Path.GetRelativePath(repositoryRoot, path).Replace('\\', '/')
-      : path.Replace('\\', '/');
 }

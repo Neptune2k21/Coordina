@@ -80,19 +80,21 @@ internal static class CommandLine
       .ToArray();
     var violations = checker.Check(files);
 
-    // jscpd and ESLint read the working tree, so the pre-commit hook, which
-    // checks the staged version, leaves them to make check and CI.
+    // jscpd, ESLint and the clang tools read the working tree, so the
+    // pre-commit hook, which checks the staged version, leaves them to make
+    // check and CI.
     if (!options.Staged)
     {
       var duplicates = FindDuplicates(repository, files, output);
       var lint = RunEslint(repository, options.All ? null : paths, output);
+      var cpp = RunClangTools(repository, paths, output);
 
-      if (duplicates is null || lint is null)
+      if (duplicates is null || lint is null || cpp is null)
       {
         return Failure;
       }
 
-      violations = QualityChecker.Order(violations.Concat(duplicates).Concat(lint));
+      violations = QualityChecker.Order(violations.Concat(duplicates).Concat(lint).Concat(cpp));
     }
 
     var baseline = Baseline.Load(repository.Root);
@@ -282,7 +284,7 @@ internal static class CommandLine
 
     if (!detector.IsAvailable)
     {
-      return ToolMissing("Duplicated code", DuplicationDetector.RelativeBinaryPath, output);
+      return WebToolMissing("Duplicated code", DuplicationDetector.RelativeBinaryPath, output);
     }
 
     var filesByPath = files.ToDictionary(file => file.Path, StringComparer.Ordinal);
@@ -312,16 +314,53 @@ internal static class CommandLine
 
     return eslint.IsAvailable
       ? eslint.Run(paths).ToArray()
-      : ToolMissing("TypeScript lint", EslintRunner.RelativeBinaryPath, output);
+      : WebToolMissing("TypeScript lint", EslintRunner.RelativeBinaryPath, output);
   }
 
   /// <summary>
-  /// Says a tool installed with the web app is missing. Locally the check goes
-  /// on without it; in CI it fails, because skipping would hide problems.
+  /// clang-format and clang-tidy findings for the C++ files in <paramref name="paths"/>.
+  /// A change without C++ does not need the tools. Returns <c>null</c> when the
+  /// pinned tools are missing in CI.
   /// </summary>
-  private static Violation[]? ToolMissing(string what, string relativeBinaryPath, TextWriter output)
+  private static Violation[]? RunClangTools(
+    GitRepository repository,
+    IReadOnlyCollection<string> paths,
+    TextWriter output)
   {
-    output.WriteLine($"{what} was not checked: {relativeBinaryPath} is missing. Run 'pnpm --dir src/web install'.");
+    var tools = new ClangTools(repository.Root);
+
+    if (!tools.AppliesHere
+      || !paths.Any(path => RepositoryPaths.IsGraphEngineSource(path) || ClangTools.IsConfiguration(path)))
+    {
+      return [];
+    }
+
+    if (!tools.IsInstalled)
+    {
+      return ToolMissing(
+        $"C++ format and analysis were not checked: the clang tools pinned in {ClangTools.RequirementsPath} are not installed. Run 'make cpp-tools'.",
+        output);
+    }
+
+    var allPaths = repository.AllFiles();
+
+    return
+    [
+      .. new ClangFormatRunner(tools, repository.Root).Run(paths, allPaths),
+      .. new ClangTidyRunner(tools, repository.Root).Run(paths, allPaths)
+    ];
+  }
+
+  private static Violation[]? WebToolMissing(string what, string relativeBinaryPath, TextWriter output) =>
+    ToolMissing($"{what} was not checked: {relativeBinaryPath} is missing. Run 'pnpm --dir src/web install'.", output);
+
+  /// <summary>
+  /// Says a tool is missing. Locally the check goes on without it; in CI it
+  /// fails, because skipping would hide problems.
+  /// </summary>
+  private static Violation[]? ToolMissing(string message, TextWriter output)
+  {
+    output.WriteLine(message);
 
     return Environment.GetEnvironmentVariable("CI") == "true" ? null : [];
   }
@@ -335,7 +374,7 @@ internal static class CommandLine
   {
     if (plan.Suites.Count == 0)
     {
-      output.WriteLine("Affected suites: none (documentation only).");
+      output.WriteLine("Affected suites: none. The quality rules, which run on every change, cover it.");
       return;
     }
 
