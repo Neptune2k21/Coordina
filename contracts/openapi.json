@@ -24,7 +24,7 @@
           "Auth"
         ],
         "summary": "Create a workspace account",
-        "description": "Creates a user account, returns an access token and sets the refresh cookie.",
+        "description": "Creates a user account, returns an access token and sets the refresh cookie. Limited per client IP, with login: 429 with Retry-After beyond the limit.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -45,6 +45,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -55,7 +65,7 @@
           "Auth"
         ],
         "summary": "Sign in",
-        "description": "Authenticates a user, returns an access token and sets the refresh cookie.",
+        "description": "Authenticates a user, returns an access token and sets the refresh cookie. Limited per client IP, with register: 429 with Retry-After beyond the limit.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -73,6 +83,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -3116,6 +3136,42 @@
             "items": {
               "$ref": "#/components/schemas/MyWorkItemResponse"
             }
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

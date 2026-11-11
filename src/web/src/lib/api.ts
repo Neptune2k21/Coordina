@@ -129,7 +129,7 @@ async function toApiError(
   }
 
   return new ApiError(
-    problem.message ?? problem.title ?? errorMessage,
+    problem.message ?? problem.detail ?? problem.title ?? errorMessage,
     response.status,
     problem.errors
   )

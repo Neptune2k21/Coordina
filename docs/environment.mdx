@@ -43,6 +43,26 @@ Cors__AllowedOrigins__1=https://beta.example.com
   `https://app.example.com/` (trailing slash) or a path stops the API at
   startup, since it could never match.
 
+## Sign-in rate limit
+
+`POST /auth/login` and `POST /auth/register` share a limit per client IP. Past
+it, the API answers `429 Too Many Requests` with a `Retry-After` header, and the
+sign-in form shows how long to wait.
+
+```dotenv
+RateLimiting__Auth__PermitLimit=10
+RateLimiting__Auth__WindowSeconds=60
+```
+
+- The defaults are 10 attempts per 60 seconds.
+- `Development` allows 100 (`src/api/appsettings.Development.json`), since the
+  end-to-end tests sign up and sign in many times from `127.0.0.1`.
+- The `Testing` environment turns the limit off, unless a test sets one, so
+  API tests do not depend on each other.
+- The limit uses the connection's address. Behind a reverse proxy, configure
+  forwarded headers for that proxy first; otherwise every client shares the
+  proxy's address and its limit.
+
 ## Web app variables
 
 The web app also supports these Vite variables:

@@ -15,14 +15,18 @@ public static class AuthEndpoints
 
     group.MapPost("/register", Register)
       .Produces<AuthResponse>(StatusCodes.Status201Created)
+      .ProducesProblem(StatusCodes.Status429TooManyRequests)
       .AllowAnonymous()
+      .RequireRateLimiting(AuthRateLimiting.Policy)
       .WithSummary("Create a workspace account")
-      .WithDescription("Creates a user account, returns an access token and sets the refresh cookie.");
+      .WithDescription("Creates a user account, returns an access token and sets the refresh cookie. Limited per client IP, with login: 429 with Retry-After beyond the limit.");
     group.MapPost("/login", Login)
       .Produces<AuthResponse>(StatusCodes.Status200OK)
+      .ProducesProblem(StatusCodes.Status429TooManyRequests)
       .AllowAnonymous()
+      .RequireRateLimiting(AuthRateLimiting.Policy)
       .WithSummary("Sign in")
-      .WithDescription("Authenticates a user, returns an access token and sets the refresh cookie.");
+      .WithDescription("Authenticates a user, returns an access token and sets the refresh cookie. Limited per client IP, with register: 429 with Retry-After beyond the limit.");
     group.MapPost("/refresh", Refresh)
       .Produces<AuthResponse>(StatusCodes.Status200OK)
       .AllowAnonymous()
