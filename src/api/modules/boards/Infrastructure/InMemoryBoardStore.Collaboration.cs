@@ -33,6 +33,80 @@ public sealed partial class InMemoryBoardStore
     return TouchedWithCardAsync(board, card, createdAt);
   }
 
+  public Task<ProjectBoardCardComment?> FindCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    return Task.FromResult(
+      TryGetCard(workspaceId, projectId, boardId, cardId, out _)
+      && _comments.TryGetValue(commentId, out var comment)
+      && comment.CardId == cardId
+        ? new ProjectBoardCardComment(
+          comment.Id,
+          comment.CardId,
+          new ProjectBoardCardUser(comment.UserId, null, null),
+          comment.Body,
+          comment.CreatedAt,
+          comment.EditedAt)
+        : null);
+  }
+
+  public Task<ProjectBoard?> UpdateCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    string body,
+    DateTimeOffset editedAt,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    if (!TryGetBoard(workspaceId, projectId, boardId, out var board)
+      || !TryGetCard(workspaceId, projectId, boardId, cardId, out var card)
+      || !_comments.TryGetValue(commentId, out var comment)
+      || comment.CardId != cardId)
+    {
+      return Task.FromResult<ProjectBoard?>(null);
+    }
+
+    _comments[commentId] = comment with { Body = body, EditedAt = editedAt };
+    return TouchedWithCardAsync(board, card, editedAt);
+  }
+
+  public Task<bool> DeleteCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    if (!TryGetBoard(workspaceId, projectId, boardId, out var board)
+      || !TryGetCard(workspaceId, projectId, boardId, cardId, out var card)
+      || !_comments.TryGetValue(commentId, out var comment)
+      || comment.CardId != cardId
+      || !_comments.TryRemove(commentId, out _))
+    {
+      return Task.FromResult(false);
+    }
+
+    _cards[cardId] = card with { UpdatedAt = updatedAt };
+    _boards[boardId] = board with { UpdatedAt = updatedAt };
+
+    return Task.FromResult(true);
+  }
+
   public Task<ProjectBoard?> CreateCardSubtaskAsync(
     Guid workspaceId,
     Guid projectId,

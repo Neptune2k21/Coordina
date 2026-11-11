@@ -114,7 +114,8 @@ public sealed partial class InMemoryBoardStore
         comment.CardId,
         new ProjectBoardCardUser(comment.UserId, null, null),
         comment.Body,
-        comment.CreatedAt))
+        comment.CreatedAt,
+        comment.EditedAt))
       .ToArray();
 
   private ProjectBoardCardSubtask[] SubtasksOf(Guid cardId) =>

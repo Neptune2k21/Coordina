@@ -48,6 +48,94 @@ public sealed partial class PostgresBoardStore
       cancellationToken);
   }
 
+  public async Task<ProjectBoardCardComment?> FindCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    CancellationToken cancellationToken)
+  {
+    if (!await CardExistsAsync(workspaceId, projectId, boardId, cardId, cancellationToken))
+    {
+      return null;
+    }
+
+    return await BoardCardComments
+      .AsNoTracking()
+      .Where(comment => comment.CardId == cardId && comment.Id == commentId)
+      .Select(comment => new ProjectBoardCardComment(
+        comment.Id,
+        comment.CardId,
+        new ProjectBoardCardUser(comment.UserId, null, null),
+        comment.Body,
+        comment.CreatedAt,
+        comment.EditedAt))
+      .SingleOrDefaultAsync(cancellationToken);
+  }
+
+  public async Task<ProjectBoard?> UpdateCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    string body,
+    DateTimeOffset editedAt,
+    CancellationToken cancellationToken)
+  {
+    if (!await CardExistsAsync(workspaceId, projectId, boardId, cardId, cancellationToken))
+    {
+      return null;
+    }
+
+    var updated = await BoardCardComments
+      .Where(comment => comment.CardId == cardId && comment.Id == commentId)
+      .ExecuteUpdateAsync(setters => setters
+        .SetProperty(comment => comment.Body, body)
+        .SetProperty(comment => comment.EditedAt, editedAt),
+        cancellationToken);
+
+    if (updated == 0)
+    {
+      return null;
+    }
+
+    await TouchCardAsync(cardId, editedAt, cancellationToken);
+    await TouchBoardAsync(boardId, editedAt, cancellationToken);
+
+    return await FindInProjectAsync(workspaceId, projectId, boardId, cancellationToken);
+  }
+
+  public async Task<bool> DeleteCardCommentAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid cardId,
+    Guid commentId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken)
+  {
+    if (!await CardExistsAsync(workspaceId, projectId, boardId, cardId, cancellationToken))
+    {
+      return false;
+    }
+
+    var deleted = await BoardCardComments
+      .Where(comment => comment.CardId == cardId && comment.Id == commentId)
+      .ExecuteDeleteAsync(cancellationToken);
+
+    if (deleted == 0)
+    {
+      return false;
+    }
+
+    await TouchCardAsync(cardId, updatedAt, cancellationToken);
+    await TouchBoardAsync(boardId, updatedAt, cancellationToken);
+
+    return true;
+  }
+
   // Positions are MAX + 1, so allocating one must not interleave with another write.
   public Task<ProjectBoard?> CreateCardSubtaskAsync(
     Guid workspaceId,

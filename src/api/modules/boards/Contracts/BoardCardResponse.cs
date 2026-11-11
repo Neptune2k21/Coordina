@@ -34,7 +34,8 @@ public sealed record BoardCardCommentResponse(
   Guid CardId,
   BoardCardUserResponse Author,
   string Body,
-  DateTimeOffset CreatedAt);
+  DateTimeOffset CreatedAt,
+  DateTimeOffset? EditedAt);
 
 public sealed record BoardCardSubtaskResponse(
   Guid Id,

@@ -123,7 +123,8 @@ public sealed record BoardCardCommentResponse(
   string CardId,
   BoardCardUserResponse Author,
   string Body,
-  DateTimeOffset CreatedAt);
+  DateTimeOffset CreatedAt,
+  DateTimeOffset? EditedAt);
 
 public sealed record BoardCardSubtaskResponse(
   string Id,

@@ -277,6 +277,44 @@ export async function addCardComment(
   )
 }
 
+export async function updateCardComment(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  commentId: string,
+  body: string
+) {
+  return apiRequest<Board>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/comments/${commentId}`,
+    {
+      accessToken,
+      method: "PATCH",
+      body: JSON.stringify({ body }),
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
+export async function deleteCardComment(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string,
+  cardId: string,
+  commentId: string
+) {
+  await apiRequest<void>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/cards/${cardId}/comments/${commentId}`,
+    {
+      accessToken,
+      method: "DELETE",
+      errorMessage: "Board request failed.",
+    }
+  )
+}
+
 export async function createSubtask(
   accessToken: string,
   workspaceId: string,
