@@ -7,22 +7,21 @@
 
 namespace coordina::graph
 {
-std::vector<NodeId> critical_path(
-  const GraphSnapshot& graph)
+std::vector<NodeId> critical_path(const GraphSnapshot& graph)
 {
   return critical_path(graph, dependency_first_topological_order(graph));
 }
 
 std::vector<NodeId> critical_path(
   const GraphSnapshot& graph,
-  const std::vector<NodeId>& ordered)
+  const std::vector<NodeId>& dependency_order)
 {
-  if (ordered.empty())
+  if (dependency_order.empty())
   {
     return {};
   }
 
-  if (ordered.size() != graph.nodes().size())
+  if (dependency_order.size() != graph.nodes().size())
   {
     return {};
   }
@@ -37,7 +36,7 @@ std::vector<NodeId> critical_path(
     depths.emplace(node, 0U);
   }
 
-  for (const auto dependency : ordered)
+  for (const auto dependency : dependency_order)
   {
     const auto depth = depths[dependency];
 
@@ -53,10 +52,10 @@ std::vector<NodeId> critical_path(
     }
   }
 
-  auto end = ordered.front();
+  auto end = dependency_order.front();
   auto longest_depth = depths[end];
 
-  for (const auto node : ordered)
+  for (const auto node : dependency_order)
   {
     if (depths[node] > longest_depth)
     {
@@ -87,7 +86,7 @@ std::vector<NodeId> critical_path(
     path.push_back(current);
   }
 
-  std::reverse(path.begin(), path.end());
+  std::ranges::reverse(path);
   return path;
 }
 }

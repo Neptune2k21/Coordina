@@ -9,9 +9,7 @@ namespace
 const std::vector<NodeId> empty_nodes;
 }
 
-GraphSnapshot::GraphSnapshot(
-  std::vector<NodeId> nodes,
-  std::vector<Edge> edges)
+GraphSnapshot::GraphSnapshot(const std::vector<NodeId>& nodes, const std::vector<Edge>& edges)
 {
   nodes_.reserve(nodes.size());
   outgoing_.reserve(nodes.size());
@@ -54,12 +52,12 @@ const std::vector<NodeId>& GraphSnapshot::incoming(NodeId node) const
 
 bool GraphSnapshot::contains(NodeId node) const
 {
-  return outgoing_.find(node) != outgoing_.end();
+  return outgoing_.contains(node);
 }
 
 bool GraphSnapshot::has_edge(NodeId source, NodeId target) const
 {
-  return edge_set_.find(Edge{source, target}) != edge_set_.end();
+  return edge_set_.contains(Edge{.source = source, .target = target});
 }
 
 std::size_t GraphSnapshot::dependency_count(NodeId node) const
@@ -91,7 +89,7 @@ void GraphSnapshot::add_edge(Edge edge)
     return;
   }
 
-  if (edge_set_.find(edge) != edge_set_.end())
+  if (edge_set_.contains(edge))
   {
     return;
   }

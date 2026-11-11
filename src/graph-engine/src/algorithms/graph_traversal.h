@@ -7,14 +7,9 @@
 
 namespace coordina::graph
 {
-bool has_path(
-  const GraphSnapshot& graph,
-  NodeId source,
-  NodeId target);
+bool has_path(const GraphSnapshot& graph, NodeId source, NodeId target);
 
-std::vector<NodeId> reachable_dependents(
-  const GraphSnapshot& graph,
-  NodeId dependency);
+std::vector<NodeId> reachable_dependents(const GraphSnapshot& graph, NodeId dependency);
 }
 
 #endif

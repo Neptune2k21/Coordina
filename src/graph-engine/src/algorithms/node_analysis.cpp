@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bit>
 #include <cstdint>
+#include <ranges>
 #include <unordered_map>
 
 namespace coordina::graph
@@ -16,18 +17,18 @@ constexpr std::size_t max_bitset_nodes = 16384U;
 constexpr std::size_t bits_per_word = 64U;
 
 // Counts every node that transitively depends on each node. Dependents always
-// come after their dependencies in `ordered`, so walking it backwards lets each
+// come after their dependencies in `dependency_order`, so walking it backwards lets each
 // node merge the already complete sets of its direct dependents.
 std::unordered_map<NodeId, std::size_t, NodeHash> transitive_dependent_counts(
   const GraphSnapshot& graph,
-  const std::vector<NodeId>& ordered)
+  const std::vector<NodeId>& dependency_order)
 {
   std::unordered_map<NodeId, std::size_t, NodeHash> counts;
-  counts.reserve(ordered.size());
+  counts.reserve(dependency_order.size());
 
-  if (ordered.size() > max_bitset_nodes)
+  if (dependency_order.size() > max_bitset_nodes)
   {
-    for (const auto node : ordered)
+    for (const auto node : dependency_order)
     {
       counts.emplace(node, reachable_dependents(graph, node).size());
     }
@@ -36,26 +37,26 @@ std::unordered_map<NodeId, std::size_t, NodeHash> transitive_dependent_counts(
   }
 
   std::unordered_map<NodeId, std::size_t, NodeHash> index_of;
-  index_of.reserve(ordered.size());
+  index_of.reserve(dependency_order.size());
 
-  for (std::size_t index = 0U; index < ordered.size(); ++index)
+  for (std::size_t index = 0U; index < dependency_order.size(); ++index)
   {
-    index_of.emplace(ordered[index], index);
+    index_of.emplace(dependency_order[index], index);
   }
 
-  const auto words = (ordered.size() + bits_per_word - 1U) / bits_per_word;
-  std::vector<std::uint64_t> bits(ordered.size() * words, 0U);
+  const auto words = (dependency_order.size() + bits_per_word - 1U) / bits_per_word;
+  std::vector<std::uint64_t> bits(dependency_order.size() * words, 0U);
 
-  for (auto index = ordered.size(); index-- > 0U;)
+  for (auto index = dependency_order.size(); index-- > 0U;)
   {
-    auto* row = bits.data() + index * words;
+    auto* row = bits.data() + (index * words);
 
-    for (const auto dependent : graph.incoming(ordered[index]))
+    for (const auto dependent : graph.incoming(dependency_order[index]))
     {
       const auto dependent_index = index_of.at(dependent);
-      const auto* dependent_row = bits.data() + dependent_index * words;
-      row[dependent_index / bits_per_word] |=
-        std::uint64_t{1U} << (dependent_index % bits_per_word);
+      const auto* dependent_row = bits.data() + (dependent_index * words);
+      row[dependent_index / bits_per_word] |= std::uint64_t{1U}
+        << (dependent_index % bits_per_word);
 
       for (std::size_t word = 0U; word < words; ++word)
       {
@@ -70,23 +71,22 @@ std::unordered_map<NodeId, std::size_t, NodeHash> transitive_dependent_counts(
       count += static_cast<std::size_t>(std::popcount(row[word]));
     }
 
-    counts.emplace(ordered[index], count);
+    counts.emplace(dependency_order[index], count);
   }
 
   return counts;
 }
 }
-std::vector<NodeAnalysis> analyze_nodes(
-  const GraphSnapshot& graph)
+std::vector<NodeAnalysis> analyze_nodes(const GraphSnapshot& graph)
 {
   return analyze_nodes(graph, dependency_first_topological_order(graph));
 }
 
 std::vector<NodeAnalysis> analyze_nodes(
   const GraphSnapshot& graph,
-  const std::vector<NodeId>& ordered)
+  const std::vector<NodeId>& dependency_order)
 {
-  if (ordered.size() != graph.nodes().size())
+  if (dependency_order.size() != graph.nodes().size())
   {
     return {};
   }
@@ -102,7 +102,7 @@ std::vector<NodeAnalysis> analyze_nodes(
     dependent_depths.emplace(node, 0U);
   }
 
-  for (const auto dependency : ordered)
+  for (const auto dependency : dependency_order)
   {
     const auto depth = dependency_depths[dependency];
 
@@ -113,31 +113,32 @@ std::vector<NodeAnalysis> analyze_nodes(
     }
   }
 
-  for (auto node = ordered.rbegin(); node != ordered.rend(); ++node)
+  for (auto node : std::views::reverse(dependency_order))
   {
-    const auto depth = dependent_depths[*node];
+    const auto depth = dependent_depths[node];
 
-    for (const auto dependency : graph.outgoing(*node))
+    for (const auto dependency : graph.outgoing(node))
     {
       auto& candidate_depth = dependent_depths[dependency];
       candidate_depth = std::max(candidate_depth, depth + 1U);
     }
   }
 
-  const auto transitive_counts = transitive_dependent_counts(graph, ordered);
+  const auto transitive_counts = transitive_dependent_counts(graph, dependency_order);
   std::vector<NodeAnalysis> analysis;
   analysis.reserve(graph.nodes().size());
 
   for (const auto node : graph.nodes())
   {
-    analysis.push_back(NodeAnalysis{
-      node,
-      graph.dependency_count(node),
-      graph.dependent_count(node),
-      dependency_depths[node],
-      dependent_depths[node],
-      transitive_counts.at(node)
-    });
+    analysis.push_back(
+      NodeAnalysis{
+        .node = node,
+        .dependency_count = graph.dependency_count(node),
+        .dependent_count = graph.dependent_count(node),
+        .dependency_depth = dependency_depths[node],
+        .dependent_depth = dependent_depths[node],
+        .transitive_dependent_count = transitive_counts.at(node)
+      });
   }
 
   return analysis;

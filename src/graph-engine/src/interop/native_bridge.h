@@ -1,9 +1,9 @@
 #ifndef COORDINA_GRAPH_ENGINE_NATIVE_BRIDGE_H
 #define COORDINA_GRAPH_ENGINE_NATIVE_BRIDGE_H
 
+#include "algorithms/node_analysis.h"
 #include "coordina_graph_engine.h"
 #include "core/graph_snapshot.h"
-#include "algorithms/node_analysis.h"
 #include "planning/work_planner.h"
 
 #include <cstddef>
@@ -33,8 +33,7 @@ std::size_t write_node_analyses(
   coordina_graph_node_analysis* output,
   std::size_t output_capacity);
 
-PlanningOptions build_planning_options(
-  const coordina_graph_planning_options* options) noexcept;
+PlanningOptions build_planning_options(const coordina_graph_planning_options* options) noexcept;
 
 std::vector<WorkItem> build_work_items(
   const coordina_graph_work_item* work_items,

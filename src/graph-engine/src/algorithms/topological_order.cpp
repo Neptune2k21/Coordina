@@ -4,8 +4,7 @@
 
 namespace coordina::graph
 {
-std::vector<NodeId> dependency_first_topological_order(
-  const GraphSnapshot& graph)
+std::vector<NodeId> dependency_first_topological_order(const GraphSnapshot& graph)
 {
   std::unordered_map<NodeId, std::size_t, NodeHash> remaining_dependencies;
   remaining_dependencies.reserve(graph.nodes().size());
@@ -50,13 +49,10 @@ std::vector<NodeId> dependency_first_topological_order(
     }
   }
 
-  return ordered.size() == graph.nodes().size()
-    ? ordered
-    : std::vector<NodeId>{};
+  return ordered.size() == graph.nodes().size() ? ordered : std::vector<NodeId>{};
 }
 
-std::vector<NodeId> ready_nodes(
-  const GraphSnapshot& graph)
+std::vector<NodeId> ready_nodes(const GraphSnapshot& graph)
 {
   std::vector<NodeId> ready;
   ready.reserve(graph.nodes().size());

@@ -13,11 +13,11 @@ PlanningAnalysis analyze_planning(const GraphSnapshot& graph)
   auto path = critical_path(graph, order);
 
   return PlanningAnalysis{
-    is_acyclic,
-    std::move(order),
-    ready_nodes(graph),
-    std::move(analyses),
-    std::move(path)
+    .is_acyclic = is_acyclic,
+    .dependency_order = std::move(order),
+    .ready_nodes = ready_nodes(graph),
+    .node_analyses = std::move(analyses),
+    .critical_path = std::move(path)
   };
 }
 
@@ -29,6 +29,9 @@ BoardAnalysis analyze_board(
   auto planning = analyze_planning(graph);
   auto recommendations = plan_work(graph, work_items, options, planning);
 
-  return BoardAnalysis{std::move(planning), std::move(recommendations)};
+  return BoardAnalysis{
+    .planning = std::move(planning),
+    .recommendations = std::move(recommendations)
+  };
 }
 }

@@ -1,0 +1,7 @@
+-xc++
+-std=c++20
+-Wall
+-Wextra
+-Wpedantic
+-Isrc/graph-engine/include
+-Isrc/graph-engine/src

@@ -18,8 +18,7 @@ struct NodeAnalysis
   std::size_t transitive_dependent_count;
 };
 
-std::vector<NodeAnalysis> analyze_nodes(
-  const GraphSnapshot& graph);
+std::vector<NodeAnalysis> analyze_nodes(const GraphSnapshot& graph);
 
 std::vector<NodeAnalysis> analyze_nodes(
   const GraphSnapshot& graph,

@@ -3,11 +3,11 @@
 #include "algorithms/critical_path.h"
 #include "algorithms/dependency_validator.h"
 #include "algorithms/graph_traversal.h"
+#include "algorithms/node_analysis.h"
+#include "algorithms/suggestion_engine.h"
+#include "algorithms/topological_order.h"
 #include "interop/native_bridge.h"
 #include "planning/planning_analysis.h"
-#include "algorithms/node_analysis.h"
-#include "algorithms/topological_order.h"
-#include "algorithms/suggestion_engine.h"
 #include "planning/work_planner.h"
 
 extern "C" const char* coordina_graph_version(void)
@@ -28,11 +28,7 @@ extern "C" coordina_graph_edge_status coordina_graph_evaluate_edge(
     return COORDINA_GRAPH_EDGE_INVALID_ARGUMENT;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
 
   return coordina::graph::evaluate_edge(
     graph,
@@ -53,18 +49,14 @@ extern "C" int coordina_graph_has_path(
     return -1;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
 
   return coordina::graph::has_path(
-    graph,
-    coordina::graph::to_node_id(source),
-    coordina::graph::to_node_id(target))
-      ? 1
-      : 0;
+           graph,
+           coordina::graph::to_node_id(source),
+           coordina::graph::to_node_id(target))
+    ? 1
+    : 0;
 }
 
 extern "C" std::size_t coordina_graph_suggest_targets(
@@ -81,15 +73,9 @@ extern "C" std::size_t coordina_graph_suggest_targets(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
-  const auto suggestions = coordina::graph::suggest_targets(
-    graph,
-    coordina::graph::to_node_id(source),
-    output_capacity);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
+  const auto suggestions =
+    coordina::graph::suggest_targets(graph, coordina::graph::to_node_id(source), output_capacity);
 
   return coordina::graph::write_nodes(suggestions, output, output_capacity);
 }
@@ -105,11 +91,7 @@ extern "C" int coordina_graph_is_acyclic(
     return -1;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
 
   return coordina::graph::is_acyclic(graph) ? 1 : 0;
 }
@@ -127,11 +109,7 @@ extern "C" std::size_t coordina_graph_topological_sort(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
   const auto ordered = coordina::graph::dependency_first_topological_order(graph);
 
   return coordina::graph::write_nodes(ordered, output, output_capacity);
@@ -150,11 +128,7 @@ extern "C" std::size_t coordina_graph_ready_nodes(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
   const auto ready = coordina::graph::ready_nodes(graph);
 
   return coordina::graph::write_nodes(ready, output, output_capacity);
@@ -174,14 +148,9 @@ extern "C" std::size_t coordina_graph_impacted_dependents(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
-  const auto impacted = coordina::graph::reachable_dependents(
-    graph,
-    coordina::graph::to_node_id(dependency));
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
+  const auto impacted =
+    coordina::graph::reachable_dependents(graph, coordina::graph::to_node_id(dependency));
 
   return coordina::graph::write_nodes(impacted, output, output_capacity);
 }
@@ -199,17 +168,10 @@ extern "C" std::size_t coordina_graph_analyze_nodes(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
   const auto analysis = coordina::graph::analyze_nodes(graph);
 
-  return coordina::graph::write_node_analyses(
-    analysis,
-    output,
-    output_capacity);
+  return coordina::graph::write_node_analyses(analysis, output, output_capacity);
 }
 
 extern "C" std::size_t coordina_graph_critical_path(
@@ -225,11 +187,7 @@ extern "C" std::size_t coordina_graph_critical_path(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
   const auto path = coordina::graph::critical_path(graph);
 
   return coordina::graph::write_nodes(path, output, output_capacity);
@@ -252,23 +210,14 @@ extern "C" std::size_t coordina_graph_plan_work(
     return 0U;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
-  const auto native_work_items = coordina::graph::build_work_items(
-    work_items,
-    work_item_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
+  const auto native_work_items = coordina::graph::build_work_items(work_items, work_item_count);
   const auto recommendations = coordina::graph::plan_work(
     graph,
     native_work_items,
     coordina::graph::build_planning_options(options));
 
-  return coordina::graph::write_work_recommendations(
-    recommendations,
-    output,
-    output_capacity);
+  return coordina::graph::write_work_recommendations(recommendations, output, output_capacity);
 }
 
 namespace
@@ -296,11 +245,7 @@ extern "C" coordina_graph_status coordina_graph_analyze_board(
     return COORDINA_GRAPH_INVALID_ARGUMENT;
   }
 
-  const auto graph = coordina::graph::build_snapshot(
-    nodes,
-    node_count,
-    edges,
-    edge_count);
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
   const auto analysis = coordina::graph::analyze_board(
     graph,
     coordina::graph::build_work_items(work_items, work_item_count),
@@ -315,10 +260,19 @@ extern "C" coordina_graph_status coordina_graph_analyze_board(
   output->recommendation_count = analysis.recommendations.size();
 
   if (!fits(output->ready_nodes.count, output->ready_nodes.items, output->ready_nodes.capacity)
-    || !fits(output->dependency_order.count, output->dependency_order.items, output->dependency_order.capacity)
-    || !fits(output->critical_path.count, output->critical_path.items, output->critical_path.capacity)
+    || !fits(
+      output->dependency_order.count,
+      output->dependency_order.items,
+      output->dependency_order.capacity)
+    || !fits(
+      output->critical_path.count,
+      output->critical_path.items,
+      output->critical_path.capacity)
     || !fits(output->node_analysis_count, output->node_analyses, output->node_analysis_capacity)
-    || !fits(output->recommendation_count, output->recommendations, output->recommendation_capacity))
+    || !fits(
+      output->recommendation_count,
+      output->recommendations,
+      output->recommendation_capacity))
   {
     return COORDINA_GRAPH_INSUFFICIENT_CAPACITY;
   }

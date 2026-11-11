@@ -5,10 +5,7 @@
 
 namespace coordina::graph
 {
-bool has_path(
-  const GraphSnapshot& graph,
-  NodeId source,
-  NodeId target)
+bool has_path(const GraphSnapshot& graph, NodeId source, NodeId target)
 {
   if (!graph.contains(source) || !graph.contains(target))
   {
@@ -25,7 +22,7 @@ bool has_path(
     const auto current = pending.top();
     pending.pop();
 
-    if (visited.find(current) != visited.end())
+    if (visited.contains(current))
     {
       continue;
     }
@@ -46,9 +43,7 @@ bool has_path(
   return false;
 }
 
-std::vector<NodeId> reachable_dependents(
-  const GraphSnapshot& graph,
-  NodeId dependency)
+std::vector<NodeId> reachable_dependents(const GraphSnapshot& graph, NodeId dependency)
 {
   if (!graph.contains(dependency))
   {

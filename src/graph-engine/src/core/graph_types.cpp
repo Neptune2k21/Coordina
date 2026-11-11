@@ -35,11 +35,11 @@ bool operator==(const Edge& left, const Edge& right) noexcept
 
 NodeId to_node_id(coordina_graph_node_id value) noexcept
 {
-  return NodeId{value.high, value.low};
+  return NodeId{.high = value.high, .low = value.low};
 }
 
 coordina_graph_node_id to_abi_node_id(NodeId value) noexcept
 {
-  return coordina_graph_node_id{value.high, value.low};
+  return coordina_graph_node_id{.high = value.high, .low = value.low};
 }
 }

@@ -26,8 +26,8 @@ std::uint32_t urgency_score(std::int32_t due_days) noexcept
   if (due_days < 0)
   {
     const auto overdue_days = -static_cast<std::int64_t>(due_days);
-    const auto overdue_bonus = static_cast<std::uint32_t>(
-      std::min<std::int64_t>(30, overdue_days * 5));
+    const auto overdue_bonus =
+      static_cast<std::uint32_t>(std::min<std::int64_t>(30, overdue_days * 5));
     return 90U + overdue_bonus;
   }
 
@@ -59,9 +59,7 @@ std::uint32_t priority_score(std::uint32_t priority) noexcept
   return std::min(priority, 3U) * 22U;
 }
 
-std::uint32_t progress_score(
-  std::uint32_t total,
-  std::uint32_t completed) noexcept
+std::uint32_t progress_score(std::uint32_t total, std::uint32_t completed) noexcept
 {
   if (total == 0U)
   {
@@ -88,28 +86,24 @@ std::uint32_t unlock_score(const NodeAnalysis& analysis) noexcept
   return score > 220U ? 220U : static_cast<std::uint32_t>(score);
 }
 
-EffortFit effort_fit(
-  std::uint32_t estimated_minutes,
-  std::uint32_t available_minutes) noexcept
+EffortFit effort_fit(std::uint32_t estimated_minutes, std::uint32_t available_minutes) noexcept
 {
   if (available_minutes == 0U)
   {
-    return EffortFit{0, true};
+    return EffortFit{.score = 0, .fits = true};
   }
 
   if (estimated_minutes == 0U)
   {
-    return EffortFit{0, false};
+    return EffortFit{.score = 0, .fits = false};
   }
 
   return estimated_minutes <= available_minutes
-    ? EffortFit{fits_time_bonus, true}
-    : EffortFit{too_long_penalty, false};
+    ? EffortFit{.score = fits_time_bonus, .fits = true}
+    : EffortFit{.score = too_long_penalty, .fits = false};
 }
 
-std::int32_t assignment_score(
-  Assignment assignment,
-  const PlanningOptions& options) noexcept
+std::int32_t assignment_score(Assignment assignment, const PlanningOptions& options) noexcept
 {
   if (assignment == Assignment::requester)
   {
@@ -131,8 +125,7 @@ std::uint32_t clamp_score(std::int64_t score) noexcept
     return 1U;
   }
 
-  constexpr auto max_score =
-    static_cast<std::int64_t>(std::numeric_limits<std::uint32_t>::max());
+  constexpr auto max_score = static_cast<std::int64_t>(std::numeric_limits<std::uint32_t>::max());
   return static_cast<std::uint32_t>(score > max_score ? max_score : score);
 }
 
