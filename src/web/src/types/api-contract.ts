@@ -971,7 +971,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          availableMinutes?: number
+          maxSize?: string
           context?: string
           preferAssigned?: boolean
           includeUnassigned?: boolean
@@ -1833,8 +1833,8 @@ export interface components {
       priority: "LOW" | "MEDIUM" | "HIGH" | null
       /** Format: date */
       dueDate: null | string
-      /** Format: int32 */
-      estimatedMinutes: null | number
+      /** @enum {null|string} */
+      size: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null
       labels: string[]
       isCompleted: boolean
       /** Format: date-time */
@@ -1900,9 +1900,9 @@ export interface components {
       isActionable: boolean
       /** Format: int32 */
       blockerCount: number
-      /** Format: int32 */
-      estimatedMinutes: null | number
-      fitsAvailableTime: boolean
+      /** @enum {null|string} */
+      size: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null
+      fitsMaxSize: boolean
       isAssignedToMe: boolean
       isContextMatch: boolean
       isInProgress: boolean
@@ -1913,8 +1913,8 @@ export interface components {
       /** Format: uuid */
       boardId: string
       isAcyclic: boolean
-      /** Format: int32 */
-      availableMinutes: number
+      /** @enum {null|string} */
+      maxSize: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null
       context: null | string
       readyCards: components["schemas"]["BoardGraphCardResponse"][]
       unblockedCards: components["schemas"]["BoardGraphCardResponse"][]
@@ -1940,15 +1940,14 @@ export interface components {
       cards: components["schemas"]["BoardCardResponse"][]
     }
     BoardPlanningPreferencesResponse: {
-      /** Format: int32 */
-      availableMinutes: number
+      /** @enum {null|string} */
+      maxSize: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null
       context: null | string
       preferAssigned: boolean
       includeUnassigned: boolean
     }
     BoardPlanningRequest: {
-      /** Format: int32 */
-      availableMinutes?: null | number
+      maxSize?: null | string
       context?: null | string
       preferAssigned?: null | boolean
       includeUnassigned?: null | boolean
@@ -1979,8 +1978,8 @@ export interface components {
       description: string
       /** @enum {string} */
       priority: "LOW" | "MEDIUM" | "HIGH"
-      /** Format: int32 */
-      estimatedMinutes: number
+      /** @enum {string} */
+      size: "XS" | "S" | "M" | "L" | "XL" | "XXL"
       /** Format: int32 */
       dueInDays: null | number
       labels: string[]
@@ -2021,8 +2020,7 @@ export interface components {
       dueDate: null | string
       labels: null | string[]
       assigneeIds: null | string[]
-      /** Format: int32 */
-      estimatedMinutes?: null | number
+      size?: null | string
     }
     CreateBoardCardSubtaskRequest: {
       title: null | string
@@ -2154,10 +2152,9 @@ export interface components {
       labels: null | string[]
       assigneeIds: null | string[]
       isCompleted: null | boolean
-      /** Format: int32 */
-      estimatedMinutes?: null | number
+      size?: null | string
       /** @default false */
-      clearEstimatedMinutes: boolean
+      clearSize: boolean
     }
     UpdateBoardCardSubtaskRequest: {
       title: null | string

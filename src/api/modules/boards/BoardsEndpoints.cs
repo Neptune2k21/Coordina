@@ -161,7 +161,7 @@ public static class BoardsEndpoints
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
-    int? availableMinutes,
+    string? maxSize,
     string? context,
     bool? preferAssigned,
     bool? includeUnassigned,
@@ -175,7 +175,7 @@ public static class BoardsEndpoints
       boardId,
       user.Id,
       new BoardPlanningRequest(
-        availableMinutes,
+        maxSize,
         context,
         preferAssigned,
         includeUnassigned),

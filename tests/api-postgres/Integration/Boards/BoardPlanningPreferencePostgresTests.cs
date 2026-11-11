@@ -20,16 +20,16 @@ public sealed class BoardPlanningPreferencePostgresTests(PostgresContainerFixtur
       new { name = "Planning", template = "BASIC" });
     var path = $"/workspaces/{workspace.Id}/projects/{project.Id}/boards/{board.Id}/planning-preferences";
 
-    await Api.SendForAsync<Preferences>(HttpMethod.Put, path, user.AccessToken, new { availableMinutes = 60, context = "ops" });
-    await Api.SendForAsync<Preferences>(HttpMethod.Put, path, user.AccessToken, new { availableMinutes = 240, preferAssigned = false });
+    await Api.SendForAsync<Preferences>(HttpMethod.Put, path, user.AccessToken, new { maxSize = "XS", context = "ops" });
+    await Api.SendForAsync<Preferences>(HttpMethod.Put, path, user.AccessToken, new { maxSize = "M", preferAssigned = false });
     var read = await Api.SendForAsync<Preferences>(HttpMethod.Get, path, user.AccessToken);
 
-    Assert.Equal(new Preferences(240, null, false, true), read);
+    Assert.Equal(new Preferences("M", null, false, true), read);
     Assert.Equal(1, await Database.ScalarAsync<long>(
       $"SELECT count(*) FROM board_planning_preferences WHERE board_id = '{board.Id}' AND user_id = '{user.Id}'"));
   }
 
   private sealed record Created(Guid Id);
 
-  private sealed record Preferences(int AvailableMinutes, string? Context, bool PreferAssigned, bool IncludeUnassigned);
+  private sealed record Preferences(string? MaxSize, string? Context, bool PreferAssigned, bool IncludeUnassigned);
 }

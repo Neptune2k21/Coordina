@@ -19,7 +19,7 @@ public sealed record BoardTemplateCardResponse(
   string Title,
   string Description,
   [property: EnumCodes<BoardCardPriority>] string Priority,
-  int EstimatedMinutes,
+  [property: EnumCodes<CardSize>] string Size,
   int? DueInDays,
   IReadOnlyCollection<string> Labels,
   IReadOnlyCollection<string> Subtasks,

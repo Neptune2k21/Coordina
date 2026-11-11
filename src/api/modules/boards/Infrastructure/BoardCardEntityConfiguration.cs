@@ -11,8 +11,8 @@ public sealed class BoardCardEntityConfiguration
   public void Configure(EntityTypeBuilder<BoardCardEntity> builder)
   {
     builder.ToTable("board_cards", table => table.HasCheckConstraint(
-      "ck_board_cards_estimated_minutes",
-      "estimated_minutes IS NULL OR estimated_minutes BETWEEN 5 AND 2880"));
+      "ck_board_cards_size",
+      "size IS NULL OR size IN ('XS', 'S', 'M', 'L', 'XL', 'XXL')"));
 
     builder.HasKey(card => card.Id);
 
@@ -58,8 +58,16 @@ public sealed class BoardCardEntityConfiguration
     builder.Property(card => card.DueDate)
       .HasColumnName("due_date");
 
-    builder.Property(card => card.EstimatedMinutes)
-      .HasColumnName("estimated_minutes");
+    builder.Property(card => card.Size)
+      .HasColumnName("size")
+      .HasConversion(
+        size => size == null
+          ? null
+          : EnumCode.Format(size.Value),
+        value => string.IsNullOrWhiteSpace(value)
+          ? null
+          : EnumCode.Parse<CardSize>(value))
+      .HasMaxLength(4);
 
     builder.Property(card => card.Labels)
       .HasColumnName("labels")

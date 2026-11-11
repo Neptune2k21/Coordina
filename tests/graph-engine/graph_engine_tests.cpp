@@ -1,4 +1,5 @@
 #include "coordina_graph_engine.h"
+#include "planning/card_size.h"
 
 #include <cassert>
 #include <cstddef>
@@ -23,11 +24,11 @@ coordina_graph_work_item work_item(unsigned long long id, std::uint32_t position
 }
 
 coordina_graph_planning_options options(
-  std::uint32_t available_minutes,
+  std::uint32_t max_size,
   std::uint32_t prefer_assigned = 1U,
   std::uint32_t include_unassigned = 1U)
 {
-  return coordina_graph_planning_options{available_minutes, prefer_assigned, include_unassigned};
+  return coordina_graph_planning_options{max_size, prefer_assigned, include_unassigned};
 }
 
 std::vector<coordina_graph_work_recommendation> plan(
@@ -233,40 +234,80 @@ void ranks_actionable_work_by_impact()
 void prefers_work_that_fits_the_focus_block()
 {
   auto quick = work_item(1U, 2U);
-  quick.estimated_minutes = 30U;
+  quick.size = COORDINA_GRAPH_SIZE_XS;
   auto unknown = work_item(2U, 0U);
   auto long_task = work_item(3U, 1U);
-  long_task.estimated_minutes = 120U;
-  const auto focus = options(60U);
+  long_task.size = COORDINA_GRAPH_SIZE_M;
+  const auto focus = options(COORDINA_GRAPH_SIZE_S);
 
   const auto output = plan({quick, unknown, long_task}, &focus);
 
   assert(output.size() == 3U);
   assert(output[0U].node.low == 1U);
-  assert(output[0U].fits_available_time == 1U);
+  assert(output[0U].fits_max_size == 1U);
   assert(output[0U].effort_score > 0);
   assert(output[1U].node.low == 2U);
-  assert(output[1U].fits_available_time == 0U);
+  assert(output[1U].fits_max_size == 0U);
   assert(output[1U].effort_score == 0);
   assert(output[2U].node.low == 3U);
-  assert(output[2U].fits_available_time == 0U);
+  assert(output[2U].fits_max_size == 0U);
   assert(output[2U].effort_score < 0);
 }
 
 void ignores_effort_without_a_time_limit()
 {
   auto quick = work_item(1U, 1U);
-  quick.estimated_minutes = 30U;
+  quick.size = COORDINA_GRAPH_SIZE_XS;
   auto long_task = work_item(2U, 0U);
-  long_task.estimated_minutes = 480U;
-  const auto unrestricted = options(0U);
+  long_task.size = COORDINA_GRAPH_SIZE_XL;
+  const auto unrestricted = options(COORDINA_GRAPH_SIZE_NONE);
 
   const auto output = plan({quick, long_task}, &unrestricted);
 
   assert(output[0U].node.low == 2U);
-  assert(output[0U].fits_available_time == 1U);
-  assert(output[1U].fits_available_time == 1U);
+  assert(output[0U].fits_max_size == 1U);
+  assert(output[1U].fits_max_size == 1U);
   assert(output[0U].effort_score == 0);
+}
+
+void orders_size_ranges_from_xs_to_xxl()
+{
+  using coordina::graph::CardSize;
+  using coordina::graph::size_range;
+
+  const CardSize sizes[] =
+    {CardSize::xs, CardSize::s, CardSize::m, CardSize::l, CardSize::xl, CardSize::xxl};
+  auto previous = size_range(CardSize::none);
+
+  assert(previous.likely_hours == 0.0);
+
+  for (const auto size : sizes)
+  {
+    const auto range = size_range(size);
+
+    assert(range.low_hours > 0.0);
+    assert(range.low_hours <= range.likely_hours && range.likely_hours <= range.high_hours);
+    assert(range.likely_hours > previous.likely_hours);
+    assert(range.high_hours >= previous.high_hours);
+    // Bigger cards are less certain: the spread never narrows.
+    assert(range.high_hours / range.low_hours >= 1.5);
+    assert(range.should_split == (size == CardSize::xxl));
+    previous = range;
+  }
+}
+
+void reads_unknown_sizes_as_none()
+{
+  using coordina::graph::CardSize;
+  using coordina::graph::fits_size_limit;
+  using coordina::graph::to_card_size;
+
+  assert(to_card_size(COORDINA_GRAPH_SIZE_XXL) == CardSize::xxl);
+  assert(to_card_size(7U) == CardSize::none);
+  assert(fits_size_limit(CardSize::xxl, CardSize::none));
+  assert(fits_size_limit(CardSize::s, CardSize::s));
+  assert(!fits_size_limit(CardSize::m, CardSize::s));
+  assert(!fits_size_limit(CardSize::none, CardSize::m));
 }
 
 void ranks_requester_work_before_others()
@@ -420,13 +461,13 @@ void batch_analysis_matches_individual_calls()
   for (unsigned long long id = 1U; id <= 5U; ++id)
   {
     auto item = work_item(id, static_cast<std::uint32_t>(5U - id));
-    item.estimated_minutes = static_cast<std::uint32_t>(id * 20U);
+    item.size = static_cast<std::uint32_t>(id);
     item.assignment = static_cast<std::uint32_t>(id % 3U);
     item.is_in_progress = id == 4U ? 1U : 0U;
     items.push_back(item);
   }
 
-  const auto focus = options(60U);
+  const auto focus = options(COORDINA_GRAPH_SIZE_M);
   BatchBuffers batch(5U);
 
   const auto status = coordina_graph_analyze_board(
@@ -570,12 +611,12 @@ void batch_analysis_flags_cycles()
 void keeps_preference_order_below_the_score_floor()
 {
   auto theirs = work_item(1U, 0U);
-  theirs.estimated_minutes = 30U;
+  theirs.size = COORDINA_GRAPH_SIZE_XS;
   theirs.assignment = 2U;
   auto long_mine = work_item(2U, 1U);
-  long_mine.estimated_minutes = 120U;
+  long_mine.size = COORDINA_GRAPH_SIZE_L;
   long_mine.assignment = 1U;
-  const auto focus = options(60U);
+  const auto focus = options(COORDINA_GRAPH_SIZE_S);
 
   const auto output = plan({theirs, long_mine}, &focus);
 
@@ -615,6 +656,8 @@ int main()
   ranks_actionable_work_by_impact();
   prefers_work_that_fits_the_focus_block();
   ignores_effort_without_a_time_limit();
+  orders_size_ranges_from_xs_to_xxl();
+  reads_unknown_sizes_as_none();
   ranks_requester_work_before_others();
   finishes_started_work_first();
   prefers_matching_context();

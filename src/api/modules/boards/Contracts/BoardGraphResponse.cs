@@ -1,9 +1,12 @@
+using Coordina.Api.Modules.Boards.Domain;
+using Coordina.Api.Shared.OpenApi;
+
 namespace Coordina.Api.Modules.Boards.Contracts;
 
 public sealed record BoardGraphResponse(
   Guid BoardId,
   bool IsAcyclic,
-  int AvailableMinutes,
+  [property: EnumCodes<CardSize>] string? MaxSize,
   string? Context,
   IReadOnlyCollection<BoardGraphCardResponse> ReadyCards,
   IReadOnlyCollection<BoardGraphCardResponse> UnblockedCards,
@@ -30,8 +33,8 @@ public sealed record BoardGraphPlanItemResponse(
   int Score,
   bool IsActionable,
   int BlockerCount,
-  int? EstimatedMinutes,
-  bool FitsAvailableTime,
+  [property: EnumCodes<CardSize>] string? Size,
+  bool FitsMaxSize,
   bool IsAssignedToMe,
   bool IsContextMatch,
   bool IsInProgress,

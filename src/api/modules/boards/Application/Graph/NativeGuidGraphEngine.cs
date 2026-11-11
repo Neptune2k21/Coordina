@@ -313,7 +313,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
       recommendation.AssignmentScore,
       checked((int)recommendation.MomentumScore),
       checked((int)recommendation.ContextScore),
-      recommendation.FitsAvailableTime != 0U,
+      recommendation.FitsMaxSize != 0U,
       recommendation.IsAssignmentMatch != 0U,
       recommendation.IsContextMatch != 0U,
       recommendation.IsInProgress != 0U);
@@ -341,7 +341,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
         checked((uint)item.SubtaskTotal),
         checked((uint)item.SubtaskCompleted),
         checked((uint)item.Position),
-        checked((uint)item.EstimatedMinutes),
+        (uint)item.Size,
         (uint)item.Assignment,
         item.IsInProgress ? 1U : 0U,
         item.IsContextMatch ? 1U : 0U))
@@ -350,7 +350,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
   private static NativeGraphPlanningOptions ToNativeOptions(
     GraphPlanningOptions options) =>
     new(
-      checked((uint)options.AvailableMinutes),
+      (uint)options.MaxSize,
       options.PreferAssigned ? 1U : 0U,
       options.IncludeUnassigned ? 1U : 0U);
 
@@ -403,14 +403,14 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
     uint SubtaskTotal,
     uint SubtaskCompleted,
     uint Position,
-    uint EstimatedMinutes,
+    uint Size,
     uint Assignment,
     uint IsInProgress,
     uint IsContextMatch);
 
   [StructLayout(LayoutKind.Sequential)]
   private record struct NativeGraphPlanningOptions(
-    uint AvailableMinutes,
+    uint MaxSize,
     uint PreferAssigned,
     uint IncludeUnassigned);
 
@@ -428,7 +428,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
     int AssignmentScore,
     uint MomentumScore,
     uint ContextScore,
-    uint FitsAvailableTime,
+    uint FitsMaxSize,
     uint IsAssignmentMatch,
     uint IsContextMatch,
     uint IsInProgress);

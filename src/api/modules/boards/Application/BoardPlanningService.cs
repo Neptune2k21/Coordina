@@ -1,6 +1,7 @@
 using Coordina.Api.Core.Results;
 using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Projects.Application;
+using Coordina.Api.Shared.Enums;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
@@ -82,5 +83,9 @@ public sealed class BoardPlanningService(
   }
 
   private static BoardPlanningPreferencesResponse ToResponse(BoardPlanningPreferences saved) =>
-    new(saved.AvailableMinutes, saved.Context, saved.PreferAssigned, saved.IncludeUnassigned);
+    new(
+      saved.MaxSize is null ? null : EnumCode.Format(saved.MaxSize.Value),
+      saved.Context,
+      saved.PreferAssigned,
+      saved.IncludeUnassigned);
 }

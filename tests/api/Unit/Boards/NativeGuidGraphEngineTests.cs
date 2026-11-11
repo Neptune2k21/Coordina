@@ -224,18 +224,18 @@ public sealed class NativeGuidGraphEngineTests
       [],
       [
         new GraphWorkItem<Guid>(theirs, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, 0,
-          EstimatedMinutes: 30, Assignment: GraphAssignment.Others),
+          Size: GraphSize.Xs, Assignment: GraphAssignment.Others),
         new GraphWorkItem<Guid>(longMine, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, 1,
-          EstimatedMinutes: 120, Assignment: GraphAssignment.Requester),
+          Size: GraphSize.M, Assignment: GraphAssignment.Requester),
         new GraphWorkItem<Guid>(quickMine, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, 2,
-          EstimatedMinutes: 30, Assignment: GraphAssignment.Requester,
+          Size: GraphSize.Xs, Assignment: GraphAssignment.Requester,
           IsInProgress: true, IsContextMatch: true)
       ],
-      new GraphPlanningOptions(AvailableMinutes: 60)).ToArray();
+      new GraphPlanningOptions(MaxSize: GraphSize.S)).ToArray();
 
     Assert.Equal([quickMine, longMine, theirs], recommendations.Select(item => item.Node));
     var best = recommendations[0];
-    Assert.True(best.FitsAvailableTime);
+    Assert.True(best.FitsMaxSize);
     Assert.True(best.IsAssignmentMatch);
     Assert.True(best.IsContextMatch);
     Assert.True(best.IsInProgress);
@@ -243,7 +243,7 @@ public sealed class NativeGuidGraphEngineTests
     Assert.True(best.AssignmentScore > 0);
     Assert.True(best.MomentumScore > 0);
     Assert.True(best.ContextScore > 0);
-    Assert.False(recommendations[1].FitsAvailableTime);
+    Assert.False(recommendations[1].FitsMaxSize);
     Assert.True(recommendations[1].EffortScore < 0);
     Assert.True(recommendations[2].AssignmentScore < 0);
   }
@@ -259,12 +259,12 @@ public sealed class NativeGuidGraphEngineTests
       [],
       [
         new GraphWorkItem<Guid>(first, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, 0,
-          EstimatedMinutes: 480),
+          Size: GraphSize.Xl),
         new GraphWorkItem<Guid>(second, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, 1)
       ]).ToArray();
 
     Assert.Equal([first, second], recommendations.Select(item => item.Node));
-    Assert.All(recommendations, item => Assert.True(item.FitsAvailableTime));
+    Assert.All(recommendations, item => Assert.True(item.FitsMaxSize));
     Assert.All(recommendations, item => Assert.False(item.IsCriticalPath));
   }
 
@@ -283,13 +283,13 @@ public sealed class NativeGuidGraphEngineTests
     ];
     GraphWorkItem<Guid>[] items =
     [
-      new(foundation, false, 1, 3, 0, 0, 0, EstimatedMinutes: 30),
-      new(api, false, 3, 1, 2, 1, 1, EstimatedMinutes: 120),
+      new(foundation, false, 1, 3, 0, 0, 0, Size: GraphSize.Xs),
+      new(api, false, 3, 1, 2, 1, 1, Size: GraphSize.M),
       new(ui, false, 2, GraphWorkItem<Guid>.NoDueDate, 0, 0, 2),
       new(docs, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, 3,
         Assignment: GraphAssignment.Requester)
     ];
-    var options = new GraphPlanningOptions(AvailableMinutes: 60);
+    var options = new GraphPlanningOptions(MaxSize: GraphSize.S);
 
     var analysis = _graphEngine.AnalyzeBoard(nodes, edges, items, options);
 

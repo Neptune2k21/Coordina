@@ -24,7 +24,7 @@ public sealed class BoardTemplatePostgresTests(PostgresContainerFixture postgres
     Assert.Equal(cards.Count(card => card.DueInDays is not null), await CountAsync(
       $"SELECT count(*) FROM board_cards WHERE board_id = '{flow.BoardId}' AND due_date IS NOT NULL"));
     Assert.Equal(cards.Length, await CountAsync(
-      $"SELECT count(*) FROM board_cards WHERE board_id = '{flow.BoardId}' AND estimated_minutes IS NOT NULL"));
+      $"SELECT count(*) FROM board_cards WHERE board_id = '{flow.BoardId}' AND size IS NOT NULL"));
     Assert.Equal(cards.Sum(card => card.Subtasks.Count), await CountAsync(
       $"""
       SELECT count(*) FROM board_card_subtasks subtask

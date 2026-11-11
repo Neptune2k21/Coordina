@@ -1,4 +1,9 @@
 import {
+  type CardSize,
+  focusSlotLabel,
+  focusSlotOptions,
+} from "@/features/board/model/card-size"
+import {
   CheckCircle,
   ClockCountdown,
   GitBranch,
@@ -21,11 +26,7 @@ import {
   getToneClass,
   pickPlanFocus,
 } from "@/features/board/model/planning-insights"
-import {
-  focusTimeOptions,
-  formatMinutes,
-  type PlanningPreferences,
-} from "@/features/board/model/planning-preferences"
+import { type PlanningPreferences } from "@/features/board/model/planning-preferences"
 import type { BoardGraph, BoardGraphPlanItem } from "@/types/task"
 
 type BoardPlanningPanelProps = {
@@ -52,7 +53,7 @@ export function BoardPlanningPanel({
     primary: primaryItem,
     queued: queuedItems,
     isNoFitAlternative,
-  } = pickPlanFocus(planItems, preferences.availableMinutes)
+  } = pickPlanFocus(planItems, preferences.maxSize)
   const blockedPlanCount = planItems.filter((item) => !item.isActionable).length
   const criticalPath = graph?.criticalPath ?? []
   const criticalPathStart = criticalPath[0] ?? null
@@ -121,10 +122,7 @@ export function BoardPlanningPanel({
                 </span>
                 <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">
                   {isNoFitAlternative
-                    ? getNoFitExplanation(
-                        primaryItem,
-                        preferences.availableMinutes
-                      )
+                    ? getNoFitExplanation(primaryItem, preferences.maxSize)
                     : getPlanExplanation(primaryItem)}
                 </span>
                 <span className="mt-2 flex flex-wrap gap-1.5">
@@ -151,11 +149,10 @@ export function BoardPlanningPanel({
           </div>
         ) : (
           <div className="rounded-md border border-dashed border-zinc-950/10 bg-zinc-50 px-3 py-4 text-muted-foreground dark:border-white/10 dark:bg-zinc-950">
-            {preferences.availableMinutes > 0 &&
-            planItems.some((item) => item.isActionable)
-              ? `Nothing ready fits ${formatMinutes(
-                  preferences.availableMinutes
-                )}. Add effort estimates to ready cards or pick a longer focus block.`
+            {preferences.maxSize && planItems.some((item) => item.isActionable)
+              ? `Nothing ready fits ${focusSlotLabel(
+                  preferences.maxSize
+                ).toLowerCase()}. Size the ready cards or pick a longer focus slot.`
               : "No suggested next step yet. Add dates, priorities, or dependencies to help the planner rank work."}
           </div>
         )}
@@ -232,18 +229,18 @@ function PlanningControls({
       <label className="flex items-center gap-1.5">
         Focus
         <select
-          aria-label="Available focus time"
+          aria-label="Focus slot"
           className={selectClass}
-          value={preferences.availableMinutes}
+          value={preferences.maxSize ?? ""}
           onChange={(event) =>
             onPreferencesChange({
               ...preferences,
-              availableMinutes: Number(event.target.value),
+              maxSize: (event.target.value || null) as CardSize | null,
             })
           }
         >
-          {focusTimeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
+          {focusSlotOptions.map((option) => (
+            <option key={option.label} value={option.value ?? ""}>
               {option.label}
             </option>
           ))}

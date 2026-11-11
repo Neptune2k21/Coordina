@@ -1,7 +1,5 @@
-import {
-  formatMinutes,
-  type PlanningPreferences,
-} from "@/features/board/model/planning-preferences"
+import { type CardSize, focusSlotLabel } from "@/features/board/model/card-size"
+import type { PlanningPreferences } from "@/features/board/model/planning-preferences"
 import type { BoardGraphPlanItem } from "@/types/task"
 
 export type PlanTone = "amber" | "rose" | "sky" | "teal" | "zinc"
@@ -44,13 +42,12 @@ export type PlanFocus = {
 
 export function pickPlanFocus(
   items: BoardGraphPlanItem[],
-  availableMinutes: number
+  maxSize: CardSize | null
 ): PlanFocus {
   const actionable = items.filter((item) => item.isActionable)
-  const candidates =
-    availableMinutes > 0
-      ? actionable.filter((item) => item.fitsAvailableTime)
-      : actionable
+  const candidates = maxSize
+    ? actionable.filter((item) => item.fitsMaxSize)
+    : actionable
 
   if (candidates.length > 0) {
     return {
@@ -72,16 +69,11 @@ export function pickPlanFocus(
 
 export function getNoFitExplanation(
   item: BoardGraphPlanItem,
-  availableMinutes: number
+  maxSize: CardSize | null
 ) {
-  const effort =
-    item.estimatedMinutes === null
-      ? ""
-      : ` (${formatMinutes(item.estimatedMinutes)})`
+  const size = item.size === null ? "" : ` (${item.size})`
 
-  return `Nothing ready fits ${formatMinutes(
-    availableMinutes
-  )}. This is the shortest ready task${effort}.`
+  return `Nothing ready fits ${focusSlotLabel(maxSize).toLowerCase()}. This is the smallest ready task${size}.`
 }
 
 export function getPlanTags(
@@ -94,14 +86,11 @@ export function getPlanTags(
   const dueReason = getDueReason(item)
   const unlockReason = getUnlockReason(item)
 
-  if (preferences.availableMinutes > 0) {
-    if (item.estimatedMinutes === null) {
-      tags.push({ label: "Effort unknown", tone: "zinc" })
-    } else if (item.fitsAvailableTime) {
-      tags.push({
-        label: `Fits ${formatMinutes(preferences.availableMinutes)}`,
-        tone: "teal",
-      })
+  if (preferences.maxSize) {
+    if (item.size === null) {
+      tags.push({ label: "Size unknown", tone: "zinc" })
+    } else if (item.fitsMaxSize) {
+      tags.push({ label: "Fits your focus slot", tone: "teal" })
     }
   }
 

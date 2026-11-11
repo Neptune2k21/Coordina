@@ -207,8 +207,8 @@ describe("BoardSettings", () => {
       name: "Planning preferences",
     })
 
-    fireEvent.change(within(planning).getByLabelText("Focus time"), {
-      target: { value: "120" },
+    fireEvent.change(within(planning).getByLabelText("Focus slot"), {
+      target: { value: "S" },
     })
     fireEvent.click(within(planning).getByLabelText("Include unassigned cards"))
     fireEvent.click(
@@ -223,7 +223,7 @@ describe("BoardSettings", () => {
       "board",
       {
         ...defaultPlanningPreferences,
-        availableMinutes: 120,
+        maxSize: "S",
         includeUnassigned: false,
       }
     )

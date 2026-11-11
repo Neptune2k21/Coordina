@@ -71,7 +71,7 @@ public sealed class BoardTemplateEndpointsTests(ApiTestApplicationFactory factor
         Assert.Equal(expectedCard.Title, card.Title);
         Assert.Equal(expectedCard.Description, card.Description);
         Assert.Equal(expectedCard.Priority, card.Priority);
-        Assert.Equal(expectedCard.EstimatedMinutes, card.EstimatedMinutes);
+        Assert.Equal(expectedCard.Size, card.Size);
         Assert.Equal(
           expectedCard.DueInDays is { } days ? createdOn.AddDays(days) : null,
           card.DueDate);

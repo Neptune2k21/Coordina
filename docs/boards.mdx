@@ -56,33 +56,53 @@ open cards with fixed, explainable rules:
 | Assigned to you | Bonus |
 | Assigned only to someone else | Penalty (still listed) |
 | Has the selected context label | Bonus |
-| Effort fits the selected focus time | Bonus |
-| Effort longer than the focus time | Penalty |
-| Effort unknown with a focus time | No bonus, no penalty, shown as "Effort unknown" |
+| Size fits the selected focus slot | Bonus |
+| Size bigger than the focus slot | Penalty |
+| No size with a focus slot | No bonus, no penalty, shown as "Size unknown" |
 
 Ties break on board position, then card id, so the same board always gives the
 same order. A board without dependencies has no critical path.
 
-Cards carry an optional effort estimate, `estimatedMinutes` (5–2,880). Set it on
-create or update; clear it with `clearEstimatedMinutes: true`.
+### Card sizes
+
+A card is sized rather than estimated: nobody knows whether a task takes 90 or
+120 minutes, but everyone can tell a few hours from a few days. A size is an
+order of magnitude, and the bigger the card, the wider its range:
+
+| Size | Means | Focus time the graph engine uses |
+| --- | --- | --- |
+| `XS` | Under an hour | 15 min – 1 h |
+| `S` | A few hours | 1 h – ½ day |
+| `M` | About a day | ½ day – 2 days |
+| `L` | A few days | 2 – 4 days |
+| `XL` | About a week | 4 – 8 days |
+| `XXL` | More than a week | 1 – 3 weeks, and the card should be split |
+
+A day is 6 hours of focus work. The ranges live in one place, the graph engine
+(`src/graph-engine/src/planning/card_size.cpp`); the API and the web app only
+handle the codes. Upcoming forecasts (#129) draw durations within these ranges.
+
+Set `size` on create or update; clear it with `clearSize: true`. Unknown codes
+return `400`.
+
+### Focus slot
 
 ```http
 GET /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/graph
-    ?availableMinutes=60&context=backend&preferAssigned=true&includeUnassigned=true
+    ?maxSize=S&context=backend&preferAssigned=true&includeUnassigned=true
 ```
 
 | Parameter | Values | Default |
 | --- | --- | --- |
-| `availableMinutes` | `0` (no limit) or 5–2,880 | `0` |
+| `maxSize` | The biggest size that fits the slot: `S` for a quick task, `M` for half a day; leave it out for any size | any size |
 | `context` | A label; `#` and spaces are normalized, max 32 characters | none |
 | `preferAssigned` | `true` / `false` | `true` |
 | `includeUnassigned` | `true` / `false` | `true` |
 
 Invalid values return `400`. Each plan item includes structured explanation
-fields: `estimatedMinutes`, `fitsAvailableTime`, `isAssignedToMe`,
-`isContextMatch`, `isInProgress`, and `isShortestAlternative`. When nothing ready
-fits the focus time, the ready card with the smallest known estimate is flagged
-`isShortestAlternative`.
+fields: `size`, `fitsMaxSize`, `isAssignedToMe`, `isContextMatch`,
+`isInProgress`, and `isShortestAlternative`. When nothing ready fits the focus
+slot, the smallest sized ready card is flagged `isShortestAlternative`.
 
 ## Concurrent changes
 

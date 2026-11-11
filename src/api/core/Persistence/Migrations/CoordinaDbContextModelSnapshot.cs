@@ -240,10 +240,6 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("due_date");
 
-                    b.Property<int?>("EstimatedMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("estimated_minutes");
-
                     b.Property<bool>("IsCompleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -272,6 +268,11 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_id");
 
+                    b.Property<string>("Size")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("size");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(180)
@@ -298,7 +299,7 @@ namespace Coordina.Api.Core.Persistence.Migrations
 
                     b.ToTable("board_cards", null, t =>
                         {
-                            t.HasCheckConstraint("ck_board_cards_estimated_minutes", "estimated_minutes IS NULL OR estimated_minutes BETWEEN 5 AND 2880");
+                            t.HasCheckConstraint("ck_board_cards_size", "size IS NULL OR size IN ('XS', 'S', 'M', 'L', 'XL', 'XXL')");
                         });
                 });
 
@@ -464,10 +465,6 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.Property<int>("AvailableMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("available_minutes");
-
                     b.Property<string>("Context")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
@@ -476,6 +473,11 @@ namespace Coordina.Api.Core.Persistence.Migrations
                     b.Property<bool>("IncludeUnassigned")
                         .HasColumnType("boolean")
                         .HasColumnName("include_unassigned");
+
+                    b.Property<string>("MaxSize")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("max_size");
 
                     b.Property<bool>("PreferAssigned")
                         .HasColumnType("boolean")
@@ -489,7 +491,10 @@ namespace Coordina.Api.Core.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("board_planning_preferences", (string)null);
+                    b.ToTable("board_planning_preferences", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_board_planning_preferences_max_size", "max_size IS NULL OR max_size IN ('XS', 'S', 'M', 'L', 'XL', 'XXL')");
+                        });
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Projects.Infrastructure.ProjectEntity", b =>

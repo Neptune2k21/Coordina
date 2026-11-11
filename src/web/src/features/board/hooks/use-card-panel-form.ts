@@ -1,3 +1,4 @@
+import type { CardSize } from "@/features/board/model/card-size"
 import { useEffect, useMemo, useState } from "react"
 
 import { useDismissibleLayer } from "@/features/board/hooks/use-dismissible-layer"
@@ -39,7 +40,7 @@ export function useCardPanelForm({
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState<BoardCardPriority | "">("")
   const [dueDate, setDueDate] = useState("")
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null)
+  const [size, setSize] = useState<CardSize | null>(null)
   const [labels, setLabels] = useState<string[]>([])
   const [labelInput, setLabelInput] = useState("")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
@@ -62,7 +63,7 @@ export function useCardPanelForm({
       description,
       priority,
       dueDate,
-      estimatedMinutes,
+      size,
       labels,
       labelInput,
       assigneeIds,
@@ -72,7 +73,7 @@ export function useCardPanelForm({
       assigneeIds,
       description,
       dueDate,
-      estimatedMinutes,
+      size,
       isCompleted,
       labelInput,
       labels,
@@ -99,7 +100,7 @@ export function useCardPanelForm({
       setDescription(next.description)
       setPriority(next.priority)
       setDueDate(next.dueDate)
-      setEstimatedMinutes(next.estimatedMinutes)
+      setSize(next.size)
       setLabels(next.labels)
       setLabelInput(next.labelInput)
       setAssigneeIds(next.assigneeIds)
@@ -236,7 +237,7 @@ export function useCardPanelForm({
     description,
     dueDate,
     error,
-    estimatedMinutes,
+    size,
     hasChanges,
     isCalendarOpen: calendar.isOpen,
     isCompleted,
@@ -253,7 +254,7 @@ export function useCardPanelForm({
     setDependencyId,
     setDescription,
     setDueDate,
-    setEstimatedMinutes,
+    setSize,
     setIsCalendarOpen,
     setIsLabelMenuOpen,
     setLabelInput,

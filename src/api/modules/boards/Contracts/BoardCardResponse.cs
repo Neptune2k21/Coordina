@@ -11,7 +11,7 @@ public sealed record BoardCardResponse(
   string? Description,
   [property: EnumCodes<BoardCardPriority>] string? Priority,
   DateOnly? DueDate,
-  int? EstimatedMinutes,
+  [property: EnumCodes<CardSize>] string? Size,
   IReadOnlyCollection<string> Labels,
   bool IsCompleted,
   DateTimeOffset? CompletedAt,

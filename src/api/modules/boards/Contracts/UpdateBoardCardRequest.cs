@@ -9,5 +9,5 @@ public sealed record UpdateBoardCardRequest(
   string[]? Labels,
   Guid[]? AssigneeIds,
   bool? IsCompleted,
-  int? EstimatedMinutes = null,
-  bool ClearEstimatedMinutes = false);
+  string? Size = null,
+  bool ClearSize = false);

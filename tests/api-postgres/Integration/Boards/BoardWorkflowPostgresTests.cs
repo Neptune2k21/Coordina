@@ -185,7 +185,7 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
   }
 
   [Fact]
-  public async Task CardEffort_RoundTripsAndIsConstrained()
+  public async Task CardSize_RoundTripsAndIsConstrained()
   {
     var flow = await CreateFlowAsync("BASIC", null);
     var todo = flow.Board.Lists.Single(list => list.TaskStatus == "TODO");
@@ -193,26 +193,26 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
       HttpMethod.Post,
       $"{flow.BoardPath}/lists/{todo.Id}/cards",
       flow.AccessToken,
-      new { title = "Sized", estimatedMinutes = 45 });
+      new { title = "Sized", size = "L" });
     var cardId = created.Lists.SelectMany(list => list.Cards)
       .Single(card => card.Title == "Sized").Id;
 
-    Assert.Equal(45, await Database.ScalarAsync<int>(
-      $"SELECT estimated_minutes FROM board_cards WHERE id = '{cardId}'"));
+    Assert.Equal("L", await Database.ScalarAsync<string>(
+      $"SELECT size FROM board_cards WHERE id = '{cardId}'"));
 
     await Api.SendForAsync<BoardResponse>(
       HttpMethod.Patch,
       $"{flow.BoardPath}/cards/{cardId}",
       flow.AccessToken,
-      new { clearEstimatedMinutes = true });
+      new { clearSize = true });
 
-    Assert.Null(await Database.ScalarAsync<int?>(
-      $"SELECT estimated_minutes FROM board_cards WHERE id = '{cardId}'"));
+    Assert.Null(await Database.ScalarAsync<string?>(
+      $"SELECT size FROM board_cards WHERE id = '{cardId}'"));
 
     var violation = await Assert.ThrowsAsync<Npgsql.PostgresException>(() =>
       Database.ExecuteAsync(
-        $"UPDATE board_cards SET estimated_minutes = 2881 WHERE id = '{cardId}'"));
-    Assert.Equal("ck_board_cards_estimated_minutes", violation.ConstraintName);
+        $"UPDATE board_cards SET size = 'XXXL' WHERE id = '{cardId}'"));
+    Assert.Equal("ck_board_cards_size", violation.ConstraintName);
   }
 
   private async Task<Flow> CreateFlowAsync(string template, string[]? customListTitles)

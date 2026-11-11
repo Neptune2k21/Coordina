@@ -14,7 +14,7 @@ DOCKER_COMPOSE := docker compose --env-file .env -f docker/docker-compose.yml -p
 GRAPH_ENGINE_DIR := src/graph-engine
 GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
 GRAPH_ENGINE_TEST_OUT := tests/graph-engine/bin
-GRAPH_ENGINE_SOURCES := $(GRAPH_ENGINE_DIR)/src/interop/coordina_graph_engine.cpp $(GRAPH_ENGINE_DIR)/src/interop/native_bridge.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_snapshot.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_types.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/critical_path.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/dependency_validator.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/graph_traversal.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/node_analysis.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/suggestion_engine.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/topological_order.cpp $(GRAPH_ENGINE_DIR)/src/planning/planning_analysis.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_planner.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_score.cpp
+GRAPH_ENGINE_SOURCES := $(GRAPH_ENGINE_DIR)/src/interop/coordina_graph_engine.cpp $(GRAPH_ENGINE_DIR)/src/interop/native_bridge.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_snapshot.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_types.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/critical_path.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/dependency_validator.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/graph_traversal.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/node_analysis.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/suggestion_engine.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/topological_order.cpp $(GRAPH_ENGINE_DIR)/src/planning/card_size.cpp $(GRAPH_ENGINE_DIR)/src/planning/planning_analysis.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_planner.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_score.cpp
 GRAPH_ENGINE_FLAGS := -std=c++20 -O2 -fPIC -Wall -Wextra -Wpedantic -Werror -I$(GRAPH_ENGINE_DIR)/include -I$(GRAPH_ENGINE_DIR)/src
 GRAPH_ENGINE_SANITIZE_FLAGS := $(filter-out -O2,$(GRAPH_ENGINE_FLAGS)) -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all
 GRAPH_ENGINE_ABI := contracts/graph-engine-abi.json
@@ -71,7 +71,7 @@ cpp-tools:
 		cp $(CLANG_TOOLS_REQUIREMENTS) $(CLANG_TOOLS_DIR)/requirements.txt; }
 
 graph-engine-format: cpp-tools
-	git ls-files -- '$(GRAPH_ENGINE_DIR)/*.cpp' '$(GRAPH_ENGINE_DIR)/*.h' 'tests/graph-engine/*.cpp' 'tests/graph-engine/*.h' | xargs $(CLANG_FORMAT) -i
+	git ls-files --cached --others --exclude-standard -- '$(GRAPH_ENGINE_DIR)/*.cpp' '$(GRAPH_ENGINE_DIR)/*.h' 'tests/graph-engine/*.cpp' 'tests/graph-engine/*.h' | xargs $(CLANG_FORMAT) -i
 
 graph-engine-build:
 	mkdir -p $(GRAPH_ENGINE_OUT)

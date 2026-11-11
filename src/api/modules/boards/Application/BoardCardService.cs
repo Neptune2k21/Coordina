@@ -32,7 +32,7 @@ public sealed class BoardCardService(
       request.Description,
       request.Priority,
       request.DueDate,
-      request.EstimatedMinutes,
+      request.Size,
       request.Labels,
       request.AssigneeIds,
       false,
@@ -109,9 +109,9 @@ public sealed class BoardCardService(
       request.Description ?? current.Description,
       request.Priority ?? (current.Priority is null ? null : EnumCode.Format(current.Priority.Value)),
       request.ClearDueDate ? null : request.DueDate ?? current.DueDate,
-      request.ClearEstimatedMinutes
+      request.ClearSize
         ? null
-        : request.EstimatedMinutes ?? current.EstimatedMinutes,
+        : request.Size ?? (current.Size is null ? null : EnumCode.Format(current.Size.Value)),
       request.Labels ?? current.Labels.ToArray(),
       request.AssigneeIds ?? current.Assignees.Select(assignee => assignee.UserId).ToArray(),
       request.IsCompleted ?? current.IsCompleted,
@@ -258,7 +258,7 @@ public sealed class BoardCardService(
     string? description,
     string? priority,
     DateOnly? dueDate,
-    int? estimatedMinutes,
+    string? size,
     string[]? labels,
     Guid[]? assigneeIds,
     bool isCompleted,
@@ -288,9 +288,10 @@ public sealed class BoardCardService(
       priority,
       normalizedLabels,
       dueDate,
-      estimatedMinutes,
+      size,
       clock.GetUtcToday(),
-      out var parsedPriority);
+      out var parsedPriority,
+      out var parsedSize);
 
     if (normalizedAssignees.Length > 0)
     {
@@ -317,7 +318,7 @@ public sealed class BoardCardService(
         : TextNormalizer.TrimToNull(description),
       parsedPriority,
       dueDate,
-      estimatedMinutes,
+      parsedSize,
       normalizedLabels,
       normalizedAssignees,
       isCompleted,

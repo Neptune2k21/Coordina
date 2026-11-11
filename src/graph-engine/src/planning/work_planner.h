@@ -2,6 +2,7 @@
 #define COORDINA_GRAPH_ENGINE_WORK_PLANNER_H
 
 #include "core/graph_snapshot.h"
+#include "planning/card_size.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -25,7 +26,7 @@ struct WorkItem
   std::uint32_t subtask_total = 0U;
   std::uint32_t subtask_completed = 0U;
   std::uint32_t position = 0U;
-  std::uint32_t estimated_minutes = 0U;
+  CardSize size = CardSize::none;
   Assignment assignment = Assignment::unassigned;
   bool is_in_progress = false;
   bool is_context_match = false;
@@ -33,7 +34,7 @@ struct WorkItem
 
 struct PlanningOptions
 {
-  std::uint32_t available_minutes = 0U;
+  CardSize max_size = CardSize::none;
   bool prefer_assigned = true;
   bool include_unassigned = true;
 };
@@ -52,7 +53,7 @@ struct WorkRecommendation
   std::int32_t assignment_score = 0;
   std::uint32_t momentum_score = 0U;
   std::uint32_t context_score = 0U;
-  bool fits_available_time = true;
+  bool fits_max_size = true;
   bool is_assignment_match = false;
   bool is_context_match = false;
   bool is_in_progress = false;

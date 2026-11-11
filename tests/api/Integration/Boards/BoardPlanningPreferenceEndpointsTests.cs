@@ -16,7 +16,7 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
 
     var preferences = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Get, PreferencesPath);
 
-    Assert.Equal(new PlanningPreferences(0, null, true, true), preferences);
+    Assert.Equal(new PlanningPreferences(null, null, true, true), preferences);
   }
 
   [Fact]
@@ -24,10 +24,10 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   {
     var scope = await BoardScope.CreateAsync(Api, "BASIC");
 
-    var saved = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { availableMinutes = 120, context = " #deep work ", preferAssigned = false, includeUnassigned = false });
+    var saved = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { maxSize = "m", context = " #deep work ", preferAssigned = false, includeUnassigned = false });
     var read = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Get, PreferencesPath);
 
-    Assert.Equal(new PlanningPreferences(120, "deep-work", false, false), saved);
+    Assert.Equal(new PlanningPreferences("M", "deep-work", false, false), saved);
     Assert.Equal(saved, read);
   }
 
@@ -35,21 +35,21 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   public async Task Save_LeavingFieldsOut_ResetsThemToTheDefaults()
   {
     var scope = await BoardScope.CreateAsync(Api, "BASIC");
-    await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { availableMinutes = 60, preferAssigned = false });
+    await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { maxSize = "S", preferAssigned = false });
 
     var saved = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { });
 
-    Assert.Equal(new PlanningPreferences(0, null, true, true), saved);
+    Assert.Equal(new PlanningPreferences(null, null, true, true), saved);
   }
 
   [Theory]
-  [InlineData(-1)]
-  [InlineData(100000)]
-  public async Task Save_OutOfRangeMinutes_ReturnsValidationProblem(int availableMinutes)
+  [InlineData("HUGE")]
+  [InlineData("120")]
+  public async Task Save_UnknownSize_ReturnsValidationProblem(string maxSize)
   {
     var scope = await BoardScope.CreateAsync(Api, "BASIC");
 
-    var response = await scope.SendAsync(HttpMethod.Put, PreferencesPath, new { availableMinutes });
+    var response = await scope.SendAsync(HttpMethod.Put, PreferencesPath, new { maxSize });
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -60,10 +60,10 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
     var scope = await BoardScope.CreateAsync(Api, "BASIC");
     var member = await scope.AddMemberAsync();
 
-    await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { availableMinutes = 240 });
+    await scope.SendForAsync<PlanningPreferences>(HttpMethod.Put, PreferencesPath, new { maxSize = "S" });
     var membersView = await scope.SendForAsync<PlanningPreferences>(HttpMethod.Get, PreferencesPath, accessToken: member.AccessToken);
 
-    Assert.Equal(0, membersView.AvailableMinutes);
+    Assert.Null(membersView.MaxSize);
   }
 
   [Fact]
@@ -78,7 +78,7 @@ public sealed class BoardPlanningPreferenceEndpointsTests(ApiTestApplicationFact
   }
 
   private sealed record PlanningPreferences(
-    int AvailableMinutes,
+    string? MaxSize,
     string? Context,
     bool PreferAssigned,
     bool IncludeUnassigned);

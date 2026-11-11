@@ -867,11 +867,10 @@
             }
           },
           {
-            "name": "availableMinutes",
+            "name": "maxSize",
             "in": "query",
             "schema": {
-              "type": "integer",
-              "format": "int32"
+              "type": "string"
             }
           },
           {
@@ -2285,7 +2284,7 @@
           "description",
           "priority",
           "dueDate",
-          "estimatedMinutes",
+          "size",
           "labels",
           "isCompleted",
           "completedAt",
@@ -2340,12 +2339,20 @@
             ],
             "format": "date"
           },
-          "estimatedMinutes": {
+          "size": {
+            "enum": [
+              "XS",
+              "S",
+              "M",
+              "L",
+              "XL",
+              "XXL",
+              null
+            ],
             "type": [
               "null",
-              "integer"
-            ],
-            "format": "int32"
+              "string"
+            ]
           },
           "labels": {
             "type": "array",
@@ -2556,8 +2563,8 @@
           "score",
           "isActionable",
           "blockerCount",
-          "estimatedMinutes",
-          "fitsAvailableTime",
+          "size",
+          "fitsMaxSize",
           "isAssignedToMe",
           "isContextMatch",
           "isInProgress",
@@ -2580,14 +2587,22 @@
             "type": "integer",
             "format": "int32"
           },
-          "estimatedMinutes": {
+          "size": {
+            "enum": [
+              "XS",
+              "S",
+              "M",
+              "L",
+              "XL",
+              "XXL",
+              null
+            ],
             "type": [
               "null",
-              "integer"
-            ],
-            "format": "int32"
+              "string"
+            ]
           },
-          "fitsAvailableTime": {
+          "fitsMaxSize": {
             "type": "boolean"
           },
           "isAssignedToMe": {
@@ -2614,7 +2629,7 @@
         "required": [
           "boardId",
           "isAcyclic",
-          "availableMinutes",
+          "maxSize",
           "context",
           "readyCards",
           "unblockedCards",
@@ -2632,9 +2647,20 @@
           "isAcyclic": {
             "type": "boolean"
           },
-          "availableMinutes": {
-            "type": "integer",
-            "format": "int32"
+          "maxSize": {
+            "enum": [
+              "XS",
+              "S",
+              "M",
+              "L",
+              "XL",
+              "XXL",
+              null
+            ],
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "context": {
             "type": [
@@ -2734,16 +2760,27 @@
       },
       "BoardPlanningPreferencesResponse": {
         "required": [
-          "availableMinutes",
+          "maxSize",
           "context",
           "preferAssigned",
           "includeUnassigned"
         ],
         "type": "object",
         "properties": {
-          "availableMinutes": {
-            "type": "integer",
-            "format": "int32"
+          "maxSize": {
+            "enum": [
+              "XS",
+              "S",
+              "M",
+              "L",
+              "XL",
+              "XXL",
+              null
+            ],
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "context": {
             "type": [
@@ -2762,12 +2799,11 @@
       "BoardPlanningRequest": {
         "type": "object",
         "properties": {
-          "availableMinutes": {
+          "maxSize": {
             "type": [
               "null",
-              "integer"
-            ],
-            "format": "int32"
+              "string"
+            ]
           },
           "context": {
             "type": [
@@ -2845,7 +2881,7 @@
           "title",
           "description",
           "priority",
-          "estimatedMinutes",
+          "size",
           "dueInDays",
           "labels",
           "subtasks",
@@ -2870,9 +2906,16 @@
             ],
             "type": "string"
           },
-          "estimatedMinutes": {
-            "type": "integer",
-            "format": "int32"
+          "size": {
+            "enum": [
+              "XS",
+              "S",
+              "M",
+              "L",
+              "XL",
+              "XXL"
+            ],
+            "type": "string"
           },
           "dueInDays": {
             "type": [
@@ -3046,12 +3089,11 @@
               "format": "uuid"
             }
           },
-          "estimatedMinutes": {
+          "size": {
             "type": [
               "null",
-              "integer"
-            ],
-            "format": "int32"
+              "string"
+            ]
           }
         }
       },
@@ -3596,14 +3638,13 @@
               "boolean"
             ]
           },
-          "estimatedMinutes": {
+          "size": {
             "type": [
               "null",
-              "integer"
-            ],
-            "format": "int32"
+              "string"
+            ]
           },
-          "clearEstimatedMinutes": {
+          "clearSize": {
             "type": "boolean",
             "default": false
           }

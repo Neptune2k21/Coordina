@@ -117,7 +117,7 @@ PlanningOptions build_planning_options(const coordina_graph_planning_options* op
   }
 
   return PlanningOptions{
-    .available_minutes = options->available_minutes,
+    .max_size = to_card_size(options->max_size),
     .prefer_assigned = options->prefer_assigned != 0U,
     .include_unassigned = options->include_unassigned != 0U
   };
@@ -141,7 +141,7 @@ std::vector<WorkItem> build_work_items(
         .subtask_total = work_items[index].subtask_total,
         .subtask_completed = work_items[index].subtask_completed,
         .position = work_items[index].position,
-        .estimated_minutes = work_items[index].estimated_minutes,
+        .size = to_card_size(work_items[index].size),
         .assignment = to_assignment(work_items[index].assignment),
         .is_in_progress = work_items[index].is_in_progress != 0U,
         .is_context_match = work_items[index].is_context_match != 0U
@@ -179,7 +179,7 @@ std::size_t write_work_recommendations(
       .assignment_score = recommendations[index].assignment_score,
       .momentum_score = recommendations[index].momentum_score,
       .context_score = recommendations[index].context_score,
-      .fits_available_time = recommendations[index].fits_available_time ? 1U : 0U,
+      .fits_max_size = recommendations[index].fits_max_size ? 1U : 0U,
       .is_assignment_match = recommendations[index].is_assignment_match ? 1U : 0U,
       .is_context_match = recommendations[index].is_context_match ? 1U : 0U,
       .is_in_progress = recommendations[index].is_in_progress ? 1U : 0U

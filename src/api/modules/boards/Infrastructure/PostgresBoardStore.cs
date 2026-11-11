@@ -162,7 +162,7 @@ public sealed partial class PostgresBoardStore : IBoardStore
       Description = seed.Description,
       Priority = seed.Priority,
       DueDate = seed.DueDate,
-      EstimatedMinutes = seed.EstimatedMinutes,
+      Size = seed.Size,
       Labels = seed.Labels.ToArray(),
       IsCompleted = isDone,
       CompletedAt = isDone ? createdAt : null,

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { boardCardPriorities } from "@/features/board/model/board-constants"
 import { panelLabelClass, shortDate } from "@/features/board/model/board-format"
 import { todayDateKey } from "@/features/board/model/dates"
-import { effortOptions } from "@/features/board/model/planning-preferences"
+import { cardSizeHints, cardSizes } from "@/features/board/model/card-size"
 import type { CardPanelForm } from "@/features/board/hooks/use-card-panel-form"
 
 type CardDetailsFieldsProps = {
@@ -32,7 +32,7 @@ export function CardDetailsFields({
     description,
     dueDate,
     error,
-    estimatedMinutes,
+    size,
     isCalendarOpen,
     isLabelMenuOpen,
     labelInput,
@@ -43,7 +43,7 @@ export function CardDetailsFields({
     priority,
     setDescription,
     setDueDate,
-    setEstimatedMinutes,
+    setSize,
     setIsCalendarOpen,
     setIsLabelMenuOpen,
     setLabelInput,
@@ -139,24 +139,33 @@ export function CardDetailsFields({
         </Field>
       </div>
       <Field>
-        <FieldLabel>Effort</FieldLabel>
-        <div className="flex flex-wrap gap-1.5">
-          {effortOptions.map((option) => (
+        <FieldLabel id="card-size-label">Size</FieldLabel>
+        <div
+          role="radiogroup"
+          aria-labelledby="card-size-label"
+          className="flex flex-wrap gap-1.5"
+        >
+          {cardSizes.map((option) => (
             <Button
-              key={option.label}
+              key={option}
               type="button"
-              variant={
-                estimatedMinutes === option.value ? "default" : "outline"
-              }
+              role="radio"
+              aria-checked={size === option}
+              title={cardSizeHints[option]}
+              variant={size === option ? "default" : "outline"}
               size="sm"
-              className="h-8 rounded-md px-2 text-xs"
+              className="h-8 min-w-10 rounded-md px-2 text-xs"
               disabled={isReadOnly}
-              onClick={() => setEstimatedMinutes(option.value)}
+              // Choosing the selected size again clears it.
+              onClick={() => setSize(size === option ? null : option)}
             >
-              {option.label}
+              {option}
             </Button>
           ))}
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          {size ? cardSizeHints[size] : "Not sized yet"}
+        </p>
       </Field>
       <Field>
         <FieldLabel htmlFor="card-labels">Labels</FieldLabel>
