@@ -14,6 +14,16 @@ updates:
     groups:
       nuget-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # tools/analyzers runs inside the compiler, so it must not reference a
+      # Roslyn newer than the oldest SDK that builds the API (Roslyn 5.0 ships
+      # with SDK 10.0.1xx). CI installs the newest SDK and would not notice.
+      # Raise it by hand, with the SDK floor; the quality tool, which only uses
+      # Roslyn as a library, follows on the same occasion.
+      - dependency-name: Microsoft.CodeAnalysis.CSharp
+        update-types: ["version-update:semver-major"]
+      - dependency-name: Microsoft.CodeAnalysis.Analyzers
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /src/web
