@@ -17,9 +17,13 @@ namespace Coordina.Api.Tests.Support;
 
 public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>
 {
+  /// <summary>The web app origin the test API allows, as a deployment would configure it.</summary>
+  public const string WebAppOrigin = "https://app.coordina.test";
+
   protected override void ConfigureWebHost(IWebHostBuilder builder)
   {
     builder.UseEnvironment(CoreHostingExtensions.TestingEnvironment);
+    builder.UseSetting("Cors:AllowedOrigins:0", WebAppOrigin);
     builder.ConfigureTestServices(services =>
     {
       services.Replace(ServiceDescriptor.Singleton<IUserStore, InMemoryUserStore>());

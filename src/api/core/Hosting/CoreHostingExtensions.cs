@@ -11,20 +11,17 @@ public static class CoreHostingExtensions
   public const string TestingEnvironment = "Testing";
   private const string WebAppCorsPolicy = "WebApp";
 
-  private static readonly string[] WebAppOrigins =
-  [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174"
-  ];
-
   public static IServiceCollection AddCore(
     this IServiceCollection services,
     IConfiguration configuration,
     IHostEnvironment environment)
   {
     ArgumentNullException.ThrowIfNull(environment);
+
+    var cors = configuration
+      .GetSection(WebAppCorsOptions.SectionName)
+      .Get<WebAppCorsOptions>() ?? new WebAppCorsOptions();
+    cors.Validate(environment);
 
     services.TryAddSingleton(TimeProvider.System);
     services.AddProblemDetails();
@@ -39,7 +36,7 @@ public static class CoreHostingExtensions
       {
         // Credentials let the web app send and receive the refresh cookie.
         policy
-          .WithOrigins(WebAppOrigins)
+          .WithOrigins(cors.AllowedOrigins)
           .AllowAnyHeader()
           .AllowAnyMethod()
           .AllowCredentials();

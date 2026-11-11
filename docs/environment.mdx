@@ -21,6 +21,30 @@ Auth__SigningKey=change-me-to-a-secure-random-secret-with-at-least-32-characters
 Auth__AccessTokenMinutes=60
 ```
 
+## Allowed web origins
+
+Browsers only let the web app call the API, and send the refresh cookie, from
+an origin listed in `Cors:AllowedOrigins`. Set one environment variable per
+origin:
+
+```dotenv
+Cors__AllowedOrigins__0=https://app.example.com
+Cors__AllowedOrigins__1=https://beta.example.com
+```
+
+- In `Development`, `src/api/appsettings.Development.json` already allows the
+  local Vite ports (`5173` for `make web`, `5174` for the end-to-end tests), on
+  both `localhost` and `127.0.0.1`. A variable replaces the default at the
+  same index, so `Cors__AllowedOrigins__0` alone replaces
+  `http://localhost:5173` and keeps the other three.
+- In any other environment the API refuses to start when the list is empty,
+  instead of rejecting every browser request.
+- Each value is an origin, `scheme://host[:port]`, as the browser sends it:
+  `https://app.example.com/` (trailing slash) or a path stops the API at
+  startup, since it could never match.
+
+## Web app variables
+
 The web app also supports these Vite variables:
 
 ```dotenv
