@@ -524,7 +524,7 @@ export interface paths {
     post?: never
     /**
      * Remove workspace member
-     * @description Removes a MEMBER from the workspace. Only OWNER members can remove members.
+     * @description Removes a MEMBER from the workspace. Only OWNER members can remove members. Their card assignments are dropped and their projects go to the OWNER who removed them.
      */
     delete: {
       parameters: {
@@ -547,6 +547,75 @@ export interface paths {
         }
       }
     }
+    options?: never
+    head?: never
+    /**
+     * Change a member's role
+     * @description Makes a member an OWNER or a MEMBER. Only OWNER members can change roles, and the last OWNER cannot be demoted (409). To hand a workspace over, make another member OWNER, then step down or leave.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          memberUserId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["ChangeMemberRoleRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["WorkspaceMemberResponse"]
+          }
+        }
+      }
+    }
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/leave": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Leave workspace
+     * @description Removes the authenticated user from the workspace. Their card assignments are dropped and their projects go to the longest-standing OWNER. The last OWNER cannot leave (409).
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+      }
+    }
+    delete?: never
     options?: never
     head?: never
     patch?: never
@@ -1858,6 +1927,10 @@ export interface components {
       name: string
       summary: string
       lists: components["schemas"]["BoardTemplateListResponse"][]
+    }
+    ChangeMemberRoleRequest: {
+      /** @enum {string} */
+      role: "OWNER" | "MEMBER"
     }
     CreateBoardCardCommentRequest: {
       body: null | string

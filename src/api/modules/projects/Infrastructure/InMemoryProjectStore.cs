@@ -108,6 +108,25 @@ public sealed class InMemoryProjectStore : IProjectStore
     return Task.FromResult<Project?>(ToProject(updated));
   }
 
+  public Task ReassignOwnerAsync(
+    Guid workspaceId,
+    Guid fromUserId,
+    Guid toUserId,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    foreach (var project in _projects.Values
+      .Where(project => project.WorkspaceId == workspaceId && project.ProjectOwnerId == fromUserId)
+      .ToArray())
+    {
+      _projects[project.Id] = project with { ProjectOwnerId = toUserId, UpdatedAt = updatedAt };
+    }
+
+    return Task.CompletedTask;
+  }
+
   public Task<bool> ArchiveInWorkspaceAsync(
     Guid workspaceId,
     Guid projectId,

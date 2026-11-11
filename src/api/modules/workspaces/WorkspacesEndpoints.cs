@@ -42,10 +42,20 @@ public static class WorkspacesEndpoints
       .WithSummary("List workspace members")
       .WithDescription("Lists members only when the authenticated user belongs to the workspace.");
 
+    group.MapPatch("/{workspaceId:guid}/members/{memberUserId:guid}", ChangeMemberRole)
+      .Produces<WorkspaceMemberResponse>(StatusCodes.Status200OK)
+      .WithSummary("Change a member's role")
+      .WithDescription("Makes a member an OWNER or a MEMBER. Only OWNER members can change roles, and the last OWNER cannot be demoted (409). To hand a workspace over, make another member OWNER, then step down or leave.");
+
+    group.MapPost("/{workspaceId:guid}/leave", Leave)
+      .Produces(StatusCodes.Status204NoContent)
+      .WithSummary("Leave workspace")
+      .WithDescription("Removes the authenticated user from the workspace. Their card assignments are dropped and their projects go to the longest-standing OWNER. The last OWNER cannot leave (409).");
+
     group.MapDelete("/{workspaceId:guid}/members/{memberUserId:guid}", RemoveMember)
       .Produces(StatusCodes.Status204NoContent)
       .WithSummary("Remove workspace member")
-      .WithDescription("Removes a MEMBER from the workspace. Only OWNER members can remove members.");
+      .WithDescription("Removes a MEMBER from the workspace. Only OWNER members can remove members. Their card assignments are dropped and their projects go to the OWNER who removed them.");
 
     group.MapDelete("/{workspaceId:guid}", Delete)
       .Produces(StatusCodes.Status204NoContent)
@@ -133,6 +143,38 @@ public static class WorkspacesEndpoints
       cancellationToken);
 
     return result.ToOkResult();
+  }
+
+  private static async Task<IResult> ChangeMemberRole(
+    Guid workspaceId,
+    Guid memberUserId,
+    ChangeMemberRoleRequest request,
+    CurrentUser user,
+    IWorkspaceService workspaceService,
+    CancellationToken cancellationToken)
+  {
+    var result = await workspaceService.ChangeMemberRoleAsync(
+      workspaceId,
+      memberUserId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> Leave(
+    Guid workspaceId,
+    CurrentUser user,
+    IWorkspaceService workspaceService,
+    CancellationToken cancellationToken)
+  {
+    var result = await workspaceService.LeaveAsync(
+      workspaceId,
+      user.Id,
+      cancellationToken);
+
+    return result.ToNoContentResult();
   }
 
   private static async Task<IResult> RemoveMember(

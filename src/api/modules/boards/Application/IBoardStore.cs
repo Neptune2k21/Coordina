@@ -164,6 +164,12 @@ public interface IBoardStore
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken);
 
+  /// <summary>Drops a user from every card of the workspace they were assigned to.</summary>
+  Task UnassignFromWorkspaceAsync(
+    Guid workspaceId,
+    Guid userId,
+    CancellationToken cancellationToken);
+
   Task<bool> DeleteCardAsync(
     Guid workspaceId,
     Guid projectId,

@@ -363,12 +363,12 @@
       }
     },
     "/workspaces/{workspaceId}/members/{memberUserId}": {
-      "delete": {
+      "patch": {
         "tags": [
           "Workspaces"
         ],
-        "summary": "Remove workspace member",
-        "description": "Removes a MEMBER from the workspace. Only OWNER members can remove members.",
+        "summary": "Change a member\u0027s role",
+        "description": "Makes a member an OWNER or a MEMBER. Only OWNER members can change roles, and the last OWNER cannot be demoted (409). To hand a workspace over, make another member OWNER, then step down or leave.",
         "parameters": [
           {
             "name": "workspaceId",
@@ -381,6 +381,80 @@
           },
           {
             "name": "memberUserId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeMemberRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceMemberResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Remove workspace member",
+        "description": "Removes a MEMBER from the workspace. Only OWNER members can remove members. Their card assignments are dropped and their projects go to the OWNER who removed them.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberUserId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/leave": {
+      "post": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Leave workspace",
+        "description": "Removes the authenticated user from the workspace. Their card assignments are dropped and their projects go to the longest-standing OWNER. The last OWNER cannot leave (409).",
+        "parameters": [
+          {
+            "name": "workspaceId",
             "in": "path",
             "required": true,
             "schema": {
@@ -2740,6 +2814,21 @@
             "items": {
               "$ref": "#/components/schemas/BoardTemplateListResponse"
             }
+          }
+        }
+      },
+      "ChangeMemberRoleRequest": {
+        "required": [
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "enum": [
+              "OWNER",
+              "MEMBER"
+            ],
+            "type": "string"
           }
         }
       },

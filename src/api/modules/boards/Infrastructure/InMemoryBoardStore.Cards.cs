@@ -137,6 +137,26 @@ public sealed partial class InMemoryBoardStore
     return TouchedAsync(board, updatedAt);
   }
 
+  public Task UnassignFromWorkspaceAsync(
+    Guid workspaceId,
+    Guid userId,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    foreach (var card in _cards.Values
+      .Where(card => card.WorkspaceId == workspaceId && card.AssigneeIds.Contains(userId))
+      .ToArray())
+    {
+      _cards[card.Id] = card with
+      {
+        AssigneeIds = card.AssigneeIds.Where(assigneeId => assigneeId != userId).ToArray()
+      };
+    }
+
+    return Task.CompletedTask;
+  }
+
   public Task<bool> DeleteCardAsync(
     Guid workspaceId,
     Guid projectId,

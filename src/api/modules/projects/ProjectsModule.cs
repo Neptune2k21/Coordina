@@ -1,6 +1,7 @@
 using Coordina.Api.Core.Modules;
 using Coordina.Api.Modules.Projects.Application;
 using Coordina.Api.Modules.Projects.Infrastructure;
+using Coordina.Api.Modules.Workspaces.Application;
 
 namespace Coordina.Api.Modules.Projects;
 
@@ -13,6 +14,7 @@ public sealed class ProjectsModule : IModule
     services.AddScoped<IProjectStore, PostgresProjectStore>();
     services.AddScoped<IProjectService, ProjectService>();
     services.AddScoped<IProjectAccessGuard, ProjectAccessGuard>();
+    services.AddScoped<IWorkspaceDepartureHandler, ProjectOwnerSuccession>();
   }
 
   public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
