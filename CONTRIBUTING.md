@@ -234,6 +234,18 @@ Apply migrations locally:
 make api-migrate
 ```
 
+Check whether model changes need a migration:
+
+```bash
+make api-migrations-check
+```
+
+This compares the current EF model with the last migration snapshot and fails
+with EF's error message when they differ. It does not connect to PostgreSQL,
+but the API still needs its configuration in `.env` (copy `.env.example` during
+setup). The check runs before tests in `make quality` and first in the API
+suite used by `make verify` and CI. It does not create or apply migrations.
+
 Before submitting a database change, verify:
 
 | Check | Reason |
