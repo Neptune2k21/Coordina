@@ -151,6 +151,45 @@ std::vector<WorkItem> build_work_items(
   return native_work_items;
 }
 
+std::vector<Assignee> build_assignees(
+  const coordina_graph_assignee* assignees,
+  std::size_t assignee_count)
+{
+  std::vector<Assignee> native_assignees;
+  native_assignees.reserve(assignee_count);
+
+  for (std::size_t index = 0U; index < assignee_count; ++index)
+  {
+    native_assignees.push_back(
+      Assignee{.node = to_node_id(assignees[index].node), .person = assignees[index].person});
+  }
+
+  return native_assignees;
+}
+
+std::size_t write_card_criticalities(
+  const std::vector<CardCriticality>& cards,
+  coordina_graph_card_criticality* output,
+  std::size_t output_capacity)
+{
+  if (output == nullptr || output_capacity == 0U)
+  {
+    return 0U;
+  }
+
+  const auto count = cards.size() < output_capacity ? cards.size() : output_capacity;
+
+  for (std::size_t index = 0U; index < count; ++index)
+  {
+    output[index] = coordina_graph_card_criticality{
+      .node = to_abi_node_id(cards[index].node),
+      .criticality = cards[index].criticality
+    };
+  }
+
+  return count;
+}
+
 std::size_t write_work_recommendations(
   const std::vector<WorkRecommendation>& recommendations,
   coordina_graph_work_recommendation* output,

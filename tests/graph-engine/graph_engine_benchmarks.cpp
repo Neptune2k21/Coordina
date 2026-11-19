@@ -113,6 +113,8 @@ std::size_t run_primitive_sequence(
     node_count,
     graph.edges.data(),
     edge_count,
+    graph.items.data(),
+    graph.items.size(),
     buffers.critical.data(),
     buffers.critical.size());
   written += coordina_graph_plan_work(
@@ -199,6 +201,75 @@ bool same_ranking(const BoardGraph& graph, const coordina_graph_planning_options
   }
 
   return true;
+}
+
+constexpr std::uint32_t forecast_runs = 2000U;
+constexpr std::uint32_t forecast_team = 5U;
+
+// Forecasts a release that depends on every card of the board, so its scope
+// is the whole board. Assigned cards are spread over a team of five.
+struct ForecastResult
+{
+  coordina_graph_status status;
+  coordina_graph_milestone_forecast output;
+};
+
+BoardGraph with_release(const BoardGraph& board)
+{
+  auto graph = board;
+  const auto release = node(board.nodes.size());
+  graph.nodes.push_back(release);
+
+  for (const auto card : board.nodes)
+  {
+    graph.edges.push_back(coordina_graph_edge{release, card});
+  }
+
+  coordina_graph_work_item item{};
+  item.node = release;
+  item.due_days = std::numeric_limits<std::int32_t>::max();
+  item.position = static_cast<std::uint32_t>(board.nodes.size());
+  item.size = COORDINA_GRAPH_SIZE_XS;
+  graph.items.push_back(item);
+  return graph;
+}
+
+ForecastResult run_forecast(const BoardGraph& graph)
+{
+  std::vector<coordina_graph_assignee> assignees;
+
+  for (std::size_t index = 0U; index < graph.items.size(); ++index)
+  {
+    if (graph.items[index].assignment != COORDINA_GRAPH_UNASSIGNED)
+    {
+      assignees.push_back(
+        coordina_graph_assignee{
+          graph.items[index].node,
+          static_cast<std::uint32_t>(index % forecast_team),
+          0U
+        });
+    }
+  }
+
+  std::vector<coordina_graph_card_criticality> cards(graph.nodes.size());
+  ForecastResult result{COORDINA_GRAPH_OK, {}};
+  result.output.cards = cards.data();
+  result.output.card_capacity = cards.size();
+  const coordina_graph_forecast_options
+    options{graph.nodes.back(), 42U, forecast_team, forecast_runs};
+  result.status = coordina_graph_forecast(
+    graph.nodes.data(),
+    graph.nodes.size(),
+    graph.edges.data(),
+    graph.edges.size(),
+    graph.items.data(),
+    graph.items.size(),
+    assignees.data(),
+    assignees.size(),
+    &options,
+    &result.output);
+  result.output.cards = nullptr;
+  return result;
 }
 
 template <typename Work>
@@ -288,6 +359,42 @@ int main(int argc, char** argv)
     {
       return 1;
     }
+  }
+
+  std::printf(
+    "\n%8s %8s %8s %12s %9s %9s\n",
+    "nodes",
+    "runs",
+    "scope",
+    "forecast_ms",
+    "p50_days",
+    "p85_days");
+
+  for (const auto size : sizes)
+  {
+    const auto graph = with_release(build_board(size));
+    ForecastResult result{COORDINA_GRAPH_OK, {}};
+    const auto elapsed = median_milliseconds(
+      size <= 1000U ? 3 : 1,
+      [&]
+      {
+        result = run_forecast(graph);
+      });
+
+    if (result.status != COORDINA_GRAPH_OK || result.output.p50_days > result.output.p85_days)
+    {
+      std::fprintf(stderr, "forecast failed with status %d\n", result.status);
+      return 1;
+    }
+
+    std::printf(
+      "%8zu %8u %8zu %12.3f %9.1f %9.1f\n",
+      size,
+      forecast_runs,
+      result.output.card_count,
+      elapsed,
+      result.output.p50_days,
+      result.output.p85_days);
   }
 
   return 0;

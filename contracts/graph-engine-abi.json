@@ -101,6 +101,46 @@
         { "name": "is_acyclic", "offset": 120, "size": 4 },
         { "name": "reserved", "offset": 124, "size": 4 }
       ]
+    },
+    {
+      "name": "coordina_graph_assignee",
+      "size": 24,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "person", "offset": 16, "size": 4 },
+        { "name": "reserved", "offset": 20, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_forecast_options",
+      "size": 32,
+      "fields": [
+        { "name": "milestone", "offset": 0, "size": 16 },
+        { "name": "seed", "offset": 16, "size": 8 },
+        { "name": "person_count", "offset": 24, "size": 4 },
+        { "name": "run_count", "offset": 28, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_card_criticality",
+      "size": 24,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "criticality", "offset": 16, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_milestone_forecast",
+      "size": 48,
+      "fields": [
+        { "name": "cards", "offset": 0, "size": 8 },
+        { "name": "card_capacity", "offset": 8, "size": 8 },
+        { "name": "card_count", "offset": 16, "size": 8 },
+        { "name": "p50_days", "offset": 24, "size": 8 },
+        { "name": "p85_days", "offset": 32, "size": 8 },
+        { "name": "unsized_count", "offset": 40, "size": 4 },
+        { "name": "reserved", "offset": 44, "size": 4 }
+      ]
     }
   ],
   "enums": [
@@ -141,7 +181,8 @@
       "values": [
         { "name": "COORDINA_GRAPH_OK", "value": 0 },
         { "name": "COORDINA_GRAPH_INVALID_ARGUMENT", "value": 1 },
-        { "name": "COORDINA_GRAPH_INSUFFICIENT_CAPACITY", "value": 2 }
+        { "name": "COORDINA_GRAPH_INSUFFICIENT_CAPACITY", "value": 2 },
+        { "name": "COORDINA_GRAPH_CYCLE", "value": 3 }
       ]
     }
   ]

@@ -1,6 +1,7 @@
 #ifndef COORDINA_GRAPH_ENGINE_PLANNING_ANALYSIS_H
 #define COORDINA_GRAPH_ENGINE_PLANNING_ANALYSIS_H
 
+#include "algorithms/critical_path.h"
 #include "algorithms/node_analysis.h"
 #include "core/graph_snapshot.h"
 #include "planning/work_planner.h"
@@ -24,7 +25,13 @@ struct BoardAnalysis
   std::vector<WorkRecommendation> recommendations;
 };
 
-PlanningAnalysis analyze_planning(const GraphSnapshot& graph);
+// The likely focus hours each open card needs. Completed cards are left out,
+// and a node without a work item counts as an open, unsized card.
+NodeHours open_card_hours(const GraphSnapshot& graph, const std::vector<WorkItem>& work_items);
+
+PlanningAnalysis analyze_planning(
+  const GraphSnapshot& graph,
+  const std::vector<WorkItem>& work_items);
 
 BoardAnalysis analyze_board(
   const GraphSnapshot& graph,

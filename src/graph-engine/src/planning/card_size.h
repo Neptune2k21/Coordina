@@ -35,6 +35,9 @@ struct SizeRange
 // The range of a size; none has an empty range.
 SizeRange size_range(CardSize size) noexcept;
 
+// The range a forecast plans for: an unsized card is planned as an M.
+SizeRange planned_range(CardSize size) noexcept;
+
 // Reads a size from the C ABI, where an unknown value counts as none.
 CardSize to_card_size(std::uint32_t value) noexcept;
 

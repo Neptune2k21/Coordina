@@ -160,10 +160,11 @@ void print_enum(const char* name, const std::vector<EnumValue>& values)
   X(COORDINA_GRAPH_EDGE_CYCLE)          \
   X(COORDINA_GRAPH_EDGE_INVALID_ARGUMENT)
 
-#define COORDINA_STATUS_VALUES(X)    \
-  X(COORDINA_GRAPH_OK)               \
-  X(COORDINA_GRAPH_INVALID_ARGUMENT) \
-  X(COORDINA_GRAPH_INSUFFICIENT_CAPACITY)
+#define COORDINA_STATUS_VALUES(X)         \
+  X(COORDINA_GRAPH_OK)                    \
+  X(COORDINA_GRAPH_INVALID_ARGUMENT)      \
+  X(COORDINA_GRAPH_INSUFFICIENT_CAPACITY) \
+  X(COORDINA_GRAPH_CYCLE)
 
 int main()
 {
@@ -246,6 +247,34 @@ int main()
     COORDINA_FIELD(coordina_graph_board_analysis, recommendation_count),
     COORDINA_FIELD(coordina_graph_board_analysis, is_acyclic),
     COORDINA_FIELD(coordina_graph_board_analysis, reserved));
+
+  COORDINA_STRUCT(
+    coordina_graph_assignee,
+    COORDINA_FIELD(coordina_graph_assignee, node),
+    COORDINA_FIELD(coordina_graph_assignee, person),
+    COORDINA_FIELD(coordina_graph_assignee, reserved));
+
+  COORDINA_STRUCT(
+    coordina_graph_forecast_options,
+    COORDINA_FIELD(coordina_graph_forecast_options, milestone),
+    COORDINA_FIELD(coordina_graph_forecast_options, seed),
+    COORDINA_FIELD(coordina_graph_forecast_options, person_count),
+    COORDINA_FIELD(coordina_graph_forecast_options, run_count));
+
+  COORDINA_STRUCT(
+    coordina_graph_card_criticality,
+    COORDINA_FIELD(coordina_graph_card_criticality, node),
+    COORDINA_FIELD(coordina_graph_card_criticality, criticality));
+
+  COORDINA_STRUCT(
+    coordina_graph_milestone_forecast,
+    COORDINA_FIELD(coordina_graph_milestone_forecast, cards),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, card_capacity),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, card_count),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, p50_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, p85_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, unsized_count),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, reserved));
 
   std::printf("\n  ],\n  \"enums\": [");
   first_entry = true;

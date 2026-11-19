@@ -1,89 +1,78 @@
 #include "algorithms/critical_path.h"
 
-#include "algorithms/topological_order.h"
-
 #include <algorithm>
-#include <unordered_map>
 
 namespace coordina::graph
 {
-std::vector<NodeId> critical_path(const GraphSnapshot& graph)
-{
-  return critical_path(graph, dependency_first_topological_order(graph));
-}
-
 std::vector<NodeId> critical_path(
   const GraphSnapshot& graph,
-  const std::vector<NodeId>& dependency_order)
+  const std::vector<NodeId>& dependency_order,
+  const NodeHours& hours)
 {
-  if (dependency_order.empty())
+  if (dependency_order.empty() || dependency_order.size() != graph.nodes().size())
   {
     return {};
   }
 
-  if (dependency_order.size() != graph.nodes().size())
-  {
-    return {};
-  }
-
-  std::unordered_map<NodeId, std::size_t, NodeHash> depths;
+  // The time from the start of the chain to the end of each node.
+  auto finish = hours;
   std::unordered_map<NodeId, NodeId, NodeHash> previous;
-  depths.reserve(graph.nodes().size());
-  previous.reserve(graph.nodes().size());
-
-  for (const auto node : graph.nodes())
-  {
-    depths.emplace(node, 0U);
-  }
+  previous.reserve(hours.size());
 
   for (const auto dependency : dependency_order)
   {
-    const auto depth = depths[dependency];
+    const auto found = finish.find(dependency);
+
+    if (found == finish.end())
+    {
+      continue;
+    }
+
+    const auto dependency_finish = found->second;
 
     for (const auto dependent : graph.incoming(dependency))
     {
-      const auto candidate_depth = depth + 1U;
+      const auto dependent_hours = hours.find(dependent);
 
-      if (candidate_depth > depths[dependent])
+      if (dependent_hours == hours.end())
       {
-        depths[dependent] = candidate_depth;
+        continue;
+      }
+
+      const auto candidate = dependency_finish + dependent_hours->second;
+      auto& current = finish[dependent];
+
+      if (candidate > current)
+      {
+        current = candidate;
         previous[dependent] = dependency;
       }
     }
   }
 
-  auto end = dependency_order.front();
-  auto longest_depth = depths[end];
+  const NodeId* end = nullptr;
+  auto longest = 0.0;
 
-  for (const auto node : dependency_order)
+  for (const auto& node : dependency_order)
   {
-    if (depths[node] > longest_depth)
+    if (previous.contains(node) && (end == nullptr || finish[node] > longest))
     {
-      end = node;
-      longest_depth = depths[node];
+      end = &node;
+      longest = finish[node];
     }
   }
 
-  if (longest_depth == 0U)
+  if (end == nullptr)
   {
     return {};
   }
 
-  std::vector<NodeId> path;
-  path.push_back(end);
+  std::vector<NodeId> path{*end};
 
-  auto current = end;
-  while (true)
+  for (auto found = previous.find(*end); found != previous.end();
+    found = previous.find(found->second))
   {
-    const auto found = previous.find(current);
-
-    if (found == previous.end())
-    {
-      break;
-    }
-
-    current = found->second;
-    path.push_back(current);
+    path.push_back(found->second);
   }
 
   std::ranges::reverse(path);

@@ -181,7 +181,7 @@ void finds_critical_path()
   };
   coordina_graph_node_id output[4U] = {};
 
-  const auto count = coordina_graph_critical_path(nodes, 4U, edges, 3U, output, 4U);
+  const auto count = coordina_graph_critical_path(nodes, 4U, edges, 3U, nullptr, 0U, output, 4U);
 
   assert(count == 3U);
   assert(output[0U].low == 1U);
@@ -194,7 +194,7 @@ void has_no_critical_path_without_dependencies()
   const coordina_graph_node_id nodes[] = {node(1U), node(2U)};
   coordina_graph_node_id output[2U] = {};
 
-  const auto count = coordina_graph_critical_path(nodes, 2U, nullptr, 0U, output, 2U);
+  const auto count = coordina_graph_critical_path(nodes, 2U, nullptr, 0U, nullptr, 0U, output, 2U);
 
   assert(count == 0U);
 
@@ -499,7 +499,15 @@ void batch_analysis_matches_individual_calls()
     assert(same_node(expected_nodes[index], batch.order[index]));
   }
 
-  count = coordina_graph_critical_path(nodes, 5U, edges, 3U, expected_nodes, 5U);
+  count = coordina_graph_critical_path(
+    nodes,
+    5U,
+    edges,
+    3U,
+    items.data(),
+    items.size(),
+    expected_nodes,
+    5U);
   assert(count == batch.output.critical_path.count);
   for (std::size_t index = 0U; index < count; ++index)
   {
@@ -641,6 +649,131 @@ void clamps_heavily_blocked_work()
   assert(output[1U].blocker_count == 5000U);
   assert(output[1U].score == 1U);
 }
+
+coordina_graph_work_item sized_item(
+  unsigned long long id,
+  std::uint32_t size,
+  std::uint32_t position,
+  bool is_completed = false)
+{
+  auto item = work_item(id, position);
+  item.size = size;
+  item.is_completed = is_completed ? 1U : 0U;
+  return item;
+}
+
+std::vector<coordina_graph_node_id> weighted_path(
+  const std::vector<coordina_graph_work_item>& items,
+  const std::vector<coordina_graph_edge>& edges)
+{
+  std::vector<coordina_graph_node_id> nodes;
+  nodes.reserve(items.size());
+
+  for (const auto& item : items)
+  {
+    nodes.push_back(item.node);
+  }
+
+  std::vector<coordina_graph_node_id> output(nodes.size());
+  const auto count = coordina_graph_critical_path(
+    nodes.data(),
+    nodes.size(),
+    edges.data(),
+    edges.size(),
+    items.data(),
+    items.size(),
+    output.data(),
+    output.size());
+  output.resize(count);
+  return output;
+}
+
+bool is_path(
+  const std::vector<coordina_graph_node_id>& path,
+  const std::vector<unsigned long long>& expected)
+{
+  if (path.size() != expected.size())
+  {
+    return false;
+  }
+
+  for (std::size_t index = 0U; index < path.size(); ++index)
+  {
+    if (path[index].low != expected[index])
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void weighs_the_critical_path_by_size()
+{
+  // Three XS cards in a row take 1.5 h; an M after an L takes 24 h.
+  const std::vector<coordina_graph_work_item> items = {
+    sized_item(1U, COORDINA_GRAPH_SIZE_XS, 0U),
+    sized_item(2U, COORDINA_GRAPH_SIZE_XS, 1U),
+    sized_item(3U, COORDINA_GRAPH_SIZE_XS, 2U),
+    sized_item(4U, COORDINA_GRAPH_SIZE_L, 3U),
+    sized_item(5U, COORDINA_GRAPH_SIZE_M, 4U)
+  };
+  const std::vector<coordina_graph_edge> edges = {
+    coordina_graph_edge{node(2U), node(1U)},
+    coordina_graph_edge{node(3U), node(2U)},
+    coordina_graph_edge{node(5U), node(4U)}
+  };
+
+  assert(is_path(weighted_path(items, edges), {4U, 5U}));
+
+  // Unsized cards count as M: two of them (12 h) beat three S (6 h).
+  const std::vector<coordina_graph_work_item> unsized = {
+    sized_item(1U, COORDINA_GRAPH_SIZE_S, 0U),
+    sized_item(2U, COORDINA_GRAPH_SIZE_S, 1U),
+    sized_item(3U, COORDINA_GRAPH_SIZE_S, 2U),
+    sized_item(4U, COORDINA_GRAPH_SIZE_NONE, 3U),
+    sized_item(5U, COORDINA_GRAPH_SIZE_NONE, 4U)
+  };
+
+  assert(is_path(weighted_path(unsized, edges), {4U, 5U}));
+}
+
+void leaves_completed_cards_out_of_the_critical_path()
+{
+  // 3 depends on 2, which depends on 1; 5 depends on 4.
+  const std::vector<coordina_graph_edge> edges = {
+    coordina_graph_edge{node(2U), node(1U)},
+    coordina_graph_edge{node(3U), node(2U)},
+    coordina_graph_edge{node(5U), node(4U)}
+  };
+  const std::vector<coordina_graph_work_item> first_done = {
+    sized_item(1U, COORDINA_GRAPH_SIZE_XXL, 0U, true),
+    sized_item(2U, COORDINA_GRAPH_SIZE_M, 1U),
+    sized_item(3U, COORDINA_GRAPH_SIZE_M, 2U),
+    sized_item(4U, COORDINA_GRAPH_SIZE_S, 3U),
+    sized_item(5U, COORDINA_GRAPH_SIZE_S, 4U)
+  };
+
+  assert(is_path(weighted_path(first_done, edges), {2U, 3U}));
+
+  // A completed card in the middle cuts the chain: 3 no longer waits for 1.
+  auto middle_done = first_done;
+  middle_done[0U].is_completed = 0U;
+  middle_done[1U].is_completed = 1U;
+
+  assert(is_path(weighted_path(middle_done, edges), {4U, 5U}));
+
+  // A lone card has no path, however long it is.
+  const std::vector<coordina_graph_work_item> lone = {
+    sized_item(1U, COORDINA_GRAPH_SIZE_XXL, 0U),
+    sized_item(2U, COORDINA_GRAPH_SIZE_XS, 1U, true),
+    sized_item(3U, COORDINA_GRAPH_SIZE_XS, 2U),
+    sized_item(4U, COORDINA_GRAPH_SIZE_XS, 3U),
+    sized_item(5U, COORDINA_GRAPH_SIZE_XS, 4U, true)
+  };
+
+  assert(weighted_path(lone, edges).empty());
+}
 }
 
 int main()
@@ -669,6 +802,8 @@ int main()
   batch_analysis_reports_missing_capacity_without_writing();
   batch_analysis_rejects_invalid_arguments();
   batch_analysis_flags_cycles();
+  weighs_the_critical_path_by_size();
+  leaves_completed_cards_out_of_the_critical_path();
 
   return 0;
 }
