@@ -20,6 +20,7 @@ export function makeCard(overrides: Partial<BoardCard> = {}): BoardCard {
     priority: null,
     dueDate: null,
     size: null,
+    milestoneDate: null,
     labels: [],
     isCompleted: false,
     completedAt: null,

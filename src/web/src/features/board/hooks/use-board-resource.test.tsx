@@ -38,6 +38,7 @@ describe("useBoardResource", () => {
       new Promise(() => undefined)
     )
     vi.mocked(workspaces.listWorkspaceMembers).mockResolvedValue([])
+    vi.mocked(boardApi.getBoardMilestones).mockResolvedValue([])
     const onError = vi.fn()
 
     const { result, rerender } = renderHook(
@@ -73,6 +74,7 @@ describe("useBoardResource", () => {
       new Promise(() => undefined)
     )
     vi.mocked(workspaces.listWorkspaceMembers).mockResolvedValue([])
+    vi.mocked(boardApi.getBoardMilestones).mockResolvedValue([])
 
     const { rerender } = renderHook(
       ({ maxSize }) =>
@@ -91,6 +93,8 @@ describe("useBoardResource", () => {
     await waitFor(() => expect(boardApi.getBoardGraph).toHaveBeenCalledTimes(2))
 
     expect(boardApi.getDefaultBoard).toHaveBeenCalledTimes(1)
+    // Forecasts do not depend on anyone's preferences.
+    expect(boardApi.getBoardMilestones).toHaveBeenCalledTimes(1)
     expect(vi.mocked(boardApi.getBoardGraph).mock.calls[1][4]).toEqual({
       ...defaultPlanningPreferences,
       maxSize: "S",

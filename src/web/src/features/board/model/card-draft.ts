@@ -17,6 +17,7 @@ export type CardDraft = {
   priority: BoardCardPriority | ""
   dueDate: string
   size: CardSize | null
+  milestoneDate: string
   labels: string[]
   labelInput: string
   assigneeIds: string[]
@@ -30,6 +31,7 @@ export function draftFromCard(card: BoardCard | null): CardDraft {
     priority: card?.priority ?? "",
     dueDate: card?.dueDate ?? "",
     size: card?.size ?? null,
+    milestoneDate: card?.milestoneDate ?? "",
     labels: normalizeLabels(card?.labels ?? []),
     labelInput: "",
     assigneeIds: card?.assignees.map((assignee) => assignee.userId) ?? [],
@@ -48,6 +50,7 @@ export function hasDraftChanges(draft: CardDraft, card: BoardCard | null) {
     draft.priority !== (card.priority ?? "") ||
     draft.dueDate !== (card.dueDate ?? "") ||
     draft.size !== card.size ||
+    draft.milestoneDate !== (card.milestoneDate ?? "") ||
     draft.isCompleted !== card.isCompleted ||
     !sameLabels(
       normalizeLabels([...draft.labels, draft.labelInput]),
@@ -60,13 +63,29 @@ export function hasDraftChanges(draft: CardDraft, card: BoardCard | null) {
   )
 }
 
-export function validateDraft(draft: CardDraft, today = todayDateKey()) {
+/**
+ * A milestone date already saved may have passed: only a new one has to be
+ * ahead, so `savedMilestoneDate` is the card's current one.
+ */
+export function validateDraft(
+  draft: CardDraft,
+  today = todayDateKey(),
+  savedMilestoneDate = ""
+) {
   if (!draft.title.trim()) {
     return "Card title is required."
   }
 
   if (draft.dueDate && draft.dueDate < today) {
     return "Due date cannot be in the past."
+  }
+
+  if (
+    draft.milestoneDate &&
+    draft.milestoneDate !== savedMilestoneDate &&
+    draft.milestoneDate < today
+  ) {
+    return "Milestone date cannot be in the past."
   }
 
   return null
@@ -90,6 +109,7 @@ export function toCardInput(
     priority: draft.priority,
     dueDate: draft.dueDate || null,
     size: draft.size,
+    milestoneDate: draft.milestoneDate || null,
     labels,
     assigneeIds: draft.assigneeIds,
     isCompleted,

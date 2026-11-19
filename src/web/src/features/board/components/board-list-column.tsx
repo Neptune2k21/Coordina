@@ -1,6 +1,7 @@
 import {
   CalendarBlank,
   CheckCircle,
+  FlagPennant,
   Plus,
   TextAlignLeft,
   WarningCircle,
@@ -326,14 +327,25 @@ const CompactCard = memo(function CompactCard({
               </span>
             ) : null}
           </div>
-          {card.dueDate ? (
-            <span
-              className={`flex items-center gap-1 rounded-sm px-1 py-0.5 text-[10px] font-medium ${dateBadgeClass(card.dueDate)}`}
-            >
-              <CalendarBlank className="size-3" />
-              {shortDate(card.dueDate)}
-            </span>
-          ) : null}
+          <div className="flex items-center gap-1">
+            {card.milestoneDate ? (
+              <span
+                title={`Milestone, target ${shortDate(card.milestoneDate)}`}
+                className="flex items-center gap-1 rounded-sm bg-violet-500/10 px-1 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-200"
+              >
+                <FlagPennant className="size-3" weight="fill" />
+                {shortDate(card.milestoneDate)}
+              </span>
+            ) : null}
+            {card.dueDate ? (
+              <span
+                className={`flex items-center gap-1 rounded-sm px-1 py-0.5 text-[10px] font-medium ${dateBadgeClass(card.dueDate)}`}
+              >
+                <CalendarBlank className="size-3" />
+                {shortDate(card.dueDate)}
+              </span>
+            ) : null}
+          </div>
         </div>
       </CardContent>
     </Card>

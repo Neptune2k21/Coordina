@@ -17,6 +17,8 @@ export type BoardCardDependency = Schemas["BoardCardDependencyResponse"]
 export type BoardGraph = Schemas["BoardGraphResponse"]
 export type BoardGraphCard = Schemas["BoardGraphCardResponse"]
 export type BoardGraphPlanItem = Schemas["BoardGraphPlanItemResponse"]
+export type BoardMilestone = Schemas["BoardMilestoneResponse"]
+export type BoardMilestoneStatus = BoardMilestone["status"]
 export type BoardCardDependencyAnalysis =
   Schemas["BoardCardDependencyAnalysisResponse"]
 export type BoardTemplateDefinition = Schemas["BoardTemplateResponse"]
@@ -40,6 +42,8 @@ export type BoardCardInput = {
   priority?: BoardCardPriority | ""
   dueDate?: string | null
   size?: CardSize | null
+  /** The target date that makes the card a milestone; null unmarks it. */
+  milestoneDate?: string | null
   labels?: string[]
   assigneeIds?: string[]
   isCompleted?: boolean

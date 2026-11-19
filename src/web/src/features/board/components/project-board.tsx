@@ -16,6 +16,7 @@ import { BoardAddListForm } from "@/features/board/components/board-add-list-for
 import { BoardFilterMenu } from "@/features/board/components/board-filter-menu"
 import { BoardFocusTabs } from "@/features/board/components/board-focus-tabs"
 import { BoardListColumn } from "@/features/board/components/board-list-column"
+import { BoardMilestoneBanner } from "@/features/board/components/board-milestone-banner"
 import {
   BoardSetupOnboarding,
   BoardStateMessage,
@@ -73,6 +74,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     isReadOnly,
     members,
     metrics,
+    milestones,
     myCardCount,
     notice,
     planningPreferences,
@@ -209,6 +211,10 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
           metrics={metrics}
           myCardCount={myCardCount}
           onFocusChange={setFocus}
+        />
+        <BoardMilestoneBanner
+          milestones={milestones}
+          onSelectCard={setSelectedCardId}
         />
         {isPlanningPanelVisible ? (
           <BoardPlanningPanel

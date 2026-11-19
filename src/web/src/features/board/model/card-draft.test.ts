@@ -19,6 +19,7 @@ const card = makeCard({
   priority: "HIGH",
   dueDate: "2026-11-02",
   size: "M",
+  milestoneDate: "2026-12-01",
   labels: ["backend", "review"],
   assignees: [
     { userId: "b", name: "B", email: null },
@@ -34,6 +35,7 @@ describe("draftFromCard", () => {
       priority: "HIGH",
       dueDate: "2026-11-02",
       size: "M",
+      milestoneDate: "2026-12-01",
       labels: ["backend", "review"],
       labelInput: "",
       assigneeIds: ["b", "a"],
@@ -70,6 +72,7 @@ describe("hasDraftChanges", () => {
     expect(hasDraftChanges({ ...draft, isCompleted: true }, card)).toBe(true)
     expect(hasDraftChanges({ ...draft, dueDate: "" }, card)).toBe(true)
     expect(hasDraftChanges({ ...draft, size: null }, card)).toBe(true)
+    expect(hasDraftChanges({ ...draft, milestoneDate: "" }, card)).toBe(true)
   })
 })
 
@@ -87,6 +90,15 @@ describe("validateDraft", () => {
       validateDraft({ ...draft, dueDate: "2026-10-27" }, "2026-10-28")
     ).toBe("Due date cannot be in the past.")
     expect(validateDraft(draft, "2026-10-28")).toBeNull()
+  })
+
+  it("rejects a new milestone date in the past but keeps a saved one", () => {
+    const passed = { ...draft, dueDate: "", milestoneDate: "2026-11-30" }
+
+    expect(validateDraft(passed, "2026-12-02")).toBe(
+      "Milestone date cannot be in the past."
+    )
+    expect(validateDraft(passed, "2026-12-02", "2026-11-30")).toBeNull()
   })
 })
 
@@ -135,6 +147,18 @@ describe("labels", () => {
 })
 
 describe("toCardInput", () => {
+  it("sends the milestone date, and null to unmark it", () => {
+    const draft = draftFromCard(card)
+
+    expect(toCardInput(draft, draft.labels, false).milestoneDate).toBe(
+      "2026-12-01"
+    )
+    expect(
+      toCardInput({ ...draft, milestoneDate: "" }, draft.labels, false)
+        .milestoneDate
+    ).toBeNull()
+  })
+
   it("sends the effort estimate, including an explicit clear", () => {
     const draft = draftFromCard(card)
 

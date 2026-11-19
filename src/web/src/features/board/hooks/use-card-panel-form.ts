@@ -41,6 +41,7 @@ export function useCardPanelForm({
   const [priority, setPriority] = useState<BoardCardPriority | "">("")
   const [dueDate, setDueDate] = useState("")
   const [size, setSize] = useState<CardSize | null>(null)
+  const [milestoneDate, setMilestoneDate] = useState("")
   const [labels, setLabels] = useState<string[]>([])
   const [labelInput, setLabelInput] = useState("")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
@@ -53,8 +54,10 @@ export function useCardPanelForm({
     "idle"
   )
   const calendar = useDismissibleLayer()
+  const milestoneCalendar = useDismissibleLayer()
   const labelMenu = useDismissibleLayer()
   const setIsCalendarOpen = calendar.setIsOpen
+  const setIsMilestoneCalendarOpen = milestoneCalendar.setIsOpen
   const setIsLabelMenuOpen = labelMenu.setIsOpen
 
   const draft = useMemo<CardDraft>(
@@ -64,6 +67,7 @@ export function useCardPanelForm({
       priority,
       dueDate,
       size,
+      milestoneDate,
       labels,
       labelInput,
       assigneeIds,
@@ -73,6 +77,7 @@ export function useCardPanelForm({
       assigneeIds,
       description,
       dueDate,
+      milestoneDate,
       size,
       isCompleted,
       labelInput,
@@ -101,6 +106,7 @@ export function useCardPanelForm({
       setPriority(next.priority)
       setDueDate(next.dueDate)
       setSize(next.size)
+      setMilestoneDate(next.milestoneDate)
       setLabels(next.labels)
       setLabelInput(next.labelInput)
       setAssigneeIds(next.assigneeIds)
@@ -109,11 +115,12 @@ export function useCardPanelForm({
       setSubtaskInput("")
       setDependencyId("")
       setIsCalendarOpen(false)
+      setIsMilestoneCalendarOpen(false)
       setIsLabelMenuOpen(false)
       setSaveState("idle")
       setError(null)
     })
-  }, [card, setIsCalendarOpen, setIsLabelMenuOpen])
+  }, [card, setIsCalendarOpen, setIsLabelMenuOpen, setIsMilestoneCalendarOpen])
 
   async function submit(nextCompleted = isCompleted) {
     const currentCard = card
@@ -122,7 +129,11 @@ export function useCardPanelForm({
       return
     }
 
-    const validationError = validateDraft(draft)
+    const validationError = validateDraft(
+      draft,
+      undefined,
+      currentCard.milestoneDate ?? ""
+    )
 
     if (validationError) {
       setError(validationError)
@@ -246,6 +257,9 @@ export function useCardPanelForm({
     labelMenuContainerRef: labelMenu.containerRef,
     labelSuggestions,
     labels,
+    milestoneCalendarContainerRef: milestoneCalendar.containerRef,
+    milestoneDate,
+    isMilestoneCalendarOpen: milestoneCalendar.isOpen,
     normalizedLabelInput,
     priority,
     saveState,
@@ -255,7 +269,9 @@ export function useCardPanelForm({
     setDescription,
     setDueDate,
     setSize,
+    setMilestoneDate,
     setIsCalendarOpen,
+    setIsMilestoneCalendarOpen,
     setIsLabelMenuOpen,
     setLabelInput,
     setLabels,

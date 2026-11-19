@@ -105,3 +105,41 @@ describe("card size field", () => {
     expect(await screen.findByText("More than a week: split it")).toBeTruthy()
   })
 })
+
+describe("card milestone field", () => {
+  afterEach(() => cleanup())
+
+  it("unmarks a milestone", async () => {
+    const onSave = renderPanel(makeCard({ milestoneDate: "2099-03-12" }))
+
+    fireEvent.click(await screen.findByRole("button", { name: "Unmark" }))
+    expect(
+      screen.getByRole("button", { name: "Mark as milestone" })
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "card" }),
+        expect.objectContaining({ milestoneDate: null })
+      )
+    )
+  })
+
+  it("keeps a milestone whose date has passed when saving other changes", async () => {
+    const onSave = renderPanel(
+      makeCard({ title: "Demo day", milestoneDate: "2020-01-15" })
+    )
+    await screen.findByRole("button", { name: "Unmark" })
+
+    fireEvent.click(screen.getByRole("radio", { name: "S" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "card" }),
+        expect.objectContaining({ milestoneDate: "2020-01-15", size: "S" })
+      )
+    )
+  })
+})
