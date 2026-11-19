@@ -96,6 +96,7 @@ public sealed record BoardCardResponse(
   string? Priority,
   DateOnly? DueDate,
   string? Size,
+  DateOnly? MilestoneDate,
   IReadOnlyCollection<string> Labels,
   bool IsCompleted,
   DateTimeOffset? CompletedAt,
@@ -141,6 +142,23 @@ public sealed record BoardCardDependencyResponse(
   string CardId,
   string Title,
   bool IsCompleted);
+
+public sealed record BoardMilestoneResponse(
+  string CardId,
+  string Title,
+  DateOnly TargetDate,
+  string Status,
+  DateOnly? ForecastDate,
+  DateOnly? CommitDate,
+  int? SlipDays,
+  int OpenCardCount,
+  int UnsizedCardCount,
+  IReadOnlyCollection<BoardMilestoneDriverResponse> Drivers);
+
+public sealed record BoardMilestoneDriverResponse(
+  string CardId,
+  string Title,
+  double Criticality);
 
 public sealed record BoardGraphResponse(
   string BoardId,

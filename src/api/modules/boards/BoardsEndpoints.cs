@@ -37,6 +37,11 @@ public static class BoardsEndpoints
       .WithSummary("Get board dependency graph")
       .WithDescription("Returns graph-derived planning signals for the board.");
 
+    boardGroup.MapGet("/milestones", GetMilestones)
+      .Produces<IReadOnlyCollection<BoardMilestoneResponse>>(StatusCodes.Status200OK)
+      .WithSummary("Forecast board milestones")
+      .WithDescription("Returns the board's milestones, soonest target first, each with the dates its work is forecast to be done by (one chance in two, and 85%), the cards that drive those dates, and how many of its open cards have no size.");
+
     boardGroup.MapGet("/planning-preferences", GetPlanningPreferences)
       .Produces<BoardPlanningPreferencesResponse>(StatusCodes.Status200OK)
       .WithSummary("Get my planning preferences")
@@ -179,6 +184,24 @@ public static class BoardsEndpoints
         context,
         preferAssigned,
         includeUnassigned),
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> GetMilestones(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    CurrentUser user,
+    IBoardMilestoneService milestones,
+    CancellationToken cancellationToken)
+  {
+    var result = await milestones.GetMilestonesAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      user.Id,
       cancellationToken);
 
     return result.ToOkResult();

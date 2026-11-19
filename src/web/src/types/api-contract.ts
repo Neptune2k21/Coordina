@@ -1005,6 +1005,49 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Forecast board milestones
+     * @description Returns the board's milestones, soonest target first, each with the dates its work is forecast to be done by (one chance in two, and 85%), the cards that drive those dates, and how many of its open cards have no size.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneResponse"][]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/planning-preferences": {
     parameters: {
       query?: never
@@ -1835,6 +1878,8 @@ export interface components {
       dueDate: null | string
       /** @enum {null|string} */
       size: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null
+      /** Format: date */
+      milestoneDate: null | string
       labels: string[]
       isCompleted: boolean
       /** Format: date-time */
@@ -1938,6 +1983,33 @@ export interface components {
       /** Format: date-time */
       updatedAt: string
       cards: components["schemas"]["BoardCardResponse"][]
+    }
+    BoardMilestoneDriverResponse: {
+      /** Format: uuid */
+      cardId: string
+      title: string
+      /** Format: double */
+      criticality: number
+    }
+    BoardMilestoneResponse: {
+      /** Format: uuid */
+      cardId: string
+      title: string
+      /** Format: date */
+      targetDate: string
+      /** @enum {string} */
+      status: "ON_TRACK" | "AT_RISK" | "LATE" | "OVERDUE" | "COMPLETED"
+      /** Format: date */
+      forecastDate: null | string
+      /** Format: date */
+      commitDate: null | string
+      /** Format: int32 */
+      slipDays: null | number
+      /** Format: int32 */
+      openCardCount: number
+      /** Format: int32 */
+      unsizedCardCount: number
+      drivers: components["schemas"]["BoardMilestoneDriverResponse"][]
     }
     BoardPlanningPreferencesResponse: {
       /** @enum {null|string} */
@@ -2155,6 +2227,10 @@ export interface components {
       size?: null | string
       /** @default false */
       clearSize: boolean
+      /** Format: date */
+      milestoneDate?: null | string
+      /** @default false */
+      clearMilestoneDate: boolean
     }
     UpdateBoardCardSubtaskRequest: {
       title: null | string

@@ -33,6 +33,7 @@ public sealed class BoardCardService(
       request.Priority,
       request.DueDate,
       request.Size,
+      null,
       request.Labels,
       request.AssigneeIds,
       false,
@@ -112,6 +113,7 @@ public sealed class BoardCardService(
       request.ClearSize
         ? null
         : request.Size ?? (current.Size is null ? null : EnumCode.Format(current.Size.Value)),
+      request.ClearMilestoneDate ? null : request.MilestoneDate ?? current.MilestoneDate,
       request.Labels ?? current.Labels.ToArray(),
       request.AssigneeIds ?? current.Assignees.Select(assignee => assignee.UserId).ToArray(),
       request.IsCompleted ?? current.IsCompleted,
@@ -259,6 +261,7 @@ public sealed class BoardCardService(
     string? priority,
     DateOnly? dueDate,
     string? size,
+    DateOnly? milestoneDate,
     string[]? labels,
     Guid[]? assigneeIds,
     bool isCompleted,
@@ -293,6 +296,13 @@ public sealed class BoardCardService(
       out var parsedPriority,
       out var parsedSize);
 
+    // Only a new date has to be ahead: a milestone that slipped past its date
+    // stays one until someone moves or clears it.
+    errors.AddIf(
+      milestoneDate != current?.MilestoneDate && milestoneDate < clock.GetUtcToday(),
+      "MilestoneDate",
+      "Milestone date cannot be in the past.");
+
     if (normalizedAssignees.Length > 0)
     {
       var members = await workspaces.ListMembersAsync(
@@ -319,6 +329,7 @@ public sealed class BoardCardService(
       parsedPriority,
       dueDate,
       parsedSize,
+      milestoneDate,
       normalizedLabels,
       normalizedAssignees,
       isCompleted,

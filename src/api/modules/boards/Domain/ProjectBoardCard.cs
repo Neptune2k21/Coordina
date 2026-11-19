@@ -11,6 +11,7 @@ public sealed record ProjectBoardCard(
   BoardCardPriority? Priority,
   DateOnly? DueDate,
   CardSize? Size,
+  DateOnly? MilestoneDate,
   IReadOnlyCollection<string> Labels,
   bool IsCompleted,
   DateTimeOffset? CompletedAt,

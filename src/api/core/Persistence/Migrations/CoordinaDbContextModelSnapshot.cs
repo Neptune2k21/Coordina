@@ -255,6 +255,10 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("list_id");
 
+                    b.Property<DateOnly?>("MilestoneDate")
+                        .HasColumnType("date")
+                        .HasColumnName("milestone_date");
+
                     b.Property<int>("Position")
                         .HasColumnType("integer")
                         .HasColumnName("position");

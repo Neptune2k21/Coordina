@@ -10,4 +10,6 @@ public sealed record UpdateBoardCardRequest(
   Guid[]? AssigneeIds,
   bool? IsCompleted,
   string? Size = null,
-  bool ClearSize = false);
+  bool ClearSize = false,
+  DateOnly? MilestoneDate = null,
+  bool ClearMilestoneDate = false);
