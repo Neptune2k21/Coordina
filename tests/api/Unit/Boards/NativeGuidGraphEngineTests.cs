@@ -164,22 +164,98 @@ public sealed class NativeGuidGraphEngineTests
   }
 
   [Fact]
-  public void FindCriticalPath_ReturnsLongestDependencyChain()
+  public void FindCriticalPath_ReturnsTheLongestChainOfOpenWork()
   {
     var dependency = Guid.NewGuid();
     var foundation = Guid.NewGuid();
     var api = Guid.NewGuid();
     var ui = Guid.NewGuid();
+    Guid[] nodes = [dependency, foundation, api, ui];
+    GraphEdge<Guid>[] edges =
+    [
+      new(foundation, dependency),
+      new(api, foundation),
+      new(ui, foundation)
+    ];
 
+    // The UI (L) outweighs the API (XS), though both sit one step after the foundation.
     var criticalPath = _graphEngine.FindCriticalPath(
-      [dependency, foundation, api, ui],
+      nodes,
+      edges,
       [
-        new GraphEdge<Guid>(foundation, dependency),
-        new GraphEdge<Guid>(api, foundation),
-        new GraphEdge<Guid>(ui, foundation)
+        Item(dependency, 0, GraphSize.S),
+        Item(foundation, 1, GraphSize.M),
+        Item(api, 2, GraphSize.Xs),
+        Item(ui, 3, GraphSize.L)
       ]);
 
-    Assert.Equal([dependency, foundation, api], criticalPath);
+    Assert.Equal([dependency, foundation, ui], criticalPath);
+
+    // Done work takes no part in it.
+    var withoutDone = _graphEngine.FindCriticalPath(
+      nodes,
+      edges,
+      [
+        Item(dependency, 0, GraphSize.S) with { IsCompleted = true },
+        Item(foundation, 1, GraphSize.M),
+        Item(api, 2, GraphSize.Xs),
+        Item(ui, 3, GraphSize.L)
+      ]);
+
+    Assert.Equal([foundation, ui], withoutDone);
+  }
+
+  [Fact]
+  public void Forecast_IsReproducibleAndPutsTheMilestoneLast()
+  {
+    var api = Guid.NewGuid();
+    var onboarding = Guid.NewGuid();
+    var review = Guid.NewGuid();
+    var launch = Guid.NewGuid();
+    Guid[] nodes = [api, onboarding, review, launch];
+    GraphEdge<Guid>[] edges =
+    [
+      new(review, onboarding),
+      new(launch, api),
+      new(launch, review)
+    ];
+    GraphWorkItem<Guid>[] items =
+    [
+      Item(api, 0, GraphSize.L),
+      Item(onboarding, 1, GraphSize.M),
+      Item(review, 2),
+      Item(launch, 3, GraphSize.Xs)
+    ];
+    GraphAssignee<Guid>[] assignees = [new(api, 0), new(onboarding, 1)];
+    var options = new GraphForecastOptions<Guid>(launch, 2, 500, 7);
+
+    var forecast = _graphEngine.Forecast(nodes, edges, items, assignees, options);
+    var again = _graphEngine.Forecast(nodes, edges, items, assignees, options);
+
+    Assert.Equal(forecast.P50Days, again.P50Days);
+    Assert.Equal(forecast.Cards, again.Cards);
+    Assert.True(forecast.P50Days > 0);
+    Assert.True(forecast.P50Days <= forecast.P85Days);
+    Assert.Equal(1, forecast.UnsizedCount);
+    Assert.Equal(4, forecast.Cards.Count);
+    Assert.Equal(new GraphCardCriticality<Guid>(launch, 1), forecast.Cards.First());
+    Assert.All(forecast.Cards, card => Assert.InRange(card.Criticality, 0, 1));
+  }
+
+  [Fact]
+  public void Forecast_WithLoopedCards_Throws()
+  {
+    var first = Guid.NewGuid();
+    var second = Guid.NewGuid();
+
+    var error = Assert.Throws<GraphEngineException>(() => _graphEngine.Forecast(
+      [first, second],
+      [new GraphEdge<Guid>(first, second), new GraphEdge<Guid>(second, first)],
+      [Item(first, 0), Item(second, 1)],
+      [],
+      new GraphForecastOptions<Guid>(first, 1, 10, 1)));
+
+    Assert.Equal("forecast", error.Operation);
   }
 
   [Fact]
@@ -296,7 +372,7 @@ public sealed class NativeGuidGraphEngineTests
     Assert.Equal(_graphEngine.IsAcyclic(nodes, edges), analysis.IsAcyclic);
     Assert.Equal(_graphEngine.FindReadyNodes(nodes, edges), analysis.ReadyNodes);
     Assert.Equal(_graphEngine.SortTopologically(nodes, edges), analysis.DependencyOrder);
-    Assert.Equal(_graphEngine.FindCriticalPath(nodes, edges), analysis.CriticalPath);
+    Assert.Equal(_graphEngine.FindCriticalPath(nodes, edges, items), analysis.CriticalPath);
     Assert.Equal(_graphEngine.AnalyzeNodes(nodes, edges), analysis.NodeAnalyses);
     Assert.Equal(_graphEngine.PlanWork(nodes, edges, items, options), analysis.Recommendations);
   }
@@ -319,4 +395,7 @@ public sealed class NativeGuidGraphEngineTests
     Assert.Empty(analysis.DependencyOrder);
     Assert.Empty(analysis.Recommendations);
   }
+
+  private static GraphWorkItem<Guid> Item(Guid node, int position, GraphSize size = GraphSize.None) =>
+    new(node, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, position, Size: size);
 }
