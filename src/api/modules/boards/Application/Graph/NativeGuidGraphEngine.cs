@@ -271,9 +271,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
     var nativeNodes = ToNativeNodes(nodes);
     var nativeEdges = ToNativeEdges(edges);
     var nativeWorkItems = ToNativeWorkItems(workItems);
-    var nativeAssignees = assignees
-      .Select(assignee => new NativeGraphAssignee(ToNative(assignee.Node), checked((uint)assignee.Person), 0U))
-      .ToArray();
+    var nativeAssignees = ToNativeAssignees(assignees);
     var nativeOptions = new NativeGraphForecastOptions(
       ToNative(options.Milestone),
       options.Seed,
@@ -418,6 +416,12 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
         (uint)item.Assignment,
         item.IsInProgress ? 1U : 0U,
         item.IsContextMatch ? 1U : 0U))
+      .ToArray();
+
+  private static NativeGraphAssignee[] ToNativeAssignees(
+    IReadOnlyCollection<GraphAssignee<Guid>> assignees) =>
+    assignees
+      .Select(assignee => new NativeGraphAssignee(ToNative(assignee.Node), checked((uint)assignee.Person), 0U))
       .ToArray();
 
   private static NativeGraphPlanningOptions ToNativeOptions(

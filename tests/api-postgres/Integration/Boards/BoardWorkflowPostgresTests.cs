@@ -215,6 +215,44 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
     Assert.Equal("ck_board_cards_size", violation.ConstraintName);
   }
 
+  [Fact]
+  public async Task MilestoneDate_RoundTripsAndForecastsFromTheDatabase()
+  {
+    var flow = await CreateFlowAsync("BASIC", null);
+    var todo = flow.Board.Lists.Single(list => list.TaskStatus == "TODO");
+    var created = await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Post,
+      $"{flow.BoardPath}/lists/{todo.Id}/cards",
+      flow.AccessToken,
+      new { title = "Launch", size = "S" });
+    var cardId = created.Lists.SelectMany(list => list.Cards)
+      .Single(card => card.Title == "Launch").Id;
+    var target = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
+
+    await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Patch,
+      $"{flow.BoardPath}/cards/{cardId}",
+      flow.AccessToken,
+      new { milestoneDate = target });
+
+    Assert.Equal(target, await Database.ScalarAsync<DateOnly>(
+      $"SELECT milestone_date FROM board_cards WHERE id = '{cardId}'"));
+    var milestones = await Api.SendForAsync<MilestoneResponse[]>(
+      HttpMethod.Get, $"{flow.BoardPath}/milestones", flow.AccessToken);
+    Assert.Equal(new MilestoneResponse(cardId, target, "ON_TRACK"), Assert.Single(milestones));
+
+    await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Patch,
+      $"{flow.BoardPath}/cards/{cardId}",
+      flow.AccessToken,
+      new { clearMilestoneDate = true });
+
+    Assert.Null(await Database.ScalarAsync<DateOnly?>(
+      $"SELECT milestone_date FROM board_cards WHERE id = '{cardId}'"));
+  }
+
+  private sealed record MilestoneResponse(Guid CardId, DateOnly TargetDate, string Status);
+
   private async Task<Flow> CreateFlowAsync(string template, string[]? customListTitles)
   {
     var user = await Api.RegisterAsync();

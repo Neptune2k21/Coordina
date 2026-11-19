@@ -292,16 +292,10 @@ public sealed class BoardCardService(
       normalizedLabels,
       dueDate,
       size,
+      new BoardRules.MilestoneDateChange(milestoneDate, current?.MilestoneDate),
       clock.GetUtcToday(),
       out var parsedPriority,
       out var parsedSize);
-
-    // Only a new date has to be ahead: a milestone that slipped past its date
-    // stays one until someone moves or clears it.
-    errors.AddIf(
-      milestoneDate != current?.MilestoneDate && milestoneDate < clock.GetUtcToday(),
-      "MilestoneDate",
-      "Milestone date cannot be in the past.");
 
     if (normalizedAssignees.Length > 0)
     {

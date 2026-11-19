@@ -118,6 +118,7 @@ internal static class BoardRules
     IReadOnlyCollection<string> labels,
     DateOnly? dueDate,
     string? sizeCode,
+    MilestoneDateChange milestoneDate,
     DateOnly today,
     out BoardCardPriority? priority,
     out CardSize? size) =>
@@ -132,7 +133,21 @@ internal static class BoardRules
       .AddIf(
         dueDate < today,
         "DueDate",
-        "Due date cannot be in the past.");
+        "Due date cannot be in the past.")
+      .AddIf(
+        milestoneDate.IsMovedBefore(today),
+        "MilestoneDate",
+        "Milestone date cannot be in the past.");
+
+  /// <summary>
+  /// A card's milestone date and the one it had. Only a new date has to be
+  /// ahead: a milestone that slipped past its date stays one until someone
+  /// moves or clears it.
+  /// </summary>
+  public readonly record struct MilestoneDateChange(DateOnly? Date, DateOnly? Saved)
+  {
+    public bool IsMovedBefore(DateOnly today) => Date != Saved && Date < today;
+  }
 
   public static string[] NormalizeLabels(string[]? labels) =>
     TextNormalizer.DistinctNonBlank(labels, MaxLabels);
