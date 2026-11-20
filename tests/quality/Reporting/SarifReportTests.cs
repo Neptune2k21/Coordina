@@ -52,7 +52,7 @@ public sealed class SarifReportTests
   private static Violation At(RuleInfo rule, int line) => new(rule, "src/a.cs", line, "Same message.");
 
   private static JsonElement Run(CheckResult result) =>
-    JsonDocument.Parse(SarifReport.Write(result)).RootElement.GetProperty("runs")[0].Clone();
+    JsonElement.Parse(SarifReport.Write(result)).GetProperty("runs")[0];
 
   private static string?[] Fingerprints(CheckResult result) =>
     [.. Run(result).GetProperty("results").EnumerateArray()
