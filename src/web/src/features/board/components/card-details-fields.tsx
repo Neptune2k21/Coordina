@@ -1,4 +1,4 @@
-import { CalendarBlank, Plus, Tag, X } from "@phosphor-icons/react"
+import { CalendarBlank, FlagPennant, Plus, Tag, X } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -39,12 +39,17 @@ export function CardDetailsFields({
     labelMenuContainerRef,
     labelSuggestions,
     labels,
+    isMilestoneCalendarOpen,
+    milestoneCalendarContainerRef,
+    milestoneDate,
     normalizedLabelInput,
     priority,
     setDescription,
     setDueDate,
+    setMilestoneDate,
     setSize,
     setIsCalendarOpen,
+    setIsMilestoneCalendarOpen,
     setIsLabelMenuOpen,
     setLabelInput,
     setLabels,
@@ -118,6 +123,7 @@ export function CardDetailsFields({
               disabled={isReadOnly}
               onClick={() => {
                 setIsLabelMenuOpen(false)
+                setIsMilestoneCalendarOpen(false)
                 setIsCalendarOpen((current) => !current)
               }}
             >
@@ -168,6 +174,56 @@ export function CardDetailsFields({
         </p>
       </Field>
       <Field>
+        <div className="flex items-center justify-between gap-2">
+          <FieldLabel>Milestone</FieldLabel>
+          {milestoneDate && !isReadOnly ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 rounded-md px-2 text-xs"
+              onClick={() => setMilestoneDate("")}
+            >
+              Unmark
+            </Button>
+          ) : null}
+        </div>
+        <div ref={milestoneCalendarContainerRef} className="relative">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 w-full justify-start rounded-md bg-white px-2 text-sm dark:bg-white/[0.06]"
+            disabled={isReadOnly}
+            onClick={() => {
+              setIsLabelMenuOpen(false)
+              setIsCalendarOpen(false)
+              setIsMilestoneCalendarOpen((current) => !current)
+            }}
+          >
+            <FlagPennant className="size-4" />
+            {milestoneDate
+              ? `Target ${shortDate(milestoneDate)}`
+              : "Mark as milestone"}
+          </Button>
+          {isMilestoneCalendarOpen ? (
+            <Calendar
+              value={milestoneDate}
+              minValue={todayDateKey()}
+              className="absolute right-0 z-20 mt-1 w-full max-w-[288px] shadow-xl"
+              onChange={(date) => {
+                setMilestoneDate(date ?? "")
+                setIsMilestoneCalendarOpen(false)
+              }}
+            />
+          ) : null}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          {milestoneDate
+            ? "Forecast from this card and everything it depends on."
+            : "A launch or a demo: forecast when its work is done."}
+        </p>
+      </Field>
+      <Field>
         <FieldLabel htmlFor="card-labels">Labels</FieldLabel>
         <div ref={labelMenuContainerRef} className="relative flex gap-2">
           <Input
@@ -177,6 +233,7 @@ export function CardDetailsFields({
             onChange={(event) => setLabelInput(event.target.value)}
             onFocus={() => {
               setIsCalendarOpen(false)
+              setIsMilestoneCalendarOpen(false)
               setIsLabelMenuOpen(true)
             }}
             placeholder="frontend"
@@ -197,6 +254,7 @@ export function CardDetailsFields({
             disabled={isReadOnly}
             onClick={() => {
               setIsCalendarOpen(false)
+              setIsMilestoneCalendarOpen(false)
               setIsLabelMenuOpen((current) => !current)
             }}
           >

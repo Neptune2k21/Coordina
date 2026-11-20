@@ -55,7 +55,7 @@ std::vector<WorkRecommendation> plan_work(
   const std::vector<WorkItem>& work_items,
   const PlanningOptions& options)
 {
-  return plan_work(graph, work_items, options, analyze_planning(graph));
+  return plan_work(graph, work_items, options, analyze_planning(graph, work_items));
 }
 
 std::vector<WorkRecommendation> plan_work(

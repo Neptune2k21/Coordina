@@ -32,6 +32,11 @@ SizeRange size_range(CardSize size) noexcept
   return SizeRange{};
 }
 
+SizeRange planned_range(CardSize size) noexcept
+{
+  return size_range(size == CardSize::none ? CardSize::m : size);
+}
+
 CardSize to_card_size(std::uint32_t value) noexcept
 {
   return value <= static_cast<std::uint32_t>(CardSize::xxl) ? static_cast<CardSize>(value)

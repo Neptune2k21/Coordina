@@ -36,6 +36,7 @@ public sealed partial class InMemoryBoardStore
     BoardCardPriority? Priority,
     DateOnly? DueDate,
     CardSize? Size,
+    DateOnly? MilestoneDate,
     IReadOnlyCollection<string> Labels,
     bool IsCompleted,
     DateTimeOffset? CompletedAt,

@@ -66,6 +66,7 @@ internal static class BoardResponseMapper
       card.Priority is null ? null : EnumCode.Format(card.Priority.Value),
       card.DueDate,
       card.Size is null ? null : EnumCode.Format(card.Size.Value),
+      card.MilestoneDate,
       card.Labels,
       card.IsCompleted,
       card.CompletedAt,

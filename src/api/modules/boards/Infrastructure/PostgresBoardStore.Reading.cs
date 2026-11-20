@@ -230,6 +230,7 @@ public sealed partial class PostgresBoardStore
       entity.Priority,
       entity.DueDate,
       entity.Size,
+      entity.MilestoneDate,
       entity.Labels,
       entity.IsCompleted,
       entity.CompletedAt,

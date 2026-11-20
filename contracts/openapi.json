@@ -909,6 +909,59 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones": {
+      "get": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Forecast board milestones",
+        "description": "Returns the board\u0027s milestones, soonest target first, each with the dates its work is forecast to be done by (one chance in two, and 85%), the cards that drive those dates, and how many of its open cards have no size.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BoardMilestoneResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/planning-preferences": {
       "get": {
         "tags": [
@@ -2285,6 +2338,7 @@
           "priority",
           "dueDate",
           "size",
+          "milestoneDate",
           "labels",
           "isCompleted",
           "completedAt",
@@ -2353,6 +2407,13 @@
               "null",
               "string"
             ]
+          },
+          "milestoneDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           },
           "labels": {
             "type": "array",
@@ -2754,6 +2815,105 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardCardResponse"
+            }
+          }
+        }
+      },
+      "BoardMilestoneDriverResponse": {
+        "required": [
+          "cardId",
+          "title",
+          "criticality",
+          "sensitivity"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "criticality": {
+            "type": "number",
+            "format": "double"
+          },
+          "sensitivity": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BoardMilestoneResponse": {
+        "required": [
+          "cardId",
+          "title",
+          "targetDate",
+          "status",
+          "forecastDate",
+          "commitDate",
+          "slipDays",
+          "openCardCount",
+          "unsizedCardCount",
+          "drivers"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "enum": [
+              "ON_TRACK",
+              "AT_RISK",
+              "LATE",
+              "OVERDUE",
+              "COMPLETED"
+            ],
+            "type": "string"
+          },
+          "forecastDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "commitDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "slipDays": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "openCardCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unsizedCardCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "drivers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneDriverResponse"
             }
           }
         }
@@ -3645,6 +3805,17 @@
             ]
           },
           "clearSize": {
+            "type": "boolean",
+            "default": false
+          },
+          "milestoneDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "clearMilestoneDate": {
             "type": "boolean",
             "default": false
           }

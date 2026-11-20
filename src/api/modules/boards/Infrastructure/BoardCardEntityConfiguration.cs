@@ -69,6 +69,9 @@ public sealed class BoardCardEntityConfiguration
           : EnumCode.Parse<CardSize>(value))
       .HasMaxLength(4);
 
+    builder.Property(card => card.MilestoneDate)
+      .HasColumnName("milestone_date");
+
     builder.Property(card => card.Labels)
       .HasColumnName("labels")
       .HasColumnType("text[]")

@@ -7,12 +7,13 @@
 #include "algorithms/suggestion_engine.h"
 #include "algorithms/topological_order.h"
 #include "interop/native_bridge.h"
+#include "planning/forecast.h"
 #include "planning/planning_analysis.h"
 #include "planning/work_planner.h"
 
 extern "C" const char* coordina_graph_version(void)
 {
-  return "coordina-graph-engine/0.5.0";
+  return "coordina-graph-engine/0.6.0";
 }
 
 extern "C" coordina_graph_edge_status coordina_graph_evaluate_edge(
@@ -179,16 +180,24 @@ extern "C" std::size_t coordina_graph_critical_path(
   std::size_t node_count,
   const coordina_graph_edge* edges,
   std::size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  std::size_t work_item_count,
   coordina_graph_node_id* output,
   std::size_t output_capacity)
 {
-  if (coordina::graph::has_invalid_pointer(nodes, node_count, edges, edge_count))
+  if (coordina::graph::has_invalid_pointer(nodes, node_count, edges, edge_count)
+    || (work_item_count > 0U && work_items == nullptr))
   {
     return 0U;
   }
 
   const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
-  const auto path = coordina::graph::critical_path(graph);
+  const auto path = coordina::graph::critical_path(
+    graph,
+    coordina::graph::dependency_first_topological_order(graph),
+    coordina::graph::open_card_hours(
+      graph,
+      coordina::graph::build_work_items(work_items, work_item_count)));
 
   return coordina::graph::write_nodes(path, output, output_capacity);
 }
@@ -297,6 +306,80 @@ extern "C" coordina_graph_status coordina_graph_analyze_board(
     analysis.recommendations,
     output->recommendations,
     output->recommendation_capacity);
+
+  return COORDINA_GRAPH_OK;
+}
+
+namespace
+{
+coordina_graph_status to_status(coordina::graph::ForecastError error) noexcept
+{
+  switch (error)
+  {
+    case coordina::graph::ForecastError::none:
+      return COORDINA_GRAPH_OK;
+    case coordina::graph::ForecastError::cycle:
+      return COORDINA_GRAPH_CYCLE;
+    case coordina::graph::ForecastError::unknown_milestone:
+    case coordina::graph::ForecastError::unknown_person:
+      break;
+  }
+
+  return COORDINA_GRAPH_INVALID_ARGUMENT;
+}
+}
+
+extern "C" coordina_graph_status coordina_graph_forecast(
+  const coordina_graph_node_id* nodes,
+  std::size_t node_count,
+  const coordina_graph_edge* edges,
+  std::size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  std::size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  std::size_t assignee_count,
+  const coordina_graph_forecast_options* options,
+  coordina_graph_milestone_forecast* output)
+{
+  if (options == nullptr || output == nullptr || options->run_count == 0U
+    || coordina::graph::has_invalid_pointer(nodes, node_count, edges, edge_count)
+    || (work_item_count > 0U && work_items == nullptr)
+    || (assignee_count > 0U && assignees == nullptr))
+  {
+    return COORDINA_GRAPH_INVALID_ARGUMENT;
+  }
+
+  const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
+  const coordina::graph::ForecastModel model(
+    graph,
+    coordina::graph::build_work_items(work_items, work_item_count),
+    coordina::graph::build_assignees(assignees, assignee_count),
+    coordina::graph::to_node_id(options->milestone),
+    options->person_count);
+
+  if (model.error() != coordina::graph::ForecastError::none)
+  {
+    return to_status(model.error());
+  }
+
+  const auto forecast = coordina::graph::forecast(
+    model,
+    coordina::graph::ForecastOptions{
+      .run_count = options->run_count,
+      .seed = options->seed,
+      .thread_count = options->thread_count
+    });
+  output->card_count = forecast.cards.size();
+
+  if (!fits(output->card_count, output->cards, output->card_capacity))
+  {
+    return COORDINA_GRAPH_INSUFFICIENT_CAPACITY;
+  }
+
+  output->p50_days = forecast.p50_days;
+  output->p85_days = forecast.p85_days;
+  output->unsized_count = forecast.unsized_count;
+  coordina::graph::write_card_forecasts(forecast.cards, output->cards, output->card_capacity);
 
   return COORDINA_GRAPH_OK;
 }

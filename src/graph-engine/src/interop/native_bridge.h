@@ -4,6 +4,7 @@
 #include "algorithms/node_analysis.h"
 #include "coordina_graph_engine.h"
 #include "core/graph_snapshot.h"
+#include "planning/forecast.h"
 #include "planning/work_planner.h"
 
 #include <cstddef>
@@ -38,6 +39,15 @@ PlanningOptions build_planning_options(const coordina_graph_planning_options* op
 std::vector<WorkItem> build_work_items(
   const coordina_graph_work_item* work_items,
   std::size_t work_item_count);
+
+std::vector<Assignee> build_assignees(
+  const coordina_graph_assignee* assignees,
+  std::size_t assignee_count);
+
+std::size_t write_card_forecasts(
+  const std::vector<CardForecast>& cards,
+  coordina_graph_card_forecast* output,
+  std::size_t output_capacity);
 
 std::size_t write_work_recommendations(
   const std::vector<WorkRecommendation>& recommendations,

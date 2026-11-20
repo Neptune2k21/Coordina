@@ -259,6 +259,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     isReadOnly,
     members: resource.members,
     metrics,
+    milestones: resource.milestones,
     myCardCount,
     notice: mutations.notice,
     planningPreferences,

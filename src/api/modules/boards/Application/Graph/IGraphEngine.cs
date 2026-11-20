@@ -36,9 +36,11 @@ public interface IGraphEngine<TNode>
     IReadOnlyCollection<TNode> nodes,
     IReadOnlyCollection<GraphEdge<TNode>> edges);
 
+  /// <summary>The longest chain of open cards, weighted by their sizes.</summary>
   IReadOnlyCollection<TNode> FindCriticalPath(
     IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges);
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems);
 
   IReadOnlyCollection<GraphWorkRecommendation<TNode>> PlanWork(
     IReadOnlyCollection<TNode> nodes,
@@ -51,4 +53,12 @@ public interface IGraphEngine<TNode>
     IReadOnlyCollection<GraphEdge<TNode>> edges,
     IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
     GraphPlanningOptions? options = null);
+
+  /// <summary>Simulates when the milestone's open cards are done; see <c>coordina_graph_forecast</c>.</summary>
+  GraphMilestoneForecast<TNode> Forecast(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
+    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    GraphForecastOptions<TNode> options);
 }

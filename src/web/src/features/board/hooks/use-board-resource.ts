@@ -11,6 +11,7 @@ import type {
   Board,
   BoardCardDependencyAnalysis,
   BoardGraph,
+  BoardMilestone,
 } from "@/types/task"
 import type { WorkspaceMember } from "@/types/workspace"
 
@@ -36,6 +37,7 @@ export function useBoardResource({
   const [board, setBoard] = useState<Board | null>(null)
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [boardGraph, setBoardGraph] = useState<BoardGraph | null>(null)
+  const [milestones, setMilestones] = useState<BoardMilestone[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const latestRequest = useRef(0)
   const onErrorRef = useRef(onError)
@@ -136,7 +138,43 @@ export function useBoardResource({
     workspaceId,
   ])
 
-  return { board, boardGraph, isLoading, members, reload, setBoard }
+  // Forecasts belong to the board, not to anyone's planning preferences, so
+  // they only reload when the board changes.
+  useEffect(() => {
+    if (!accessToken || !board) {
+      queueMicrotask(() => setMilestones([]))
+      return
+    }
+
+    let ignore = false
+
+    boardApi
+      .getBoardMilestones(accessToken, workspaceId, projectId, board.id)
+      .then((loaded) => {
+        if (!ignore) {
+          setMilestones(loaded)
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setMilestones([])
+        }
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [accessToken, board, projectId, workspaceId])
+
+  return {
+    board,
+    boardGraph,
+    isLoading,
+    members,
+    milestones,
+    reload,
+    setBoard,
+  }
 }
 
 type UseCardDependencyAnalysisOptions = BoardScope & {

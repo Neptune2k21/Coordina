@@ -212,6 +212,7 @@ public sealed record BoardCardMutation(
   BoardCardPriority? Priority,
   DateOnly? DueDate,
   CardSize? Size,
+  DateOnly? MilestoneDate,
   IReadOnlyCollection<string> Labels,
   IReadOnlyCollection<Guid> AssigneeIds,
   bool IsCompleted,

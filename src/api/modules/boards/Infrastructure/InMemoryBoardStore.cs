@@ -109,6 +109,7 @@ public sealed partial class InMemoryBoardStore : IBoardStore
       seed.Priority,
       seed.DueDate,
       seed.Size,
+      null,
       seed.Labels.ToArray(),
       isDone,
       isDone ? createdAt : null,

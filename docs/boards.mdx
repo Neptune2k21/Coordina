@@ -61,7 +61,13 @@ open cards with fixed, explainable rules:
 | No size with a focus slot | No bonus, no penalty, shown as "Size unknown" |
 
 Ties break on board position, then card id, so the same board always gives the
-same order. A board without dependencies has no critical path.
+same order.
+
+The critical path is the chain of open cards that takes longest, weighted by
+the likely duration of each card's size: three `XS` cards in a row weigh less
+than one `L`. An unsized card counts as `M`, and completed cards take no part
+in it, so a completed card in the middle of a chain cuts it. Only chains of at
+least two cards count: a board without open dependencies has no critical path.
 
 ### Card sizes
 
@@ -80,7 +86,7 @@ order of magnitude, and the bigger the card, the wider its range:
 
 A day is 6 hours of focus work. The ranges live in one place, the graph engine
 (`src/graph-engine/src/planning/card_size.cpp`); the API and the web app only
-handle the codes. Upcoming forecasts (#129) draw durations within these ranges.
+handle the codes. Milestone forecasts draw durations within these ranges.
 
 Set `size` on create or update; clear it with `clearSize: true`. Unknown codes
 return `400`.
@@ -103,6 +109,85 @@ Invalid values return `400`. Each plan item includes structured explanation
 fields: `size`, `fitsMaxSize`, `isAssignedToMe`, `isContextMatch`,
 `isInProgress`, and `isShortestAlternative`. When nothing ready fits the focus
 slot, the smallest sized ready card is flagged `isShortestAlternative`.
+
+## Milestones
+
+A milestone is a card with a target date, such as "Launch v1" or "Demo day".
+Its scope is the card and everything it depends on, directly or not: the
+dependency graph defines it, so there is nothing to tag. A milestone without
+dependencies covers only itself.
+
+```http
+PATCH /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
+      { "milestoneDate": "2027-03-12" }
+PATCH /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
+      { "clearMilestoneDate": true }
+GET   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones
+```
+
+A new milestone date cannot be in the past (`400`); a milestone whose date has
+passed keeps it until someone moves or clears it. Anyone who can read the
+project can read the forecasts.
+
+### How the forecast works
+
+The graph engine (`coordina_graph_forecast`) simulates the work 2,000 times:
+
+1. **Schedule.** Each open card of the scope takes a duration within its size's
+   range. Each person works 6 focus hours a day on one card at a time, and a
+   card starts once its open dependencies are done. People pick cards up in
+   the planning order, computed for nobody in particular so that everyone sees
+   the same forecast. A card goes to the first of its assignees who is free;
+   an unassigned card goes to the first free person. The team is everyone
+   assigned to an open card of the board, or one person when nobody is.
+2. **Uncertainty.** Each run draws every duration from a triangular
+   distribution over its size's range. The ranges lean towards the high end,
+   so cards slip more than they come in early. Each card has a random stream
+   of its own, keyed by its id and a fixed seed: the forecast only moves when
+   something in the milestone's scope changes, not when an unrelated card is
+   added or reordered.
+3. **Results.** The forecast date is the median run (P50) and the commit date
+   is the 85th percentile (P85), counted in working days from today and
+   skipping weekends. A card's criticality is the share of runs where it is on
+   the chain that sets the date, whether it waited for a dependency or for its
+   person. Its sensitivity is the correlation between its duration and the
+   date across runs; squared, it is the share of the date's spread the card's
+   own uncertainty explains, so a high value points at a card worth splitting
+   or sizing again.
+
+The runs spread over every core and give the same result with any number of
+threads. On the benchmark board (`make graph-engine-benchmark`), 2,000 runs
+over 1,000 cards take about 18 ms on 20 cores and 180 ms on one.
+
+Unsized cards count as `M`, and the forecast says how many there are.
+
+| Field | Meaning |
+| --- | --- |
+| `targetDate` | The milestone's date |
+| `status` | `ON_TRACK` (P85 on or before the target), `AT_RISK` (P50 on time, P85 late), `LATE` (P50 late), `OVERDUE` (target passed), `COMPLETED` |
+| `forecastDate`, `commitDate` | P50 and P85 dates; `null` once completed |
+| `slipDays` | `forecastDate` minus `targetDate`, in calendar days; positive is late |
+| `openCardCount`, `unsizedCardCount` | Open cards in the scope, and those without a size |
+| `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first, each with its `criticality` and `sensitivity` |
+
+### Limits
+
+The forecast is as good as what the board says, and it knows nothing else:
+
+- Every person gives 6 focus hours a day, every weekday. Holidays, time off
+  and part-time work are not counted.
+- A card in progress counts at its full duration: the time already spent on
+  it is not tracked yet.
+- Work outside the board, and cards outside the milestone's scope, take
+  nobody's time, so a team busy elsewhere makes the forecast optimistic.
+- Unassigned cards go to whoever is free; the forecast does not decide who
+  should do what, or reorder work to ship sooner.
+- Sizes are ranges, not measurements: until forecasts are calibrated on how
+  long cards really take, a team that is systematically slow or fast shifts
+  every date the same way.
+
+The board shows a banner per milestone with these dates, the slip, the
+drivers (clicking one opens its card) and a warning when sizes are missing.
 
 ## Concurrent changes
 
@@ -129,6 +214,7 @@ PATCH  /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{ca
        { "listId": "..." }
 DELETE /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
 GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/graph
+GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones
 ```
 
 ## Project shell and board system

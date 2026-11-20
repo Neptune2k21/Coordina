@@ -38,14 +38,10 @@ internal static class BoardDependencyGraph
 
     var graph = ToGraph(board);
     var cardsById = graph.Cards.ToDictionary(card => card.Id);
-    var inProgressListIds = board.Lists
-      .Where(list => list.TaskStatus == BoardTaskStatus.InProgress)
-      .Select(list => list.Id)
-      .ToHashSet();
     var analysis = graphEngine.AnalyzeBoard(
       graph.Nodes,
       graph.Edges,
-      ToWorkItems(graph.Cards, today, inProgressListIds, preferences),
+      ToWorkItems(board, graph.Cards, today, preferences),
       new GraphPlanningOptions(
         ToGraphSize(preferences.MaxSize),
         preferences.PreferAssigned,
@@ -105,7 +101,7 @@ internal static class BoardDependencyGraph
       .AnalyzeNodes(graph.Nodes, graph.Edges)
       .ToDictionary(analysis => analysis.Node);
     var criticalPathIds = graphEngine
-      .FindCriticalPath(graph.Nodes, graph.Edges)
+      .FindCriticalPath(graph.Nodes, graph.Edges, ToSizedItems(graph.Cards))
       .ToHashSet();
 
     if (!cardsById.TryGetValue(cardId, out var card))
@@ -157,7 +153,7 @@ internal static class BoardDependencyGraph
       criticalPathIds);
   }
 
-  private static BoardGraphSnapshot ToGraph(ProjectBoard board)
+  public static BoardGraphSnapshot ToGraph(ProjectBoard board)
   {
     var cards = board.Lists
       .SelectMany(list => list.Cards)
@@ -183,12 +179,19 @@ internal static class BoardDependencyGraph
       .OfType<ProjectBoardCard>()
       .ToArray();
 
-  private static GraphWorkItem<Guid>[] ToWorkItems(
+  /// <summary>The cards as the engine ranks them for the user the preferences belong to.</summary>
+  public static GraphWorkItem<Guid>[] ToWorkItems(
+    ProjectBoard board,
     IReadOnlyCollection<ProjectBoardCard> cards,
     DateOnly today,
-    HashSet<Guid> inProgressListIds,
-    BoardPlanningPreferences preferences) =>
-    cards
+    BoardPlanningPreferences preferences)
+  {
+    var inProgressListIds = board.Lists
+      .Where(list => list.TaskStatus == BoardTaskStatus.InProgress)
+      .Select(list => list.Id)
+      .ToHashSet();
+
+    return cards
       .Select(card => new GraphWorkItem<Guid>(
         card.Id,
         card.IsCompleted,
@@ -203,6 +206,21 @@ internal static class BoardDependencyGraph
         AssignmentOf(card, preferences.UserId),
         inProgressListIds.Contains(card.ListId),
         preferences.MatchesContext(card.Labels)))
+      .ToArray();
+  }
+
+  // What the weighted critical path reads: whether each card is done, and its size.
+  private static GraphWorkItem<Guid>[] ToSizedItems(IReadOnlyCollection<ProjectBoardCard> cards) =>
+    cards
+      .Select(card => new GraphWorkItem<Guid>(
+        card.Id,
+        card.IsCompleted,
+        0,
+        GraphWorkItem<Guid>.NoDueDate,
+        0,
+        0,
+        Math.Max(0, card.Position),
+        ToGraphSize(card.Size)))
       .ToArray();
 
   // CardSize has the engine's values; null is the engine's None.
@@ -366,11 +384,12 @@ internal static class BoardDependencyGraph
 
   private static string Plural(int value) => value == 1 ? string.Empty : "s";
 
-  private sealed record BoardGraphSnapshot(
-    IReadOnlyCollection<ProjectBoardCard> Cards,
-    IReadOnlyCollection<Guid> Nodes,
-    IReadOnlyCollection<GraphEdge<Guid>> Edges);
 }
+
+internal sealed record BoardGraphSnapshot(
+  IReadOnlyCollection<ProjectBoardCard> Cards,
+  IReadOnlyCollection<Guid> Nodes,
+  IReadOnlyCollection<GraphEdge<Guid>> Edges);
 
 internal sealed record BoardGraphAnalysis(
   Guid BoardId,

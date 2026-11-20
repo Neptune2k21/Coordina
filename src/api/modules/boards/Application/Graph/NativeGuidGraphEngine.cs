@@ -168,13 +168,16 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
 
   public IReadOnlyCollection<Guid> FindCriticalPath(
     IReadOnlyCollection<Guid> nodes,
-    IReadOnlyCollection<GraphEdge<Guid>> edges)
+    IReadOnlyCollection<GraphEdge<Guid>> edges,
+    IReadOnlyCollection<GraphWorkItem<Guid>> workItems)
   {
     ArgumentNullException.ThrowIfNull(nodes);
     ArgumentNullException.ThrowIfNull(edges);
+    ArgumentNullException.ThrowIfNull(workItems);
 
     var nativeNodes = ToNativeNodes(nodes);
     var nativeEdges = ToNativeEdges(edges);
+    var nativeWorkItems = ToNativeWorkItems(workItems);
 
     return ReadNodeCollection(
       nativeNodes.Length,
@@ -183,6 +186,8 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
         ToNativeCount(nativeNodes.Length),
         nativeEdges,
         ToNativeCount(nativeEdges.Length),
+        nativeWorkItems,
+        ToNativeCount(nativeWorkItems.Length),
         output,
         ToNativeCount(output.Length)));
   }
@@ -248,6 +253,74 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
     }
 
     return buffers.ToAnalysis();
+  }
+
+  public GraphMilestoneForecast<Guid> Forecast(
+    IReadOnlyCollection<Guid> nodes,
+    IReadOnlyCollection<GraphEdge<Guid>> edges,
+    IReadOnlyCollection<GraphWorkItem<Guid>> workItems,
+    IReadOnlyCollection<GraphAssignee<Guid>> assignees,
+    GraphForecastOptions<Guid> options)
+  {
+    ArgumentNullException.ThrowIfNull(nodes);
+    ArgumentNullException.ThrowIfNull(edges);
+    ArgumentNullException.ThrowIfNull(workItems);
+    ArgumentNullException.ThrowIfNull(assignees);
+    ArgumentNullException.ThrowIfNull(options);
+
+    var nativeNodes = ToNativeNodes(nodes);
+    var nativeEdges = ToNativeEdges(edges);
+    var nativeWorkItems = ToNativeWorkItems(workItems);
+    var nativeAssignees = ToNativeAssignees(assignees);
+    var nativeOptions = new NativeGraphForecastOptions(
+      ToNative(options.Milestone),
+      options.Seed,
+      checked((uint)options.PersonCount),
+      checked((uint)options.RunCount),
+      checked((uint)options.ThreadCount),
+      0U);
+    // Every open card of the scope is a node, so the node count always fits.
+    var cards = new NativeGraphCardForecast[nativeNodes.Length];
+    var handle = GCHandle.Alloc(cards, GCHandleType.Pinned);
+    NativeGraphMilestoneForecast output;
+    NativeGraphStatus status;
+
+    try
+    {
+      output = new NativeGraphMilestoneForecast
+      {
+        Cards = handle.AddrOfPinnedObject(),
+        CardCapacity = ToNativeCount(cards.Length)
+      };
+      status = NativeMethods.Forecast(
+        nativeNodes,
+        ToNativeCount(nativeNodes.Length),
+        nativeEdges,
+        ToNativeCount(nativeEdges.Length),
+        nativeWorkItems,
+        ToNativeCount(nativeWorkItems.Length),
+        nativeAssignees,
+        ToNativeCount(nativeAssignees.Length),
+        ref nativeOptions,
+        ref output);
+    }
+    finally
+    {
+      handle.Free();
+    }
+
+    if (status != NativeGraphStatus.Ok)
+    {
+      throw new GraphEngineException("forecast", (int)status);
+    }
+
+    return new GraphMilestoneForecast<Guid>(
+      output.P50Days,
+      output.P85Days,
+      checked((int)output.UnsizedCount),
+      BoardAnalysisBuffers.Take(cards, output.CardCount)
+        .Select(card => new GraphCardForecast<Guid>(FromNative(card.Node), card.Criticality, card.Sensitivity))
+        .ToArray());
   }
 
   private static Guid[] ReadNodeCollection(
@@ -347,6 +420,12 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
         item.IsContextMatch ? 1U : 0U))
       .ToArray();
 
+  private static NativeGraphAssignee[] ToNativeAssignees(
+    IReadOnlyCollection<GraphAssignee<Guid>> assignees) =>
+    assignees
+      .Select(assignee => new NativeGraphAssignee(ToNative(assignee.Node), checked((uint)assignee.Person), 0U))
+      .ToArray();
+
   private static NativeGraphPlanningOptions ToNativeOptions(
     GraphPlanningOptions options) =>
     new(
@@ -433,11 +512,45 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
     uint IsContextMatch,
     uint IsInProgress);
 
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphAssignee(
+    NativeGraphNodeId Node,
+    uint Person,
+    uint Reserved);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private record struct NativeGraphForecastOptions(
+    NativeGraphNodeId Milestone,
+    ulong Seed,
+    uint PersonCount,
+    uint RunCount,
+    uint ThreadCount,
+    uint Reserved);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphCardForecast(
+    NativeGraphNodeId Node,
+    double Criticality,
+    double Sensitivity);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphMilestoneForecast
+  {
+    public IntPtr Cards;
+    public UIntPtr CardCapacity;
+    public UIntPtr CardCount;
+    public double P50Days;
+    public double P85Days;
+    public uint UnsizedCount;
+    public uint Reserved;
+  }
+
   private enum NativeGraphStatus
   {
     Ok = 0,
     InvalidArgument = 1,
-    InsufficientCapacity = 2
+    InsufficientCapacity = 2,
+    Cycle = 3
   }
 
   [StructLayout(LayoutKind.Sequential)]
@@ -527,7 +640,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
         Capacity = ToNativeCount(capacity)
       };
 
-    private static IEnumerable<T> Take<T>(T[] buffer, UIntPtr count)
+    public static IEnumerable<T> Take<T>(T[] buffer, UIntPtr count)
     {
       var written = checked((int)count.ToUInt64());
 
@@ -641,6 +754,8 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
       UIntPtr nodeCount,
       NativeGraphEdge[] edges,
       UIntPtr edgeCount,
+      NativeGraphWorkItem[] workItems,
+      UIntPtr workItemCount,
       [Out]
       NativeGraphNodeId[] output,
       UIntPtr outputCapacity);
@@ -674,5 +789,21 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
       UIntPtr workItemCount,
       ref NativeGraphPlanningOptions options,
       ref NativeGraphBoardAnalysis output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_forecast",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus Forecast(
+      NativeGraphNodeId[] nodes,
+      UIntPtr nodeCount,
+      NativeGraphEdge[] edges,
+      UIntPtr edgeCount,
+      NativeGraphWorkItem[] workItems,
+      UIntPtr workItemCount,
+      NativeGraphAssignee[] assignees,
+      UIntPtr assigneeCount,
+      ref NativeGraphForecastOptions options,
+      ref NativeGraphMilestoneForecast output);
   }
 }

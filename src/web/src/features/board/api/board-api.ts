@@ -10,6 +10,7 @@ import type {
   BoardCardInput,
   BoardCreationInput,
   BoardGraph,
+  BoardMilestone,
   BoardTaskStatus,
   BoardTemplateDefinition,
 } from "@/types/task"
@@ -187,6 +188,22 @@ export async function deleteCard(
       accessToken,
       method: "DELETE",
       errorMessage: "Board request failed.",
+    }
+  )
+}
+
+/** The board's milestones, soonest target first, each with its forecast. */
+export async function getBoardMilestones(
+  accessToken: string,
+  workspaceId: string,
+  projectId: string,
+  boardId: string
+) {
+  return apiRequest<BoardMilestone[]>(
+    `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/milestones`,
+    {
+      accessToken,
+      errorMessage: "Milestones request failed.",
     }
   )
 }
@@ -425,6 +442,9 @@ function normalizeCardUpdateInput(input: BoardCardInput) {
     ...normalizeCardInput(input),
     clearDueDate: input.dueDate === null || input.dueDate === "",
     clearSize: input.size === null,
+    milestoneDate: input.milestoneDate || null,
+    clearMilestoneDate:
+      input.milestoneDate === null || input.milestoneDate === "",
     priority: input.priority ?? "",
   }
 }
