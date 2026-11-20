@@ -170,6 +170,22 @@ Unsized cards count as `M`, and the forecast says how many there are.
 | `openCardCount`, `unsizedCardCount` | Open cards in the scope, and those without a size |
 | `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first, each with its `criticality` and `sensitivity` |
 
+### Limits
+
+The forecast is as good as what the board says, and it knows nothing else:
+
+- Every person gives 6 focus hours a day, every weekday. Holidays, time off
+  and part-time work are not counted.
+- A card in progress counts at its full duration: the time already spent on
+  it is not tracked yet.
+- Work outside the board, and cards outside the milestone's scope, take
+  nobody's time, so a team busy elsewhere makes the forecast optimistic.
+- Unassigned cards go to whoever is free; the forecast does not decide who
+  should do what, or reorder work to ship sooner.
+- Sizes are ranges, not measurements: until forecasts are calibrated on how
+  long cards really take, a team that is systematically slow or fast shifts
+  every date the same way.
+
 The board shows a banner per milestone with these dates, the slip, the
 drivers (clicking one opens its card) and a warning when sizes are missing.
 
