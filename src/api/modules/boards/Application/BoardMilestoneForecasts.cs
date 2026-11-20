@@ -103,7 +103,8 @@ internal static class BoardMilestoneForecasts
         .Select(card => new BoardMilestoneDriverResponse(
           card.Node,
           input.CardsById[card.Node].Title,
-          card.Criticality))
+          card.Criticality,
+          card.Sensitivity))
         .ToArray());
   }
 

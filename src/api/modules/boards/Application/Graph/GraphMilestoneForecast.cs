@@ -4,12 +4,13 @@ namespace Coordina.Api.Modules.Boards.Application.Graph;
 public sealed record GraphAssignee<TNode>(TNode Node, int Person)
   where TNode : notnull;
 
-/// <summary>What to forecast: the milestone, the team, and how many runs to simulate.</summary>
+/// <summary>What to forecast; a <paramref name="ThreadCount"/> of 0 uses every core, with the same result.</summary>
 public sealed record GraphForecastOptions<TNode>(
   TNode Milestone,
   int PersonCount,
   int RunCount,
-  ulong Seed)
+  ulong Seed,
+  int ThreadCount = 0)
   where TNode : notnull;
 
 /// <summary>
@@ -20,9 +21,12 @@ public sealed record GraphMilestoneForecast<TNode>(
   double P50Days,
   double P85Days,
   int UnsizedCount,
-  IReadOnlyCollection<GraphCardCriticality<TNode>> Cards)
+  IReadOnlyCollection<GraphCardForecast<TNode>> Cards)
   where TNode : notnull;
 
-/// <summary>The share of runs, from 0 to 1, where the card drives the milestone's date.</summary>
-public sealed record GraphCardCriticality<TNode>(TNode Node, double Criticality)
+/// <summary>
+/// How a card weighs on the milestone's date: the share of runs where it drives
+/// the date (0 to 1), and how closely its duration moves the date (-1 to 1).
+/// </summary>
+public sealed record GraphCardForecast<TNode>(TNode Node, double Criticality, double Sensitivity)
   where TNode : notnull;

@@ -19,8 +19,13 @@ public sealed record BoardMilestoneResponse(
   int UnsizedCardCount,
   IReadOnlyCollection<BoardMilestoneDriverResponse> Drivers);
 
-/// <summary>A card that drives the milestone's date in a share of the simulated runs, from 0 to 1.</summary>
+/// <summary>
+/// A card that drives the milestone's date: the share of simulated runs where
+/// it sets the date (0 to 1), and how closely its duration moves the date
+/// (-1 to 1), high when sizing it better or splitting it would firm the date up.
+/// </summary>
 public sealed record BoardMilestoneDriverResponse(
   Guid CardId,
   string Title,
-  double Criticality);
+  double Criticality,
+  double Sensitivity);

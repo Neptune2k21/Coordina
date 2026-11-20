@@ -1990,6 +1990,8 @@ export interface components {
       title: string
       /** Format: double */
       criticality: number
+      /** Format: double */
+      sensitivity: number
     }
     BoardMilestoneResponse: {
       /** Format: uuid */

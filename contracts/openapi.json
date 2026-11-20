@@ -2823,7 +2823,8 @@
         "required": [
           "cardId",
           "title",
-          "criticality"
+          "criticality",
+          "sensitivity"
         ],
         "type": "object",
         "properties": {
@@ -2835,6 +2836,10 @@
             "type": "string"
           },
           "criticality": {
+            "type": "number",
+            "format": "double"
+          },
+          "sensitivity": {
             "type": "number",
             "format": "double"
           }

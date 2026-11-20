@@ -276,9 +276,11 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
       ToNative(options.Milestone),
       options.Seed,
       checked((uint)options.PersonCount),
-      checked((uint)options.RunCount));
+      checked((uint)options.RunCount),
+      checked((uint)options.ThreadCount),
+      0U);
     // Every open card of the scope is a node, so the node count always fits.
-    var cards = new NativeGraphCardCriticality[nativeNodes.Length];
+    var cards = new NativeGraphCardForecast[nativeNodes.Length];
     var handle = GCHandle.Alloc(cards, GCHandleType.Pinned);
     NativeGraphMilestoneForecast output;
     NativeGraphStatus status;
@@ -317,7 +319,7 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
       output.P85Days,
       checked((int)output.UnsizedCount),
       BoardAnalysisBuffers.Take(cards, output.CardCount)
-        .Select(card => new GraphCardCriticality<Guid>(FromNative(card.Node), card.Criticality))
+        .Select(card => new GraphCardForecast<Guid>(FromNative(card.Node), card.Criticality, card.Sensitivity))
         .ToArray());
   }
 
@@ -521,12 +523,15 @@ public sealed class NativeGuidGraphEngine : IGraphEngine<Guid>
     NativeGraphNodeId Milestone,
     ulong Seed,
     uint PersonCount,
-    uint RunCount);
+    uint RunCount,
+    uint ThreadCount,
+    uint Reserved);
 
   [StructLayout(LayoutKind.Sequential)]
-  private readonly record struct NativeGraphCardCriticality(
+  private readonly record struct NativeGraphCardForecast(
     NativeGraphNodeId Node,
-    double Criticality);
+    double Criticality,
+    double Sensitivity);
 
   [StructLayout(LayoutKind.Sequential)]
   private struct NativeGraphMilestoneForecast

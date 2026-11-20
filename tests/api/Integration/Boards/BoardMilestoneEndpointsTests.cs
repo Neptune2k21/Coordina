@@ -72,6 +72,11 @@ public sealed class BoardMilestoneEndpointsTests(ApiTestApplicationFactory facto
       ["Onboarding", "Payment API"],
       milestone.Drivers.Select(driver => driver.Title).Order(StringComparer.Ordinal));
     Assert.All(milestone.Drivers, driver => Assert.Equal(1.0, driver.Criticality));
+    Assert.All(milestone.Drivers, driver => Assert.InRange(driver.Sensitivity, 0.0, 1.0));
+    // The L card's wider range moves the sum more than the unsized one (an M).
+    Assert.True(
+      milestone.Drivers.Single(driver => driver.Title == "Payment API").Sensitivity
+        > milestone.Drivers.Single(driver => driver.Title == "Onboarding").Sensitivity);
   }
 
   [Fact]

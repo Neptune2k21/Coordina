@@ -238,8 +238,10 @@ public sealed class NativeGuidGraphEngineTests
     Assert.True(forecast.P50Days <= forecast.P85Days);
     Assert.Equal(1, forecast.UnsizedCount);
     Assert.Equal(4, forecast.Cards.Count);
-    Assert.Equal(new GraphCardCriticality<Guid>(launch, 1), forecast.Cards.First());
+    Assert.Equal(launch, forecast.Cards.First().Node);
+    Assert.Equal(1, forecast.Cards.First().Criticality);
     Assert.All(forecast.Cards, card => Assert.InRange(card.Criticality, 0, 1));
+    Assert.All(forecast.Cards, card => Assert.InRange(card.Sensitivity, -1, 1));
   }
 
   [Fact]

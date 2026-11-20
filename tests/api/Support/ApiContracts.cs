@@ -158,7 +158,8 @@ public sealed record BoardMilestoneResponse(
 public sealed record BoardMilestoneDriverResponse(
   string CardId,
   string Title,
-  double Criticality);
+  double Criticality,
+  double Sensitivity);
 
 public sealed record BoardGraphResponse(
   string BoardId,
