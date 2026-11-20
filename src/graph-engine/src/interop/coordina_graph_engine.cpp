@@ -350,19 +350,25 @@ extern "C" coordina_graph_status coordina_graph_forecast(
   }
 
   const auto graph = coordina::graph::build_snapshot(nodes, node_count, edges, edge_count);
-  const coordina::graph::MilestoneWork work(
+  const coordina::graph::ForecastModel model(
     graph,
     coordina::graph::build_work_items(work_items, work_item_count),
     coordina::graph::build_assignees(assignees, assignee_count),
     coordina::graph::to_node_id(options->milestone),
     options->person_count);
 
-  if (work.error() != coordina::graph::ForecastError::none)
+  if (model.error() != coordina::graph::ForecastError::none)
   {
-    return to_status(work.error());
+    return to_status(model.error());
   }
 
-  const auto forecast = coordina::graph::forecast(work, options->run_count, options->seed);
+  const auto forecast = coordina::graph::forecast(
+    model,
+    coordina::graph::ForecastOptions{
+      .run_count = options->run_count,
+      .seed = options->seed,
+      .thread_count = options->thread_count
+    });
   output->card_count = forecast.cards.size();
 
   if (!fits(output->card_count, output->cards, output->card_capacity))
@@ -373,7 +379,7 @@ extern "C" coordina_graph_status coordina_graph_forecast(
   output->p50_days = forecast.p50_days;
   output->p85_days = forecast.p85_days;
   output->unsized_count = forecast.unsized_count;
-  coordina::graph::write_card_criticalities(forecast.cards, output->cards, output->card_capacity);
+  coordina::graph::write_card_forecasts(forecast.cards, output->cards, output->card_capacity);
 
   return COORDINA_GRAPH_OK;
 }

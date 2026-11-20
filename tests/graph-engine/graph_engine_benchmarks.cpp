@@ -234,7 +234,7 @@ BoardGraph with_release(const BoardGraph& board)
   return graph;
 }
 
-ForecastResult run_forecast(const BoardGraph& graph)
+ForecastResult run_forecast(const BoardGraph& graph, std::uint32_t thread_count)
 {
   std::vector<coordina_graph_assignee> assignees;
 
@@ -251,12 +251,12 @@ ForecastResult run_forecast(const BoardGraph& graph)
     }
   }
 
-  std::vector<coordina_graph_card_criticality> cards(graph.nodes.size());
+  std::vector<coordina_graph_card_forecast> cards(graph.nodes.size());
   ForecastResult result{COORDINA_GRAPH_OK, {}};
   result.output.cards = cards.data();
   result.output.card_capacity = cards.size();
   const coordina_graph_forecast_options
-    options{graph.nodes.back(), 42U, forecast_team, forecast_runs};
+    options{graph.nodes.back(), 42U, forecast_team, forecast_runs, thread_count, 0U};
   result.status = coordina_graph_forecast(
     graph.nodes.data(),
     graph.nodes.size(),
@@ -362,11 +362,12 @@ int main(int argc, char** argv)
   }
 
   std::printf(
-    "\n%8s %8s %8s %12s %9s %9s\n",
+    "\n%8s %8s %8s %10s %10s %9s %9s\n",
     "nodes",
     "runs",
     "scope",
-    "forecast_ms",
+    "1_core_ms",
+    "all_ms",
     "p50_days",
     "p85_days");
 
@@ -374,11 +375,18 @@ int main(int argc, char** argv)
   {
     const auto graph = with_release(build_board(size));
     ForecastResult result{COORDINA_GRAPH_OK, {}};
-    const auto elapsed = median_milliseconds(
-      size <= 1000U ? 3 : 1,
+    const auto samples = size <= 1000U ? 5 : 1;
+    const auto single = median_milliseconds(
+      samples,
       [&]
       {
-        result = run_forecast(graph);
+        result = run_forecast(graph, 1U);
+      });
+    const auto parallel = median_milliseconds(
+      samples,
+      [&]
+      {
+        result = run_forecast(graph, 0U);
       });
 
     if (result.status != COORDINA_GRAPH_OK || result.output.p50_days > result.output.p85_days)
@@ -388,11 +396,12 @@ int main(int argc, char** argv)
     }
 
     std::printf(
-      "%8zu %8u %8zu %12.3f %9.1f %9.1f\n",
+      "%8zu %8u %8zu %10.3f %10.3f %9.1f %9.1f\n",
       size,
       forecast_runs,
       result.output.card_count,
-      elapsed,
+      single,
+      parallel,
       result.output.p50_days,
       result.output.p85_days);
   }

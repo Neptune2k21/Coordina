@@ -157,19 +157,24 @@ typedef struct coordina_graph_assignee
 typedef struct coordina_graph_forecast_options
 {
   coordina_graph_node_id milestone;
-  /* The same seed gives the same forecast. */
+  /* The same seed gives the same forecast, whatever thread_count is. */
   uint64_t seed;
   /* The team: unassigned cards go to the first of them who is free. */
   uint32_t person_count;
   uint32_t run_count;
+  /* 0 uses every core. */
+  uint32_t thread_count;
+  uint32_t reserved;
 } coordina_graph_forecast_options;
 
-typedef struct coordina_graph_card_criticality
+typedef struct coordina_graph_card_forecast
 {
   coordina_graph_node_id node;
   /* The share of runs where the card drives the date, from 0 to 1. */
   double criticality;
-} coordina_graph_card_criticality;
+  /* The correlation between the card's duration and the date, from -1 to 1. */
+  double sensitivity;
+} coordina_graph_card_forecast;
 
 /*
  * Output of coordina_graph_forecast. The caller owns the card buffer and sets
@@ -180,7 +185,7 @@ typedef struct coordina_graph_card_criticality
 typedef struct coordina_graph_milestone_forecast
 {
   /* Every open card of the scope, most critical first. */
-  coordina_graph_card_criticality* cards;
+  coordina_graph_card_forecast* cards;
   size_t card_capacity;
   size_t card_count;
   /* Working days until the scope is done: one chance in two, and 85%. */
@@ -301,11 +306,12 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_analyze_board(
 /*
  * Forecasts when a milestone ships. Its scope is the milestone and every card
  * it depends on, directly or not; completed cards are ignored. Each run draws
- * a duration for every open card within its size's range, then schedules the
- * cards: each person works 6 focus hours a day on one card at a time, cards
- * start once their dependencies are done, and people pick cards up in the
- * board's plan_work order (computed for nobody in particular). A card goes to
- * the first of its assignees who is free, or to anyone when it has none.
+ * a duration for every open card within its size's range, from a random
+ * stream of the card's own, then schedules the cards: each person works 6 focus hours a day
+ * on one card at a time, cards start once their dependencies are done, and
+ * people pick cards up in the board's plan_work order (computed for nobody in
+ * particular). A card goes to the first of its assignees who is free, or to
+ * anyone when it has none. Runs spread over threads.
  *
  * Returns COORDINA_GRAPH_INVALID_ARGUMENT when the milestone is not a node,
  * person_count or run_count is 0, or an assignee is outside the team, and

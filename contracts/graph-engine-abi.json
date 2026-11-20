@@ -113,20 +113,23 @@
     },
     {
       "name": "coordina_graph_forecast_options",
-      "size": 32,
+      "size": 40,
       "fields": [
         { "name": "milestone", "offset": 0, "size": 16 },
         { "name": "seed", "offset": 16, "size": 8 },
         { "name": "person_count", "offset": 24, "size": 4 },
-        { "name": "run_count", "offset": 28, "size": 4 }
+        { "name": "run_count", "offset": 28, "size": 4 },
+        { "name": "thread_count", "offset": 32, "size": 4 },
+        { "name": "reserved", "offset": 36, "size": 4 }
       ]
     },
     {
-      "name": "coordina_graph_card_criticality",
-      "size": 24,
+      "name": "coordina_graph_card_forecast",
+      "size": 32,
       "fields": [
         { "name": "node", "offset": 0, "size": 16 },
-        { "name": "criticality", "offset": 16, "size": 8 }
+        { "name": "criticality", "offset": 16, "size": 8 },
+        { "name": "sensitivity", "offset": 24, "size": 8 }
       ]
     },
     {

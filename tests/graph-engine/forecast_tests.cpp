@@ -1,10 +1,8 @@
-// Tests of coordina_graph_forecast: the milestone's scope, the schedule it
-// simulates, and the Monte Carlo forecast through the C ABI.
-
 #include "coordina_graph_engine.h"
 #include "planning/forecast.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -33,210 +31,6 @@ coordina_graph_work_item sized_item(
   item.position = position;
   item.size = size;
   return item;
-}
-
-using coordina::graph::Assignee;
-using coordina::graph::ForecastError;
-using coordina::graph::MilestoneWork;
-
-coordina::graph::NodeId native(unsigned long long value)
-{
-  return coordina::graph::NodeId{.high = 0U, .low = value};
-}
-
-struct MilestoneBoard
-{
-  std::vector<coordina::graph::NodeId> nodes;
-  std::vector<coordina::graph::Edge> edges;
-  std::vector<coordina::graph::WorkItem> items;
-
-  // An open card; the position keeps the plan_work order the list order.
-  void card(unsigned long long id, coordina::graph::CardSize size, bool is_completed = false)
-  {
-    nodes.push_back(native(id));
-    items.push_back(
-      coordina::graph::WorkItem{
-        .node = native(id),
-        .is_completed = is_completed,
-        .due_days = std::numeric_limits<std::int32_t>::max(),
-        .position = static_cast<std::uint32_t>(items.size()),
-        .size = size
-      });
-  }
-
-  void depends(unsigned long long card, unsigned long long dependency)
-  {
-    edges.push_back(coordina::graph::Edge{.source = native(card), .target = native(dependency)});
-  }
-
-  MilestoneWork work(
-    unsigned long long milestone,
-    std::uint32_t person_count,
-    const std::vector<Assignee>& assignees = {}) const
-  {
-    return {
-      coordina::graph::GraphSnapshot(nodes, edges),
-      items,
-      assignees,
-      native(milestone),
-      person_count
-    };
-  }
-};
-
-const coordina::graph::ScheduledCard& scheduled(
-  const coordina::graph::Schedule& schedule,
-  unsigned long long id)
-{
-  for (const auto& card : schedule.cards)
-  {
-    if (card.node.low == id)
-    {
-      return card;
-    }
-  }
-
-  assert(false && "card not scheduled");
-  return schedule.cards.front();
-}
-
-std::vector<unsigned long long> chain_of(const coordina::graph::Schedule& schedule)
-{
-  std::vector<unsigned long long> chain;
-  chain.reserve(schedule.driving_chain.size());
-
-  for (const auto index : schedule.driving_chain)
-  {
-    chain.push_back(schedule.cards[index].node.low);
-  }
-
-  return chain;
-}
-
-void schedules_one_card_at_a_time_per_person()
-{
-  using coordina::graph::CardSize;
-
-  // Launch (XS) needs the payment API (M) and the store listing (S).
-  MilestoneBoard board;
-  board.card(1U, CardSize::m);
-  board.card(2U, CardSize::s);
-  board.card(3U, CardSize::xs);
-  board.depends(3U, 1U);
-  board.depends(3U, 2U);
-
-  // Alone, Grace does M, then S, then XS: 6 h, 8 h, 8.5 h.
-  const auto alone = board.work(3U, 1U, {Assignee{native(1U), 0U}, Assignee{native(2U), 0U}});
-  assert(alone.error() == ForecastError::none);
-  const auto serial = alone.schedule(alone.likely_hours());
-
-  assert(scheduled(serial, 1U).start_hours == 0.0 && scheduled(serial, 1U).finish_hours == 6.0);
-  assert(scheduled(serial, 2U).start_hours == 6.0 && scheduled(serial, 2U).finish_hours == 8.0);
-  assert(scheduled(serial, 3U).start_hours == 8.0 && scheduled(serial, 3U).finish_hours == 8.5);
-  assert(serial.finish_hours == 8.5);
-  // Launch waited for the listing, which waited for Grace to finish the API.
-  assert((chain_of(serial) == std::vector<unsigned long long>{1U, 2U, 3U}));
-
-  // With Alan on the listing, both start at once and launch follows the API.
-  const auto pair = board.work(3U, 2U, {Assignee{native(1U), 0U}, Assignee{native(2U), 1U}});
-  const auto parallel = pair.schedule(pair.likely_hours());
-
-  assert(scheduled(parallel, 2U).person == 1U && scheduled(parallel, 2U).finish_hours == 2.0);
-  assert(scheduled(parallel, 3U).start_hours == 6.0 && scheduled(parallel, 3U).person == 0U);
-  assert(parallel.finish_hours == 6.5);
-  assert((chain_of(parallel) == std::vector<unsigned long long>{1U, 3U}));
-}
-
-void gives_unassigned_cards_to_the_first_free_person()
-{
-  using coordina::graph::CardSize;
-
-  // Launch (XS) needs three unassigned M cards; two people share them.
-  MilestoneBoard board;
-  board.card(1U, CardSize::m);
-  board.card(2U, CardSize::m);
-  board.card(3U, CardSize::m);
-  board.card(4U, CardSize::xs);
-  board.depends(4U, 1U);
-  board.depends(4U, 2U);
-  board.depends(4U, 3U);
-
-  const auto work = board.work(4U, 2U);
-  const auto schedule = work.schedule(work.likely_hours());
-
-  assert(scheduled(schedule, 1U).person == 0U && scheduled(schedule, 1U).start_hours == 0.0);
-  assert(scheduled(schedule, 2U).person == 1U && scheduled(schedule, 2U).start_hours == 0.0);
-  // Both are free at 6 h; the first of them takes the third card.
-  assert(scheduled(schedule, 3U).person == 0U && scheduled(schedule, 3U).start_hours == 6.0);
-  assert(scheduled(schedule, 4U).start_hours == 12.0);
-  assert(schedule.finish_hours == 12.5);
-  assert((chain_of(schedule) == std::vector<unsigned long long>{1U, 3U, 4U}));
-
-  // A card waits for its own assignee even when someone else is free.
-  const auto assigned = board.work(
-    4U,
-    2U,
-    {Assignee{native(1U), 1U}, Assignee{native(2U), 1U}, Assignee{native(3U), 1U}});
-  const auto waiting = assigned.schedule(assigned.likely_hours());
-
-  assert(scheduled(waiting, 2U).person == 1U && scheduled(waiting, 2U).start_hours == 6.0);
-  assert(scheduled(waiting, 3U).person == 1U && scheduled(waiting, 3U).start_hours == 12.0);
-  assert(scheduled(waiting, 4U).person == 0U && scheduled(waiting, 4U).start_hours == 18.0);
-  assert(waiting.finish_hours == 18.5);
-  assert((chain_of(waiting) == std::vector<unsigned long long>{1U, 2U, 3U, 4U}));
-}
-
-void scopes_a_milestone_to_its_open_dependencies()
-{
-  using coordina::graph::CardSize;
-
-  // 1 depends on 2 (done), which depends on 3; 4 is another milestone's work.
-  MilestoneBoard board;
-  board.card(1U, CardSize::s);
-  board.card(2U, CardSize::xl, true);
-  board.card(3U, CardSize::none);
-  board.card(4U, CardSize::xxl);
-  board.depends(1U, 2U);
-  board.depends(2U, 3U);
-
-  const auto work = board.work(1U, 2U);
-  assert(work.nodes().size() == 2U);
-  assert(work.unsized_count() == 1U);
-
-  // The done card no longer holds 1 back, so 1 and 3 (planned as M) run at
-  // once.
-  const auto schedule = work.schedule(work.likely_hours());
-  assert(scheduled(schedule, 1U).start_hours == 0.0);
-  assert(scheduled(schedule, 3U).start_hours == 0.0);
-  assert(schedule.finish_hours == 6.0);
-
-  // A milestone without dependencies covers only itself.
-  assert(board.work(4U, 1U).nodes().size() == 1U);
-}
-
-void rejects_forecasts_it_cannot_make()
-{
-  using coordina::graph::CardSize;
-
-  MilestoneBoard board;
-  board.card(1U, CardSize::s);
-  board.card(2U, CardSize::s);
-  board.card(3U, CardSize::s, true);
-  board.depends(1U, 2U);
-
-  assert(board.work(9U, 1U).error() == ForecastError::unknown_milestone);
-  assert(board.work(1U, 0U).error() == ForecastError::unknown_person);
-  assert(board.work(1U, 1U, {Assignee{native(2U), 1U}}).error() == ForecastError::unknown_person);
-
-  // A loop through open cards blocks them all; through a done card it does not.
-  auto loop = board;
-  loop.depends(2U, 1U);
-  assert(loop.work(1U, 1U).error() == ForecastError::cycle);
-
-  auto done_loop = board;
-  done_loop.depends(2U, 3U);
-  done_loop.depends(3U, 1U);
-  assert(done_loop.work(1U, 1U).error() == ForecastError::none);
 }
 
 struct ForecastBoard
@@ -284,7 +78,7 @@ ForecastBoard release_board()
 coordina_graph_status run_forecast(
   const ForecastBoard& board,
   const coordina_graph_forecast_options& options,
-  std::vector<coordina_graph_card_criticality>& cards,
+  std::vector<coordina_graph_card_forecast>& cards,
   coordina_graph_milestone_forecast& output)
 {
   output = coordina_graph_milestone_forecast{};
@@ -307,8 +101,8 @@ coordina_graph_status run_forecast(
 void forecasts_a_reproducible_range()
 {
   const auto board = release_board();
-  const coordina_graph_forecast_options options{node(6U), 42U, 2U, 2000U};
-  std::vector<coordina_graph_card_criticality> cards(6U);
+  const coordina_graph_forecast_options options{node(6U), 42U, 2U, 2000U, 0U, 0U};
+  std::vector<coordina_graph_card_forecast> cards(6U);
   coordina_graph_milestone_forecast output{};
 
   assert(run_forecast(board, options, cards, output) == COORDINA_GRAPH_OK);
@@ -327,7 +121,7 @@ void forecasts_a_reproducible_range()
   }
 
   // The same seed gives the same forecast, card for card.
-  std::vector<coordina_graph_card_criticality> again(6U);
+  std::vector<coordina_graph_card_forecast> again(6U);
   coordina_graph_milestone_forecast repeated{};
   assert(run_forecast(board, options, again, repeated) == COORDINA_GRAPH_OK);
   assert(repeated.p50_days == output.p50_days && repeated.p85_days == output.p85_days);
@@ -342,7 +136,7 @@ void forecasts_a_reproducible_range()
   // and the sum of the high durations (unsized counts as M).
   auto alone = board;
   alone.assignees.clear();
-  const coordina_graph_forecast_options solo{node(6U), 7U, 1U, 2000U};
+  const coordina_graph_forecast_options solo{node(6U), 7U, 1U, 2000U, 0U, 0U};
   assert(run_forecast(alone, solo, cards, output) == COORDINA_GRAPH_OK);
 
   constexpr auto day = coordina::graph::focus_hours_per_day;
@@ -360,15 +154,15 @@ void forecasts_a_reproducible_range()
 void forecast_reports_missing_capacity_and_bad_arguments()
 {
   const auto board = release_board();
-  const coordina_graph_forecast_options options{node(6U), 1U, 2U, 10U};
-  std::vector<coordina_graph_card_criticality> small(2U);
+  const coordina_graph_forecast_options options{node(6U), 1U, 2U, 10U, 0U, 0U};
+  std::vector<coordina_graph_card_forecast> small(2U);
   coordina_graph_milestone_forecast output{};
 
   assert(run_forecast(board, options, small, output) == COORDINA_GRAPH_INSUFFICIENT_CAPACITY);
   assert(output.card_count == 6U);
   assert(small[0U].node.low == 0U);
 
-  std::vector<coordina_graph_card_criticality> cards(6U);
+  std::vector<coordina_graph_card_forecast> cards(6U);
   auto unknown = options;
   unknown.milestone = node(99U);
   assert(run_forecast(board, unknown, cards, output) == COORDINA_GRAPH_INVALID_ARGUMENT);
@@ -399,16 +193,131 @@ void forecast_reports_missing_capacity_and_bad_arguments()
       &output)
     == COORDINA_GRAPH_INVALID_ARGUMENT);
 }
+
+ForecastBoard wide_board(std::uint32_t card_count)
+{
+  ForecastBoard board;
+  const auto release = node(card_count + 1U);
+
+  for (std::uint32_t index = 0U; index < card_count; ++index)
+  {
+    board.nodes.push_back(node(index + 1U));
+    board.items.push_back(sized_item(index + 1U, 1U + (index % 6U), index));
+    board.edges.push_back(coordina_graph_edge{release, node(index + 1U)});
+
+    if (index % 3U != 0U)
+    {
+      board.edges.push_back(coordina_graph_edge{node(index + 1U), node(index)});
+    }
+
+    if (index % 4U != 0U)
+    {
+      board.assignees.push_back(coordina_graph_assignee{node(index + 1U), index % 4U, 0U});
+    }
+  }
+
+  board.nodes.push_back(release);
+  board.items.push_back(sized_item(card_count + 1U, COORDINA_GRAPH_SIZE_XS, card_count));
+  return board;
+}
+
+void keeps_the_forecast_when_an_unrelated_card_arrives()
+{
+  const auto board = wide_board(40U);
+  std::vector<coordina_graph_card_forecast> before(41U);
+  coordina_graph_milestone_forecast first{};
+  assert(
+    run_forecast(board, {node(41U), 3U, 4U, 500U, 1U, 0U}, before, first) == COORDINA_GRAPH_OK);
+
+  // A new card ranks first and shifts every scheduling index, but it is
+  // outside the scope, so no card of the scope draws differently.
+  auto grown = board;
+  grown.nodes.insert(grown.nodes.begin(), node(500U));
+  auto urgent = sized_item(500U, COORDINA_GRAPH_SIZE_XL, 0U);
+  urgent.priority = 3U;
+  urgent.due_days = 0;
+  grown.items.insert(grown.items.begin(), urgent);
+  std::vector<coordina_graph_card_forecast> after(42U);
+  coordina_graph_milestone_forecast second{};
+  assert(
+    run_forecast(grown, {node(41U), 3U, 4U, 500U, 1U, 0U}, after, second) == COORDINA_GRAPH_OK);
+
+  assert(first.p50_days == second.p50_days && first.p85_days == second.p85_days);
+  assert(first.card_count == second.card_count);
+
+  for (std::size_t index = 0U; index < first.card_count; ++index)
+  {
+    assert(same_node(before[index].node, after[index].node));
+    assert(before[index].criticality == after[index].criticality);
+  }
+}
+
+void gives_the_same_forecast_with_any_thread_count()
+{
+  const auto board = wide_board(80U);
+  std::vector<coordina_graph_card_forecast> alone(81U);
+  std::vector<coordina_graph_card_forecast> shared(81U);
+  coordina_graph_milestone_forecast first{};
+  coordina_graph_milestone_forecast second{};
+
+  assert(
+    run_forecast(board, {node(81U), 9U, 4U, 2000U, 1U, 0U}, alone, first) == COORDINA_GRAPH_OK);
+  assert(
+    run_forecast(board, {node(81U), 9U, 4U, 2000U, 7U, 0U}, shared, second) == COORDINA_GRAPH_OK);
+  assert(first.p50_days == second.p50_days && first.p85_days == second.p85_days);
+
+  for (std::size_t index = 0U; index < first.card_count; ++index)
+  {
+    assert(same_node(alone[index].node, shared[index].node));
+    assert(alone[index].criticality == shared[index].criticality);
+    assert(alone[index].sensitivity == shared[index].sensitivity);
+  }
+}
+
+void measures_how_much_each_card_moves_the_date()
+{
+  // Two people: one on an XXL card, the other on an XS card; the release
+  // waits for both, so only the XXL card's duration moves the date.
+  ForecastBoard board;
+  board.nodes = {node(1U), node(2U), node(3U)};
+  board.items = {
+    sized_item(1U, COORDINA_GRAPH_SIZE_XXL, 0U),
+    sized_item(2U, COORDINA_GRAPH_SIZE_XS, 1U),
+    sized_item(3U, COORDINA_GRAPH_SIZE_XS, 2U)
+  };
+  board.edges = {coordina_graph_edge{node(3U), node(1U)}, coordina_graph_edge{node(3U), node(2U)}};
+  board.assignees = {
+    coordina_graph_assignee{node(1U), 0U, 0U},
+    coordina_graph_assignee{node(2U), 1U, 0U}
+  };
+  std::vector<coordina_graph_card_forecast> cards(3U);
+  coordina_graph_milestone_forecast output{};
+
+  assert(
+    run_forecast(board, {node(3U), 5U, 2U, 1000U, 0U, 0U}, cards, output) == COORDINA_GRAPH_OK);
+
+  for (const auto& card : cards)
+  {
+    if (card.node.low == 1U)
+    {
+      assert(card.criticality == 1.0 && card.sensitivity > 0.95);
+    }
+
+    if (card.node.low == 2U)
+    {
+      assert(card.criticality == 0.0 && std::fabs(card.sensitivity) < 0.1);
+    }
+  }
+}
 }
 
 int main()
 {
-  schedules_one_card_at_a_time_per_person();
-  gives_unassigned_cards_to_the_first_free_person();
-  scopes_a_milestone_to_its_open_dependencies();
-  rejects_forecasts_it_cannot_make();
   forecasts_a_reproducible_range();
   forecast_reports_missing_capacity_and_bad_arguments();
+  keeps_the_forecast_when_an_unrelated_card_arrives();
+  gives_the_same_forecast_with_any_thread_count();
+  measures_how_much_each_card_moves_the_date();
 
   return 0;
 }

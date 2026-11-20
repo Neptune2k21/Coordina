@@ -44,9 +44,9 @@ std::vector<Assignee> build_assignees(
   const coordina_graph_assignee* assignees,
   std::size_t assignee_count);
 
-std::size_t write_card_criticalities(
-  const std::vector<CardCriticality>& cards,
-  coordina_graph_card_criticality* output,
+std::size_t write_card_forecasts(
+  const std::vector<CardForecast>& cards,
+  coordina_graph_card_forecast* output,
   std::size_t output_capacity);
 
 std::size_t write_work_recommendations(

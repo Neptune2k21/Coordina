@@ -167,9 +167,9 @@ std::vector<Assignee> build_assignees(
   return native_assignees;
 }
 
-std::size_t write_card_criticalities(
-  const std::vector<CardCriticality>& cards,
-  coordina_graph_card_criticality* output,
+std::size_t write_card_forecasts(
+  const std::vector<CardForecast>& cards,
+  coordina_graph_card_forecast* output,
   std::size_t output_capacity)
 {
   if (output == nullptr || output_capacity == 0U)
@@ -181,9 +181,10 @@ std::size_t write_card_criticalities(
 
   for (std::size_t index = 0U; index < count; ++index)
   {
-    output[index] = coordina_graph_card_criticality{
+    output[index] = coordina_graph_card_forecast{
       .node = to_abi_node_id(cards[index].node),
-      .criticality = cards[index].criticality
+      .criticality = cards[index].criticality,
+      .sensitivity = cards[index].sensitivity
     };
   }
 

@@ -259,12 +259,15 @@ int main()
     COORDINA_FIELD(coordina_graph_forecast_options, milestone),
     COORDINA_FIELD(coordina_graph_forecast_options, seed),
     COORDINA_FIELD(coordina_graph_forecast_options, person_count),
-    COORDINA_FIELD(coordina_graph_forecast_options, run_count));
+    COORDINA_FIELD(coordina_graph_forecast_options, run_count),
+    COORDINA_FIELD(coordina_graph_forecast_options, thread_count),
+    COORDINA_FIELD(coordina_graph_forecast_options, reserved));
 
   COORDINA_STRUCT(
-    coordina_graph_card_criticality,
-    COORDINA_FIELD(coordina_graph_card_criticality, node),
-    COORDINA_FIELD(coordina_graph_card_criticality, criticality));
+    coordina_graph_card_forecast,
+    COORDINA_FIELD(coordina_graph_card_forecast, node),
+    COORDINA_FIELD(coordina_graph_card_forecast, criticality),
+    COORDINA_FIELD(coordina_graph_card_forecast, sensitivity));
 
   COORDINA_STRUCT(
     coordina_graph_milestone_forecast,
