@@ -15,8 +15,18 @@ const late: BoardMilestone = {
   openCardCount: 12,
   unsizedCardCount: 7,
   drivers: [
-    { cardId: "payment", title: "Payment API", criticality: 0.9 },
-    { cardId: "onboarding", title: "Onboarding", criticality: 0.4 },
+    {
+      cardId: "payment",
+      title: "Payment API",
+      criticality: 0.9,
+      sensitivity: 0.8,
+    },
+    {
+      cardId: "onboarding",
+      title: "Onboarding",
+      criticality: 0.4,
+      sensitivity: 0.3,
+    },
   ],
 }
 

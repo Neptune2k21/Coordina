@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { shortDate } from "@/features/board/model/board-format"
 import {
+  describeDriver,
   describeSlip,
   describeUnsized,
   milestoneStatusClass,
@@ -110,7 +111,7 @@ function MilestoneRow({ milestone, onSelectCard }: MilestoneRowProps) {
             <button
               key={driver.cardId}
               type="button"
-              title={`Sets the date in ${Math.round(driver.criticality * 100)}% of runs`}
+              title={describeDriver(driver)}
               className="rounded-sm bg-zinc-950/5 px-1.5 py-0.5 font-medium hover:bg-zinc-950/10 dark:bg-white/10 dark:hover:bg-white/15"
               onClick={() => onSelectCard(driver.cardId)}
             >

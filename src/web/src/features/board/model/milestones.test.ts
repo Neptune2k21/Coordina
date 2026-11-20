@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  describeDriver,
   describeSlip,
   describeUnsized,
   orderMilestones,
@@ -54,5 +55,18 @@ describe("orderMilestones", () => {
     expect(
       orderMilestones([shipped, late, onTrack]).map((item) => item.cardId)
     ).toEqual(["launch", "v2", "beta"])
+  })
+})
+
+describe("describeDriver", () => {
+  it("says how often the card sets the date and how much of the spread it explains", () => {
+    expect(
+      describeDriver({
+        cardId: "payment",
+        title: "Payment API",
+        criticality: 0.9,
+        sensitivity: 0.8,
+      })
+    ).toBe("Sets the date in 90% of runs; its size explains 64% of the spread")
   })
 })

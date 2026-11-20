@@ -1,5 +1,7 @@
 import type { BoardMilestone, BoardMilestoneStatus } from "@/types/task"
 
+type BoardMilestoneDriver = BoardMilestone["drivers"][number]
+
 export const milestoneStatusLabels: Record<BoardMilestoneStatus, string> = {
   ON_TRACK: "On track",
   AT_RISK: "At risk",
@@ -57,4 +59,12 @@ export function orderMilestones(milestones: BoardMilestone[]) {
     ...milestones.filter((milestone) => milestone.status !== "COMPLETED"),
     ...milestones.filter((milestone) => milestone.status === "COMPLETED"),
   ]
+}
+
+/** The square of the sensitivity is the share of the date's spread the card's own uncertainty explains. */
+export function describeDriver(driver: BoardMilestoneDriver) {
+  const sets = Math.round(driver.criticality * 100)
+  const explains = Math.round(Math.max(0, driver.sensitivity) ** 2 * 100)
+
+  return `Sets the date in ${sets}% of runs; its size explains ${explains}% of the spread`
 }
