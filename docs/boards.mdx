@@ -142,13 +142,22 @@ The graph engine (`coordina_graph_forecast`) simulates the work 2,000 times:
    assigned to an open card of the board, or one person when nobody is.
 2. **Uncertainty.** Each run draws every duration from a triangular
    distribution over its size's range. The ranges lean towards the high end,
-   so cards slip more than they come in early. The seed is fixed, so the
-   forecast only changes when the board does.
+   so cards slip more than they come in early. Each card has a random stream
+   of its own, keyed by its id and a fixed seed: the forecast only moves when
+   something in the milestone's scope changes, not when an unrelated card is
+   added or reordered.
 3. **Results.** The forecast date is the median run (P50) and the commit date
    is the 85th percentile (P85), counted in working days from today and
    skipping weekends. A card's criticality is the share of runs where it is on
    the chain that sets the date, whether it waited for a dependency or for its
-   person.
+   person. Its sensitivity is the correlation between its duration and the
+   date across runs; squared, it is the share of the date's spread the card's
+   own uncertainty explains, so a high value points at a card worth splitting
+   or sizing again.
+
+The runs spread over every core and give the same result with any number of
+threads. On the benchmark board (`make graph-engine-benchmark`), 2,000 runs
+over 1,000 cards take about 18 ms on 20 cores and 180 ms on one.
 
 Unsized cards count as `M`, and the forecast says how many there are.
 
@@ -159,7 +168,7 @@ Unsized cards count as `M`, and the forecast says how many there are.
 | `forecastDate`, `commitDate` | P50 and P85 dates; `null` once completed |
 | `slipDays` | `forecastDate` minus `targetDate`, in calendar days; positive is late |
 | `openCardCount`, `unsizedCardCount` | Open cards in the scope, and those without a size |
-| `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first |
+| `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first, each with its `criticality` and `sensitivity` |
 
 The board shows a banner per milestone with these dates, the slip, the
 drivers (clicking one opens its card) and a warning when sizes are missing.
