@@ -1,5 +1,7 @@
 .PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
 
+.PHONY: api-migrations-check
+
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
 API_TEST_PROJECT := tests/api/Coordina.Api.Tests.csproj
@@ -37,6 +39,7 @@ help:
 	@echo "  make api-restore  Restaure les dependances .NET"
 	@echo "  make api-tools    Restaure les outils .NET locaux"
 	@echo "  make api-migration name=Nom  Cree une migration EF Core"
+	@echo "  make api-migrations-check Verifie les changements de modele sans migration"
 	@echo "  make api-migrate  Applique les migrations EF Core"
 	@echo "  make api-test     Lance tous les tests .NET (rapides + PostgreSQL)"
 	@echo "  make api-test-fast Lance les tests .NET en memoire"
@@ -48,7 +51,7 @@ help:
 	@echo "  make lint         Lance les linters"
 	@echo "  make test         Lance tous les tests"
 	@echo "  make docs         Lance la documentation Mintlify"
-	@echo "  make quality      Lance format-check, lint, tests et builds"
+	@echo "  make quality      Lance format-check, lint, verification des migrations, tests et builds"
 	@echo "  make check        Verifie les regles qualite sur tes changements (depuis origin/master)"
 	@echo "  make check-all    Verifie les regles qualite sur tout le depot"
 	@echo "  make affected     Liste les suites impactees par tes changements, et pourquoi"
@@ -135,6 +138,9 @@ api-test-fast: api-restore
 api-test-postgres: api-restore
 	dotnet test $(API_POSTGRES_TEST_PROJECT) --configuration Release --no-restore -m:1
 
+api-migrations-check: api-restore api-tools
+	dotnet tool run dotnet-ef migrations has-pending-model-changes --project $(API_PROJECT)
+
 api-migration: api-restore api-tools
 	dotnet tool run dotnet-ef migrations add $(name) --project $(API_PROJECT) --output-dir core/Persistence/Migrations --namespace Coordina.Api.Core.Persistence.Migrations
 
@@ -176,7 +182,7 @@ format: api-format web-format graph-engine-format
 
 format-check: api-format-check web-format-check
 
-quality: format-check lint test api-build web-build
+quality: format-check lint api-migrations-check test api-build web-build
 
 check:
 	$(QUALITY) check
