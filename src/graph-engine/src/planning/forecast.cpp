@@ -1,24 +1,16 @@
 #include "planning/forecast.h"
 
+#include "planning/parallel_runs.h"
 #include "planning/schedule.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <span>
-#include <thread>
 
 namespace coordina::graph
 {
 namespace
 {
-// The runs always split into the same chunks, whatever the thread count, and
-// chunk totals add up in chunk order, so even the floating-point sums come out
-// identical with one thread or sixteen.
-constexpr std::size_t chunk_limit = 16U;
-// Below this many card draws, starting threads costs more than it saves.
-constexpr std::size_t parallel_draws = std::size_t{1U} << 16U;
-
 struct ChunkTotals
 {
   explicit ChunkTotals(std::size_t card_count)
@@ -92,20 +84,7 @@ private:
   Scheduler scheduler_;
 };
 
-std::size_t thread_count_for(const ForecastOptions& options, std::size_t chunks, std::size_t cards)
-{
-  if (static_cast<std::size_t>(options.run_count) * cards < parallel_draws)
-  {
-    return 1U;
-  }
-
-  const auto requested = options.thread_count == 0U
-    ? std::max(1U, std::thread::hardware_concurrency())
-    : options.thread_count;
-  return std::min<std::size_t>(requested, chunks);
-}
-
-void run_chunks(
+void simulate(
   const ForecastModel& model,
   const ForecastOptions& options,
   std::vector<ChunkTotals>& totals,
@@ -113,35 +92,23 @@ void run_chunks(
 {
   const auto chunks = totals.size();
   const auto runs = static_cast<std::size_t>(options.run_count);
-  const auto threads = thread_count_for(options, chunks, model.card_count());
+  const auto threads = thread_count_for(options.thread_count, chunks, runs * model.card_count());
   Scheduler likely(model);
   const auto likely_finish = likely.run(model.likely_hours());
   const CardStreams streams(options.seed, model.nodes());
   std::vector<ChunkRunner> runners(threads, ChunkRunner(model, streams, likely_finish));
-  std::atomic<std::size_t> next_chunk{0U};
 
-  const auto work = [&](ChunkRunner& runner)
-  {
-    for (auto chunk = next_chunk.fetch_add(1U); chunk < chunks; chunk = next_chunk.fetch_add(1U))
+  run_chunks(
+    std::span(runners),
+    chunks,
+    [&](ChunkRunner& runner, std::size_t chunk)
     {
-      runner.run(runs * chunk / chunks, runs * (chunk + 1U) / chunks, totals[chunk], finishes);
-    }
-  };
-
-  std::vector<std::thread> workers;
-  workers.reserve(threads - 1U);
-
-  for (std::size_t thread = 1U; thread < threads; ++thread)
-  {
-    workers.emplace_back(work, std::ref(runners[thread]));
-  }
-
-  work(runners.front());
-
-  for (auto& worker : workers)
-  {
-    worker.join();
-  }
+      runner.run(
+        chunk_start(runs, chunks, chunk),
+        chunk_start(runs, chunks, chunk + 1U),
+        totals[chunk],
+        finishes);
+    });
 }
 
 double correlation(
@@ -184,9 +151,9 @@ Forecast forecast(const ForecastModel& model, const ForecastOptions& options)
 
   const auto cards = model.card_count();
   const auto runs = static_cast<std::size_t>(options.run_count);
-  std::vector<ChunkTotals> totals(std::min(chunk_limit, runs), ChunkTotals(cards));
+  std::vector<ChunkTotals> totals(chunk_count_for(runs), ChunkTotals(cards));
   std::vector<double> finishes(runs, 0.0);
-  run_chunks(model, options, totals, finishes);
+  simulate(model, options, totals, finishes);
 
   const auto p50 = finishes.begin() + static_cast<std::ptrdiff_t>(rank_of(runs, 50U));
   const auto p85 = finishes.begin() + static_cast<std::ptrdiff_t>(rank_of(runs, 85U));

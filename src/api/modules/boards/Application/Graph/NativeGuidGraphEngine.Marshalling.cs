@@ -40,6 +40,30 @@ public sealed partial class NativeGuidGraphEngine
     return buffer.Take(written).Select(convert).ToArray();
   }
 
+  // Pins the buffers a native call writes to through the pointers of its
+  // output struct, for as long as the call runs.
+  private static TResult WithPinned<TResult>(Array[] buffers, Func<IntPtr[], TResult> call)
+  {
+    var handles = new GCHandle[buffers.Length];
+
+    try
+    {
+      for (var index = 0; index < buffers.Length; index++)
+      {
+        handles[index] = GCHandle.Alloc(buffers[index], GCHandleType.Pinned);
+      }
+
+      return call(handles.Select(handle => handle.AddrOfPinnedObject()).ToArray());
+    }
+    finally
+    {
+      foreach (var handle in handles.Where(handle => handle.IsAllocated))
+      {
+        handle.Free();
+      }
+    }
+  }
+
   private readonly record struct MarshalledGraph(
     NativeGraphNodeId[] Nodes,
     NativeGraphEdge[] Edges,
@@ -239,6 +263,40 @@ public sealed partial class NativeGuidGraphEngine
     NativeGraphNodeId Node,
     double Criticality,
     double Sensitivity);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private record struct NativeGraphScopeOptions(
+    NativeGraphNodeId Milestone,
+    ulong Seed,
+    double TargetHours,
+    double Goal,
+    uint PersonCount,
+    uint RunCount,
+    uint ScreenRunCount,
+    uint ThreadCount,
+    uint EvaluationLimit,
+    uint TimeLimitMs);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphDroppedCard(
+    NativeGraphNodeId Node,
+    uint Cut,
+    uint Reserved);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphScopeCut
+  {
+    public IntPtr Cuts;
+    public UIntPtr CutCapacity;
+    public UIntPtr CutCount;
+    public IntPtr Dropped;
+    public UIntPtr DroppedCapacity;
+    public UIntPtr DroppedCount;
+    public double OnTimeBefore;
+    public double OnTimeAfter;
+    public double P50Days;
+    public double P85Days;
+  }
 
   [StructLayout(LayoutKind.Sequential)]
   private struct NativeGraphMilestoneForecast

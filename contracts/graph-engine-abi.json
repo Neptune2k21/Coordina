@@ -144,6 +144,47 @@
         { "name": "unsized_count", "offset": 40, "size": 4 },
         { "name": "reserved", "offset": 44, "size": 4 }
       ]
+    },
+    {
+      "name": "coordina_graph_scope_options",
+      "size": 64,
+      "fields": [
+        { "name": "milestone", "offset": 0, "size": 16 },
+        { "name": "seed", "offset": 16, "size": 8 },
+        { "name": "target_hours", "offset": 24, "size": 8 },
+        { "name": "goal", "offset": 32, "size": 8 },
+        { "name": "person_count", "offset": 40, "size": 4 },
+        { "name": "run_count", "offset": 44, "size": 4 },
+        { "name": "screen_run_count", "offset": 48, "size": 4 },
+        { "name": "thread_count", "offset": 52, "size": 4 },
+        { "name": "evaluation_limit", "offset": 56, "size": 4 },
+        { "name": "time_limit_ms", "offset": 60, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_dropped_card",
+      "size": 24,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "cut", "offset": 16, "size": 4 },
+        { "name": "reserved", "offset": 20, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_scope_cut",
+      "size": 80,
+      "fields": [
+        { "name": "cuts", "offset": 0, "size": 8 },
+        { "name": "cut_capacity", "offset": 8, "size": 8 },
+        { "name": "cut_count", "offset": 16, "size": 8 },
+        { "name": "dropped", "offset": 24, "size": 8 },
+        { "name": "dropped_capacity", "offset": 32, "size": 8 },
+        { "name": "dropped_count", "offset": 40, "size": 8 },
+        { "name": "on_time_before", "offset": 48, "size": 8 },
+        { "name": "on_time_after", "offset": 56, "size": 8 },
+        { "name": "p50_days", "offset": 64, "size": 8 },
+        { "name": "p85_days", "offset": 72, "size": 8 }
+      ]
     }
   ],
   "enums": [

@@ -196,6 +196,64 @@ typedef struct coordina_graph_milestone_forecast
   uint32_t reserved;
 } coordina_graph_milestone_forecast;
 
+/* Options of coordina_graph_propose_scope and coordina_graph_evaluate_scope. */
+typedef struct coordina_graph_scope_options
+{
+  coordina_graph_node_id milestone;
+  /* The same seed gives the same result, whatever thread_count is. */
+  uint64_t seed;
+  /* Focus hours, 6 a working day, from now to the end of the target day. */
+  double target_hours;
+  /* The chance of shipping by the target a proposal aims for, above 0 and at most 1. */
+  double goal;
+  uint32_t person_count;
+  /* Runs that measure the scope before and after the cut. */
+  uint32_t run_count;
+  /* Runs that compare candidates during the search, on the same draws. */
+  uint32_t screen_run_count;
+  /* 0 uses every core. */
+  uint32_t thread_count;
+  /*
+   * The search compares at most evaluation_limit candidates. When
+   * time_limit_ms is not 0, it also stops early enough for the whole call to
+   * end within it. Only the time limit makes the result depend on the machine.
+   */
+  uint32_t evaluation_limit;
+  uint32_t time_limit_ms;
+} coordina_graph_scope_options;
+
+typedef struct coordina_graph_dropped_card
+{
+  coordina_graph_node_id node;
+  /* Index in cuts of the cut that takes the card out. */
+  uint32_t cut;
+  uint32_t reserved;
+} coordina_graph_dropped_card;
+
+/*
+ * Output of coordina_graph_propose_scope and coordina_graph_evaluate_scope.
+ * The caller owns both buffers and sets their capacities; node_count is always
+ * enough. If one is too small the call returns
+ * COORDINA_GRAPH_INSUFFICIENT_CAPACITY, sets both counts and writes no card.
+ */
+typedef struct coordina_graph_scope_cut
+{
+  /* The cards to take out, in the order the search took them. */
+  coordina_graph_node_id* cuts;
+  size_t cut_capacity;
+  size_t cut_count;
+  /* Every card that leaves the scope, cuts included. */
+  coordina_graph_dropped_card* dropped;
+  size_t dropped_capacity;
+  size_t dropped_count;
+  /* The share of runs done by the target, from 0 to 1. */
+  double on_time_before;
+  double on_time_after;
+  /* Working days until the scope left is done: one chance in two, and 85%. */
+  double p50_days;
+  double p85_days;
+} coordina_graph_scope_cut;
+
 COORDINA_GRAPH_EXPORT const char* coordina_graph_version(void);
 
 COORDINA_GRAPH_EXPORT coordina_graph_edge_status coordina_graph_evaluate_edge(
@@ -328,6 +386,56 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_forecast(
   size_t assignee_count,
   const coordina_graph_forecast_options* options,
   coordina_graph_milestone_forecast* output);
+
+/*
+ * Proposes cards to take out of a milestone so it ships by the target. Taking
+ * a card out also takes out the cards of the scope that depend on it, and the
+ * cards the milestone then no longer needs; a card it still needs through
+ * another path stays. Applying the cut means dropping the milestone's
+ * dependencies on the cards that leave.
+ *
+ * The proposal aims for the goal's chance of shipping by the target while
+ * giving up as little value as possible: a card is worth its likely hours,
+ * weighted by priority (high 4, medium 2, otherwise 1). The milestone, cards
+ * in progress, the keep cards, and any card whose cut would take one of them
+ * out are never proposed. Cards are scheduled as in coordina_graph_forecast,
+ * on the same random streams.
+ *
+ * Returns COORDINA_GRAPH_INVALID_ARGUMENT for the arguments
+ * coordina_graph_forecast refuses, a goal outside (0, 1], or a run_count or
+ * screen_run_count of 0, and COORDINA_GRAPH_CYCLE for a loop.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_scope(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  size_t assignee_count,
+  const coordina_graph_node_id* keep,
+  size_t keep_count,
+  const coordina_graph_scope_options* options,
+  coordina_graph_scope_cut* output);
+
+/*
+ * Measures a cut someone chose, as coordina_graph_propose_scope measures its
+ * proposals. Cards outside the scope and the milestone itself are ignored.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_scope(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  size_t assignee_count,
+  const coordina_graph_node_id* cuts,
+  size_t cut_count,
+  const coordina_graph_scope_options* options,
+  coordina_graph_scope_cut* output);
 
 #ifdef __cplusplus
 }

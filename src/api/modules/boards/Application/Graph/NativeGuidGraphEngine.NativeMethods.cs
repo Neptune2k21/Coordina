@@ -158,5 +158,41 @@ public sealed partial class NativeGuidGraphEngine
       UIntPtr assigneeCount,
       ref NativeGraphForecastOptions options,
       ref NativeGraphMilestoneForecast output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_propose_scope",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus ProposeScope(
+      NativeGraphNodeId[] nodes,
+      UIntPtr nodeCount,
+      NativeGraphEdge[] edges,
+      UIntPtr edgeCount,
+      NativeGraphWorkItem[] workItems,
+      UIntPtr workItemCount,
+      NativeGraphAssignee[] assignees,
+      UIntPtr assigneeCount,
+      NativeGraphNodeId[] keep,
+      UIntPtr keepCount,
+      ref NativeGraphScopeOptions options,
+      ref NativeGraphScopeCut output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_evaluate_scope",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus EvaluateScope(
+      NativeGraphNodeId[] nodes,
+      UIntPtr nodeCount,
+      NativeGraphEdge[] edges,
+      UIntPtr edgeCount,
+      NativeGraphWorkItem[] workItems,
+      UIntPtr workItemCount,
+      NativeGraphAssignee[] assignees,
+      UIntPtr assigneeCount,
+      NativeGraphNodeId[] cuts,
+      UIntPtr cutCount,
+      ref NativeGraphScopeOptions options,
+      ref NativeGraphScopeCut output);
   }
 }

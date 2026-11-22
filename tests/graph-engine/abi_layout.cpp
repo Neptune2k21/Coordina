@@ -279,6 +279,38 @@ int main()
     COORDINA_FIELD(coordina_graph_milestone_forecast, unsized_count),
     COORDINA_FIELD(coordina_graph_milestone_forecast, reserved));
 
+  COORDINA_STRUCT(
+    coordina_graph_scope_options,
+    COORDINA_FIELD(coordina_graph_scope_options, milestone),
+    COORDINA_FIELD(coordina_graph_scope_options, seed),
+    COORDINA_FIELD(coordina_graph_scope_options, target_hours),
+    COORDINA_FIELD(coordina_graph_scope_options, goal),
+    COORDINA_FIELD(coordina_graph_scope_options, person_count),
+    COORDINA_FIELD(coordina_graph_scope_options, run_count),
+    COORDINA_FIELD(coordina_graph_scope_options, screen_run_count),
+    COORDINA_FIELD(coordina_graph_scope_options, thread_count),
+    COORDINA_FIELD(coordina_graph_scope_options, evaluation_limit),
+    COORDINA_FIELD(coordina_graph_scope_options, time_limit_ms));
+
+  COORDINA_STRUCT(
+    coordina_graph_dropped_card,
+    COORDINA_FIELD(coordina_graph_dropped_card, node),
+    COORDINA_FIELD(coordina_graph_dropped_card, cut),
+    COORDINA_FIELD(coordina_graph_dropped_card, reserved));
+
+  COORDINA_STRUCT(
+    coordina_graph_scope_cut,
+    COORDINA_FIELD(coordina_graph_scope_cut, cuts),
+    COORDINA_FIELD(coordina_graph_scope_cut, cut_capacity),
+    COORDINA_FIELD(coordina_graph_scope_cut, cut_count),
+    COORDINA_FIELD(coordina_graph_scope_cut, dropped),
+    COORDINA_FIELD(coordina_graph_scope_cut, dropped_capacity),
+    COORDINA_FIELD(coordina_graph_scope_cut, dropped_count),
+    COORDINA_FIELD(coordina_graph_scope_cut, on_time_before),
+    COORDINA_FIELD(coordina_graph_scope_cut, on_time_after),
+    COORDINA_FIELD(coordina_graph_scope_cut, p50_days),
+    COORDINA_FIELD(coordina_graph_scope_cut, p85_days));
+
   std::printf("\n  ],\n  \"enums\": [");
   first_entry = true;
 

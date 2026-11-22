@@ -44,6 +44,9 @@ public:
 
   // One duration per card; returns when the last card is done.
   double run(std::span<const double> hours);
+  // Leaves out the cards whose active flag is 0, as if they were not in the
+  // scope: they never start, and the active cards stop waiting for them.
+  double run(std::span<const double> hours, std::span<const std::uint8_t> active);
   void driving_chain(std::vector<std::size_t>& chain) const;
   Schedule schedule() const;
 
@@ -66,6 +69,7 @@ private:
     std::uint32_t cause;
   };
 
+  void leave_out(std::span<const std::uint8_t> active) noexcept;
   void release(std::size_t card) noexcept;
   std::size_t next_card() const noexcept;
   std::uint32_t person_for(std::size_t card) const noexcept;

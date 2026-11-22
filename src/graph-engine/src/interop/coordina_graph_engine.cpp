@@ -6,8 +6,8 @@
 #include "algorithms/node_analysis.h"
 #include "algorithms/suggestion_engine.h"
 #include "algorithms/topological_order.h"
+#include "interop/abi_queries.h"
 #include "interop/native_bridge.h"
-#include "planning/forecast.h"
 #include "planning/planning_analysis.h"
 #include "planning/work_planner.h"
 
@@ -15,52 +15,9 @@ namespace
 {
 using coordina::graph::GraphSnapshot;
 using coordina::graph::WorkItem;
-
-template <typename Result, typename Query>
-Result query_graph(
-  const coordina_graph_node_id* nodes,
-  std::size_t node_count,
-  const coordina_graph_edge* edges,
-  std::size_t edge_count,
-  Result invalid,
-  Query query)
-{
-  if (coordina::graph::is_missing(nodes, node_count)
-    || coordina::graph::is_missing(edges, edge_count))
-  {
-    return invalid;
-  }
-
-  return query(coordina::graph::build_snapshot(nodes, node_count, edges, edge_count));
-}
-
-template <typename Result, typename Query>
-Result query_work(
-  const coordina_graph_node_id* nodes,
-  std::size_t node_count,
-  const coordina_graph_edge* edges,
-  std::size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  std::size_t work_item_count,
-  Result invalid,
-  Query query)
-{
-  if (coordina::graph::is_missing(work_items, work_item_count))
-  {
-    return invalid;
-  }
-
-  return query_graph(
-    nodes,
-    node_count,
-    edges,
-    edge_count,
-    invalid,
-    [&](const GraphSnapshot& graph)
-    {
-      return query(graph, coordina::graph::build_work_items(work_items, work_item_count));
-    });
-}
+using coordina::graph::abi::fits;
+using coordina::graph::abi::query_graph;
+using coordina::graph::abi::query_work;
 
 template <typename Query>
 std::size_t write_node_query(
@@ -84,11 +41,6 @@ std::size_t write_node_query(
     });
 }
 
-bool fits(std::size_t required, const void* items, std::size_t capacity) noexcept
-{
-  return required == 0U || (items != nullptr && capacity >= required);
-}
-
 bool fits(const coordina_graph_node_buffer& buffer) noexcept
 {
   return fits(buffer.count, buffer.items, buffer.capacity);
@@ -100,27 +52,11 @@ void write_nodes(
 {
   coordina::graph::write_nodes(nodes, buffer.items, buffer.capacity);
 }
-
-coordina_graph_status to_status(coordina::graph::ForecastError error) noexcept
-{
-  switch (error)
-  {
-    case coordina::graph::ForecastError::none:
-      return COORDINA_GRAPH_OK;
-    case coordina::graph::ForecastError::cycle:
-      return COORDINA_GRAPH_CYCLE;
-    case coordina::graph::ForecastError::unknown_milestone:
-    case coordina::graph::ForecastError::unknown_person:
-      break;
-  }
-
-  return COORDINA_GRAPH_INVALID_ARGUMENT;
-}
 }
 
 extern "C" const char* coordina_graph_version(void)
 {
-  return "coordina-graph-engine/0.6.0";
+  return "coordina-graph-engine/0.7.0";
 }
 
 extern "C" coordina_graph_edge_status coordina_graph_evaluate_edge(
@@ -418,69 +354,6 @@ extern "C" coordina_graph_status coordina_graph_analyze_board(
         analysis.recommendations,
         output->recommendations,
         output->recommendation_capacity);
-
-      return COORDINA_GRAPH_OK;
-    });
-}
-
-extern "C" coordina_graph_status coordina_graph_forecast(
-  const coordina_graph_node_id* nodes,
-  std::size_t node_count,
-  const coordina_graph_edge* edges,
-  std::size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  std::size_t work_item_count,
-  const coordina_graph_assignee* assignees,
-  std::size_t assignee_count,
-  const coordina_graph_forecast_options* options,
-  coordina_graph_milestone_forecast* output)
-{
-  if (options == nullptr || output == nullptr || options->run_count == 0U
-    || coordina::graph::is_missing(assignees, assignee_count))
-  {
-    return COORDINA_GRAPH_INVALID_ARGUMENT;
-  }
-
-  return query_work(
-    nodes,
-    node_count,
-    edges,
-    edge_count,
-    work_items,
-    work_item_count,
-    COORDINA_GRAPH_INVALID_ARGUMENT,
-    [&](const GraphSnapshot& graph, const std::vector<WorkItem>& items)
-    {
-      const coordina::graph::ForecastModel model(
-        graph,
-        items,
-        coordina::graph::build_assignees(assignees, assignee_count),
-        coordina::graph::to_node_id(options->milestone),
-        options->person_count);
-
-      if (model.error() != coordina::graph::ForecastError::none)
-      {
-        return to_status(model.error());
-      }
-
-      const auto forecast = coordina::graph::forecast(
-        model,
-        coordina::graph::ForecastOptions{
-          .run_count = options->run_count,
-          .seed = options->seed,
-          .thread_count = options->thread_count
-        });
-      output->card_count = forecast.cards.size();
-
-      if (!fits(output->card_count, output->cards, output->card_capacity))
-      {
-        return COORDINA_GRAPH_INSUFFICIENT_CAPACITY;
-      }
-
-      output->p50_days = forecast.p50_days;
-      output->p85_days = forecast.p85_days;
-      output->unsized_count = forecast.unsized_count;
-      coordina::graph::write_card_forecasts(forecast.cards, output->cards, output->card_capacity);
 
       return COORDINA_GRAPH_OK;
     });

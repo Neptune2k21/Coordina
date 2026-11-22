@@ -261,6 +261,52 @@ public sealed class NativeGuidGraphEngineTests
   }
 
   [Fact]
+  public void ProposeScope_CutsTheLeastValuableCardThatMakesTheDate()
+  {
+    var cheap = Guid.NewGuid();
+    var valuable = Guid.NewGuid();
+    var launch = Guid.NewGuid();
+    Guid[] nodes = [cheap, valuable, launch];
+    GraphEdge<Guid>[] edges = [new(launch, cheap), new(launch, valuable)];
+    GraphWorkItem<Guid>[] items =
+    [
+      Item(cheap, 0, GraphSize.L) with { Priority = 1 },
+      Item(valuable, 1, GraphSize.L) with { Priority = 3 },
+      Item(launch, 2, GraphSize.Xs)
+    ];
+
+    // Either large card alone takes at most 24 hours, and both take at least 24.
+    var cut = _graphEngine.ProposeScope(nodes, edges, items, [], [], ScopeOptions(launch, 25));
+    var kept = _graphEngine.ProposeScope(nodes, edges, items, [], [cheap], ScopeOptions(launch, 25));
+    var chosen = _graphEngine.EvaluateScope(nodes, edges, items, [], [valuable], ScopeOptions(launch, 25));
+
+    Assert.Equal([cheap], cut.Cuts);
+    Assert.Equal([new GraphDroppedCard<Guid>(cheap, 0)], cut.Dropped);
+    Assert.Equal(0, cut.OnTimeBefore);
+    Assert.Equal(1, cut.OnTimeAfter);
+    Assert.True(cut.P50Days <= cut.P85Days);
+    Assert.Equal([valuable], kept.Cuts);
+    Assert.Equal([valuable], chosen.Cuts);
+    Assert.Equal(1, chosen.OnTimeAfter);
+  }
+
+  [Fact]
+  public void ProposeScope_WithAnUnknownMilestone_Throws()
+  {
+    var card = Guid.NewGuid();
+
+    var error = Assert.Throws<GraphEngineException>(() => _graphEngine.ProposeScope(
+      [card],
+      [],
+      [Item(card, 0)],
+      [],
+      [],
+      ScopeOptions(Guid.NewGuid(), 10)));
+
+    Assert.Equal("propose_scope", error.Operation);
+  }
+
+  [Fact]
   public void PlanWork_RanksActionableCardsByProductImpact()
   {
     var dependency = Guid.NewGuid();
@@ -397,6 +443,9 @@ public sealed class NativeGuidGraphEngineTests
     Assert.Empty(analysis.DependencyOrder);
     Assert.Empty(analysis.Recommendations);
   }
+
+  private static GraphScopeOptions<Guid> ScopeOptions(Guid milestone, double targetHours) =>
+    new(milestone, 1, targetHours, 0.85, 2000, 256, 131, 200, TimeSpan.Zero, 1);
 
   private static GraphWorkItem<Guid> Item(Guid node, int position, GraphSize size = GraphSize.None) =>
     new(node, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, position, Size: size);
