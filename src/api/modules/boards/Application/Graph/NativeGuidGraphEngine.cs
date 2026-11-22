@@ -225,33 +225,25 @@ public sealed partial class NativeGuidGraphEngine : IGraphEngine<Guid>
       0U);
     // Every open card of the scope is a node, so the node count always fits.
     var cards = new NativeGraphCardForecast[graph.Nodes.Length];
-    var handle = GCHandle.Alloc(cards, GCHandleType.Pinned);
-    NativeGraphMilestoneForecast output;
-    NativeGraphStatus status;
+    var output = new NativeGraphMilestoneForecast { CardCapacity = ToNativeCount(cards.Length) };
 
-    try
-    {
-      output = new NativeGraphMilestoneForecast
+    var status = WithPinned(
+      [cards],
+      pointers =>
       {
-        Cards = handle.AddrOfPinnedObject(),
-        CardCapacity = ToNativeCount(cards.Length)
-      };
-      status = NativeMethods.Forecast(
-        graph.Nodes,
-        graph.NodeCount,
-        graph.Edges,
-        graph.EdgeCount,
-        graph.WorkItems,
-        graph.WorkItemCount,
-        nativeAssignees,
-        ToNativeCount(nativeAssignees.Length),
-        ref nativeOptions,
-        ref output);
-    }
-    finally
-    {
-      handle.Free();
-    }
+        output.Cards = pointers[0];
+        return NativeMethods.Forecast(
+          graph.Nodes,
+          graph.NodeCount,
+          graph.Edges,
+          graph.EdgeCount,
+          graph.WorkItems,
+          graph.WorkItemCount,
+          nativeAssignees,
+          ToNativeCount(nativeAssignees.Length),
+          ref nativeOptions,
+          ref output);
+      });
 
     if (status != NativeGraphStatus.Ok)
     {

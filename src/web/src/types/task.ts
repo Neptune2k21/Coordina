@@ -19,6 +19,8 @@ export type BoardGraphCard = Schemas["BoardGraphCardResponse"]
 export type BoardGraphPlanItem = Schemas["BoardGraphPlanItemResponse"]
 export type BoardMilestone = Schemas["BoardMilestoneResponse"]
 export type BoardMilestoneStatus = BoardMilestone["status"]
+export type BoardMilestoneScope = Schemas["BoardMilestoneScopeResponse"]
+export type BoardMilestoneCut = Schemas["BoardMilestoneCutResponse"]
 export type BoardCardDependencyAnalysis =
   Schemas["BoardCardDependencyAnalysisResponse"]
 export type BoardTemplateDefinition = Schemas["BoardTemplateResponse"]

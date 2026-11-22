@@ -61,4 +61,26 @@ public interface IGraphEngine<TNode>
     IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
     IReadOnlyCollection<GraphAssignee<TNode>> assignees,
     GraphForecastOptions<TNode> options);
+
+  /// <summary>
+  /// Proposes cards to take out of a milestone so it ships by the target,
+  /// giving up as little value as possible. The milestone, cards in progress,
+  /// the <paramref name="keep"/> cards and whatever they need are never proposed.
+  /// </summary>
+  GraphScopeCut<TNode> ProposeScope(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
+    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    IReadOnlyCollection<TNode> keep,
+    GraphScopeOptions<TNode> options);
+
+  /// <summary>Measures a cut someone chose; cards outside the scope and the milestone are ignored.</summary>
+  GraphScopeCut<TNode> EvaluateScope(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
+    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    IReadOnlyCollection<TNode> cuts,
+    GraphScopeOptions<TNode> options);
 }

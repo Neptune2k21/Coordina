@@ -163,6 +163,55 @@ std::vector<Assignee> build_assignees(
   return native_assignees;
 }
 
+std::vector<NodeId> build_node_ids(const coordina_graph_node_id* nodes, std::size_t node_count)
+{
+  std::vector<NodeId> ids;
+  ids.reserve(node_count);
+
+  for (std::size_t index = 0U; index < node_count; ++index)
+  {
+    ids.push_back(to_node_id(nodes[index]));
+  }
+
+  return ids;
+}
+
+ScopeOptions build_scope_options(const coordina_graph_scope_options& options) noexcept
+{
+  return ScopeOptions{
+    .target_hours = options.target_hours,
+    .goal = options.goal,
+    .seed = options.seed,
+    .run_count = options.run_count,
+    .screen_run_count = options.screen_run_count,
+    .thread_count = options.thread_count,
+    .evaluation_limit = options.evaluation_limit,
+    .time_limit = std::chrono::milliseconds(options.time_limit_ms)
+  };
+}
+
+void write_scope_cut(const ScopeCut& cut, coordina_graph_scope_cut& output)
+{
+  for (std::size_t index = 0U; index < cut.cuts.size(); ++index)
+  {
+    output.cuts[index] = to_abi_node_id(cut.cuts[index]);
+  }
+
+  for (std::size_t index = 0U; index < cut.dropped.size(); ++index)
+  {
+    output.dropped[index] = coordina_graph_dropped_card{
+      .node = to_abi_node_id(cut.dropped[index].node),
+      .cut = cut.dropped[index].cut,
+      .reserved = 0U
+    };
+  }
+
+  output.on_time_before = cut.on_time_before;
+  output.on_time_after = cut.on_time_after;
+  output.p50_days = cut.p50_days;
+  output.p85_days = cut.p85_days;
+}
+
 std::size_t write_card_forecasts(
   const std::vector<CardForecast>& cards,
   coordina_graph_card_forecast* output,

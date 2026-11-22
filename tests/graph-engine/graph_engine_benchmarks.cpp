@@ -1,3 +1,4 @@
+#include "benchmark_board.h"
 #include "coordina_graph_engine.h"
 
 #include <algorithm>
@@ -11,58 +12,7 @@
 
 namespace
 {
-using ClockType = std::chrono::steady_clock;
-
-struct BoardGraph
-{
-  std::vector<coordina_graph_node_id> nodes;
-  std::vector<coordina_graph_edge> edges;
-  std::vector<coordina_graph_work_item> items;
-};
-
-coordina_graph_node_id node(std::uint64_t value)
-{
-  return coordina_graph_node_id{0U, value + 1U};
-}
-
-BoardGraph build_board(std::size_t size)
-{
-  BoardGraph graph;
-  graph.nodes.reserve(size);
-  graph.items.reserve(size);
-
-  for (std::size_t index = 0U; index < size; ++index)
-  {
-    graph.nodes.push_back(node(index));
-
-    if (index > 0U && index % 3U != 0U)
-    {
-      graph.edges.push_back(coordina_graph_edge{node(index), node(index - 1U)});
-    }
-
-    if (index > 1U)
-    {
-      graph.edges.push_back(coordina_graph_edge{node(index), node(index / 2U)});
-    }
-
-    coordina_graph_work_item item{};
-    item.node = node(index);
-    item.is_completed = index % 7U == 0U ? 1U : 0U;
-    item.priority = static_cast<std::uint32_t>(index % 4U);
-    item.due_days = index % 5U == 0U ? std::numeric_limits<std::int32_t>::max()
-                                     : static_cast<std::int32_t>(index % 30U) - 5;
-    item.subtask_total = static_cast<std::uint32_t>(index % 4U);
-    item.subtask_completed = static_cast<std::uint32_t>(index % 2U);
-    item.position = static_cast<std::uint32_t>(index);
-    item.size = static_cast<std::uint32_t>(index % 7U);
-    item.assignment = static_cast<std::uint32_t>(index % 3U);
-    item.is_in_progress = index % 4U == 0U ? 1U : 0U;
-    item.is_context_match = index % 5U == 0U ? 1U : 0U;
-    graph.items.push_back(item);
-  }
-
-  return graph;
-}
+using namespace coordina::graph::benchmarks;
 
 struct Buffers
 {
@@ -234,7 +184,7 @@ BoardGraph with_release(const BoardGraph& board)
   return graph;
 }
 
-ForecastResult run_forecast(const BoardGraph& graph, std::uint32_t thread_count)
+std::vector<coordina_graph_assignee> team_of(const BoardGraph& graph)
 {
   std::vector<coordina_graph_assignee> assignees;
 
@@ -251,6 +201,12 @@ ForecastResult run_forecast(const BoardGraph& graph, std::uint32_t thread_count)
     }
   }
 
+  return assignees;
+}
+
+ForecastResult run_forecast(const BoardGraph& graph, std::uint32_t thread_count)
+{
+  const auto assignees = team_of(graph);
   std::vector<coordina_graph_card_forecast> cards(graph.nodes.size());
   ForecastResult result{COORDINA_GRAPH_OK, {}};
   result.output.cards = cards.data();
@@ -272,22 +228,56 @@ ForecastResult run_forecast(const BoardGraph& graph, std::uint32_t thread_count)
   return result;
 }
 
-template <typename Work>
-double median_milliseconds(int runs, Work work)
+// The API's settings: the whole proposal fits in 450 ms, which leaves room
+// under the half second the issue asks for.
+constexpr std::uint32_t scope_time_limit_ms = 450U;
+constexpr double scope_budget_ms = 500.0;
+
+struct ScopeResult
 {
-  std::vector<double> samples;
-  samples.reserve(static_cast<std::size_t>(runs));
+  coordina_graph_status status;
+  coordina_graph_scope_cut output;
+};
 
-  for (int run = 0; run < runs; ++run)
-  {
-    const auto started = ClockType::now();
-    work();
-    const auto elapsed = std::chrono::duration<double, std::milli>(ClockType::now() - started);
-    samples.push_back(elapsed.count());
-  }
-
-  std::ranges::sort(samples);
-  return samples[samples.size() / 2U];
+// Asks for the release to ship in 70% of its likely time.
+ScopeResult run_scope(const BoardGraph& graph, double p50_days)
+{
+  const auto assignees = team_of(graph);
+  std::vector<coordina_graph_node_id> cuts(graph.nodes.size());
+  std::vector<coordina_graph_dropped_card> dropped(graph.nodes.size());
+  ScopeResult result{COORDINA_GRAPH_OK, {}};
+  result.output.cuts = cuts.data();
+  result.output.cut_capacity = cuts.size();
+  result.output.dropped = dropped.data();
+  result.output.dropped_capacity = dropped.size();
+  const coordina_graph_scope_options options{
+    .milestone = graph.nodes.back(),
+    .seed = 42U,
+    .target_hours = p50_days * 6.0 * 0.7,
+    .goal = 0.85,
+    .person_count = forecast_team,
+    .run_count = forecast_runs,
+    .screen_run_count = 256U,
+    .thread_count = 0U,
+    .evaluation_limit = 120U,
+    .time_limit_ms = scope_time_limit_ms
+  };
+  result.status = coordina_graph_propose_scope(
+    graph.nodes.data(),
+    graph.nodes.size(),
+    graph.edges.data(),
+    graph.edges.size(),
+    graph.items.data(),
+    graph.items.size(),
+    assignees.data(),
+    assignees.size(),
+    nullptr,
+    0U,
+    &options,
+    &result.output);
+  result.output.cuts = nullptr;
+  result.output.dropped = nullptr;
+  return result;
 }
 
 int runs_for(std::size_t size)
@@ -404,6 +394,53 @@ int main(int argc, char** argv)
       parallel,
       result.output.p50_days,
       result.output.p85_days);
+  }
+
+  std::printf(
+    "\n%8s %8s %8s %10s %10s %10s %7s\n",
+    "nodes",
+    "cuts",
+    "dropped",
+    "on_time",
+    "after",
+    "scope_ms",
+    "budget");
+
+  for (const auto size : sizes)
+  {
+    const auto graph = with_release(build_board(size));
+    const auto forecast = run_forecast(graph, 0U);
+    ScopeResult result{COORDINA_GRAPH_OK, {}};
+    const auto elapsed = median_milliseconds(
+      size <= 1000U ? 3 : 1,
+      [&]
+      {
+        result = run_scope(graph, forecast.output.p50_days);
+      });
+    // Past 1,000 cards the forecasts before and after alone take longer.
+    const auto within_budget = size > 1000U || elapsed < scope_budget_ms;
+
+    if (result.status != COORDINA_GRAPH_OK
+      || result.output.on_time_after < result.output.on_time_before)
+    {
+      std::fprintf(stderr, "scope proposal failed with status %d\n", result.status);
+      return 1;
+    }
+
+    std::printf(
+      "%8zu %8zu %8zu %10.3f %10.3f %10.3f %7s\n",
+      size,
+      result.output.cut_count,
+      result.output.dropped_count,
+      result.output.on_time_before,
+      result.output.on_time_after,
+      elapsed,
+      within_budget ? "ok" : "FAILED");
+
+    if (!within_budget)
+    {
+      return 1;
+    }
   }
 
   return 0;

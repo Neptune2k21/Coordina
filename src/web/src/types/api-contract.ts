@@ -1767,6 +1767,150 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-proposal": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Propose what to cut from a milestone
+     * @description Proposes cards to take out of the milestone so it has an 85% chance of shipping by its target date, giving up as little as possible: a card is worth its size, weighted by priority. Taking a card out also takes out the cards of the scope that depend on it, and those the milestone then no longer needs. Cards in progress, the cards in keep and whatever they need are never proposed. Changes nothing.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneScopeRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneScopeResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-evaluation": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Measure a cut of a milestone
+     * @description Returns what taking the chosen cards out of the milestone would buy, as a proposal does. Changes nothing.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneCutRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneScopeResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-cut": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Cut a milestone's scope
+     * @description Takes the chosen cards out of the milestone: it stops depending on every card that leaves its scope with them. No card is deleted.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneCutRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/me/work": {
     parameters: {
       query?: never
@@ -1984,6 +2128,20 @@ export interface components {
       updatedAt: string
       cards: components["schemas"]["BoardCardResponse"][]
     }
+    BoardMilestoneCutCardResponse: {
+      /** Format: uuid */
+      cardId: string
+      title: string
+    }
+    BoardMilestoneCutRequest: {
+      cardIds: null | string[]
+    }
+    BoardMilestoneCutResponse: {
+      /** Format: uuid */
+      cardId: string
+      title: string
+      alsoRemoved: components["schemas"]["BoardMilestoneCutCardResponse"][]
+    }
     BoardMilestoneDriverResponse: {
       /** Format: uuid */
       cardId: string
@@ -2012,6 +2170,24 @@ export interface components {
       /** Format: int32 */
       unsizedCardCount: number
       drivers: components["schemas"]["BoardMilestoneDriverResponse"][]
+    }
+    BoardMilestoneScopeRequest: {
+      keep: null | string[]
+    }
+    BoardMilestoneScopeResponse: {
+      /** Format: uuid */
+      milestoneId: string
+      /** Format: date */
+      targetDate: string
+      /** Format: double */
+      onTimeBefore: number
+      /** Format: double */
+      onTimeAfter: number
+      /** Format: date */
+      forecastDate: string
+      /** Format: date */
+      commitDate: string
+      cuts: components["schemas"]["BoardMilestoneCutResponse"][]
     }
     BoardPlanningPreferencesResponse: {
       /** @enum {null|string} */

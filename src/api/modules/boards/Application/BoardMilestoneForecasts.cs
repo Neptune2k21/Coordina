@@ -15,8 +15,8 @@ internal static class BoardMilestoneForecasts
 {
   // A few thousand runs keep the 85% date steady, and a fixed seed keeps the
   // forecast the same from one load to the next while nothing changes.
-  private const int RunCount = 2000;
-  private const ulong Seed = 129;
+  internal const int RunCount = 2000;
+  internal const ulong Seed = 129;
   private const int DriverLimit = 3;
 
   // A card has to set the date in at least one run in ten to count as a driver.
@@ -24,7 +24,7 @@ internal static class BoardMilestoneForecasts
 
   // The engine ranks the cards the same way for everyone, so the forecast does
   // not depend on who asks; these preferences belong to nobody.
-  private static readonly BoardPlanningPreferences Nobody = new(Guid.Empty, null, null, false, true);
+  internal static readonly BoardPlanningPreferences Nobody = new(Guid.Empty, null, null, false, true);
 
   public static BoardMilestoneResponse[] Forecast(
     IGraphEngine<Guid> graphEngine,
@@ -129,7 +129,7 @@ internal static class BoardMilestoneForecasts
 
   // The team is everyone assigned to an open card of the board, numbered in a
   // stable order; a board where nobody is assigned plans for one person.
-  private static ForecastTeam TeamOf(IReadOnlyCollection<ProjectBoardCard> cards)
+  internal static ForecastTeam TeamOf(IReadOnlyCollection<ProjectBoardCard> cards)
   {
     var openCards = cards.Where(card => !card.IsCompleted).ToArray();
     var people = openCards
@@ -147,7 +147,7 @@ internal static class BoardMilestoneForecasts
     return new ForecastTeam(Math.Max(1, people.Count), assignees);
   }
 
-  private sealed record ForecastTeam(int Size, IReadOnlyCollection<GraphAssignee<Guid>> Assignees);
+  internal sealed record ForecastTeam(int Size, IReadOnlyCollection<GraphAssignee<Guid>> Assignees);
 
   private sealed record ForecastInput(
     IGraphEngine<Guid> GraphEngine,

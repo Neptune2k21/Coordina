@@ -5,6 +5,7 @@
 #include "coordina_graph_engine.h"
 #include "core/graph_snapshot.h"
 #include "planning/forecast.h"
+#include "planning/scope_cut.h"
 #include "planning/work_planner.h"
 
 #include <cstddef>
@@ -39,6 +40,13 @@ std::vector<WorkItem> build_work_items(
 std::vector<Assignee> build_assignees(
   const coordina_graph_assignee* assignees,
   std::size_t assignee_count);
+
+std::vector<NodeId> build_node_ids(const coordina_graph_node_id* nodes, std::size_t node_count);
+
+ScopeOptions build_scope_options(const coordina_graph_scope_options& options) noexcept;
+
+// Writes every card; the caller has checked both capacities.
+void write_scope_cut(const ScopeCut& cut, coordina_graph_scope_cut& output);
 
 std::size_t write_card_forecasts(
   const std::vector<CardForecast>& cards,

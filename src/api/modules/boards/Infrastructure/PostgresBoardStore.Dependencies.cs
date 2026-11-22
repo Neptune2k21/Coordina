@@ -60,12 +60,12 @@ public sealed partial class PostgresBoardStore
       cancellationToken);
   }
 
-  public async Task<bool> DeleteCardDependencyAsync(
+  public async Task<int> DeleteCardDependenciesAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
     Guid cardId,
-    Guid dependsOnCardId,
+    IReadOnlyCollection<Guid> dependsOnCardIds,
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken)
   {
@@ -78,22 +78,20 @@ public sealed partial class PostgresBoardStore
 
     if (!cardExists)
     {
-      return false;
+      return 0;
     }
 
     var deleted = await BoardCardDependencies
       .Where(dependency => dependency.CardId == cardId
-        && dependency.DependsOnCardId == dependsOnCardId)
+        && dependsOnCardIds.Contains(dependency.DependsOnCardId))
       .ExecuteDeleteAsync(cancellationToken);
 
-    if (deleted == 0)
+    if (deleted > 0)
     {
-      return false;
+      await TouchCardAsync(cardId, updatedAt, cancellationToken);
+      await TouchBoardAsync(boardId, updatedAt, cancellationToken);
     }
 
-    await TouchCardAsync(cardId, updatedAt, cancellationToken);
-    await TouchBoardAsync(boardId, updatedAt, cancellationToken);
-
-    return true;
+    return deleted;
   }
 }

@@ -10,6 +10,8 @@ namespace
 {
 constexpr auto none = ReadySet::none;
 constexpr auto no_card = std::numeric_limits<std::uint32_t>::max();
+// Far above any dependency count, so finishing dependencies never brings it to 0.
+constexpr auto left_out = std::numeric_limits<std::uint32_t>::max() / 2U;
 constexpr std::size_t word_bits = 64U;
 
 constexpr bool finishes_later(
@@ -37,6 +39,11 @@ Scheduler::Scheduler(const ForecastModel& model)
 
 double Scheduler::run(std::span<const double> hours)
 {
+  return run(hours, {});
+}
+
+double Scheduler::run(std::span<const double> hours, std::span<const std::uint8_t> active)
+{
   const auto count = model_->card_count();
   hours_ = hours;
   std::ranges::fill(last_card_, no_card);
@@ -55,7 +62,15 @@ double Scheduler::run(std::span<const double> hours)
       .ready_cause = no_card,
       .cause = no_card
     };
+  }
 
+  if (!active.empty())
+  {
+    leave_out(active);
+  }
+
+  for (std::size_t card = 0U; card < count; ++card)
+  {
     if (cards_[card].remaining == 0U)
     {
       release(card);
@@ -110,6 +125,29 @@ Schedule Scheduler::schedule() const
   driving_chain(result.driving_chain);
   result.finish_hours = last_ == none ? 0.0 : cards_[last_].finish;
   return result;
+}
+
+// A card left out never becomes ready, and the cards waiting for it stop
+// counting it among their dependencies.
+void Scheduler::leave_out(std::span<const std::uint8_t> active) noexcept
+{
+  for (std::size_t card = 0U; card < active.size(); ++card)
+  {
+    if (active[card] != 0U)
+    {
+      continue;
+    }
+
+    cards_[card].remaining = left_out;
+
+    for (const auto dependent : model_->dependents(card))
+    {
+      if (active[dependent] != 0U)
+      {
+        --cards_[dependent].remaining;
+      }
+    }
+  }
 }
 
 void Scheduler::release(std::size_t card) noexcept

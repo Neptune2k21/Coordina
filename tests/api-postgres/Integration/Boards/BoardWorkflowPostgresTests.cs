@@ -251,6 +251,50 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
       $"SELECT milestone_date FROM board_cards WHERE id = '{cardId}'"));
   }
 
+  [Fact]
+  public async Task MilestoneCut_DropsEveryDependencyOnTheCardsThatLeave()
+  {
+    var flow = await CreateFlowAsync("BASIC", null);
+    var todo = flow.Board.Lists.Single(list => list.TaskStatus == "TODO");
+    var titles = new[] { "Export", "Import", "Search", "Launch" };
+    var cards = new Dictionary<string, Guid>(StringComparer.Ordinal);
+
+    foreach (var title in titles)
+    {
+      var board = await Api.SendForAsync<BoardResponse>(
+        HttpMethod.Post,
+        $"{flow.BoardPath}/lists/{todo.Id}/cards",
+        flow.AccessToken,
+        new { title, size = "M" });
+      cards[title] = board.Lists.SelectMany(list => list.Cards).Single(card => card.Title == title).Id;
+    }
+
+    foreach (var title in titles[..3])
+    {
+      await Api.SendForAsync<BoardResponse>(
+        HttpMethod.Post,
+        $"{flow.BoardPath}/cards/{cards["Launch"]}/dependencies",
+        flow.AccessToken,
+        new { dependsOnCardId = cards[title] });
+    }
+
+    await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Patch,
+      $"{flow.BoardPath}/cards/{cards["Launch"]}",
+      flow.AccessToken,
+      new { milestoneDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30) });
+    await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Post,
+      $"{flow.BoardPath}/milestones/{cards["Launch"]}/scope-cut",
+      flow.AccessToken,
+      new { cardIds = new[] { cards["Export"], cards["Import"] } });
+
+    Assert.Equal(cards["Search"], await Database.ScalarAsync<Guid>(
+      $"SELECT depends_on_card_id FROM board_card_dependencies WHERE card_id = '{cards["Launch"]}'"));
+    Assert.Equal(4, await Database.ScalarAsync<long>(
+      $"SELECT count(*) FROM board_cards WHERE id IN ('{string.Join("', '", cards.Values)}')"));
+  }
+
   private sealed record MilestoneResponse(Guid CardId, DateOnly TargetDate, string Status);
 
   private async Task<Flow> CreateFlowAsync(string template, string[]? customListTitles)

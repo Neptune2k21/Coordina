@@ -189,11 +189,84 @@ The forecast is as good as what the board says, and it knows nothing else:
 The board shows a banner per milestone with these dates, the slip, the
 drivers (clicking one opens its card) and a warning when sizes are missing.
 
+### Cutting the scope
+
+When a milestone is at risk or late, the engine can propose what to take out
+so it ships on time, and say what a cut buys before anyone applies it.
+
+```http
+POST /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-proposal
+     { "keep": ["..."] }
+POST /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-evaluation
+     { "cardIds": ["..."] }
+POST /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-cut
+     { "cardIds": ["..."] }
+```
+
+Taking a card out also takes out the cards of the scope that depend on it,
+since they cannot ship without it, and the cards the milestone then no longer
+needs. A card it still needs through another path stays. Applying a cut
+(`scope-cut`) removes the milestone's dependencies on the cards that leave;
+nothing is deleted, and the cards stay on the board. The proposal and the
+evaluation change nothing, and anyone who can read the project can ask for
+them; applying a cut needs write access. A done milestone, or one whose target
+has passed, cannot be cut (`400`).
+
+**What a proposal aims for.** The best chance of shipping by the target date,
+reaching 85% if it can, while giving up as little value as possible. A card
+is worth its likely hours, weighted by priority: high 4, medium 2, low or none
+1. The milestone, cards in progress, the `keep` cards, and any card whose cut
+would take one of them out are never proposed. When a card is needed by only
+one other card of the scope, the proposal names that other card: cutting
+either takes both out.
+
+**How the engine searches** (`coordina_graph_propose_scope`). Choosing what to
+cut under dependencies is a knapsack with precedence constraints, which is
+NP-hard, so the engine uses a heuristic:
+
+1. **Greedy batches.** Cut the cards that give up least value per hour saved,
+   until their savings would bring the 85% date to the target, then simulate
+   again, since cards that waited behind them may now set the date. The hours
+   a card saves are its share of the chain that sets the date in each run:
+   that chain spans the whole run, so the shares add up to the mean finish.
+2. **Local search.** Give back each cut the goal no longer needs, the most
+   valuable first, then try to trade each cut for a cheaper one.
+3. **Confirmation.** Candidates are compared on 256 runs, on the cards' own
+   random streams, so two candidates differ only by what they cut. The result
+   is then measured on the forecast's 2,000 runs. When that falls short of
+   85%, up to three more batches measured on every run repair it, each kept
+   only if it raises the chance.
+
+The search stops early enough for the whole proposal to take at most 450 ms.
+On the benchmark board, 1,000 cards take about 290 ms on 20 cores and stay
+under 450 ms on two (`make graph-engine-benchmark`). The same board gives the
+same proposal with any number of threads, unless the time limit stops the
+search first.
+
+| Field | Meaning |
+| --- | --- |
+| `onTimeBefore`, `onTimeAfter` | Share of runs done by the target date, from 0 to 1, without and with the cut |
+| `forecastDate`, `commitDate` | P50 and P85 dates of the work left |
+| `cuts` | The cards to take out, each with `alsoRemoved`: the cards that leave with it. Empty when nothing is worth cutting |
+
+The banner shows **Propose a scope** on milestones at risk or late. Unchecking
+a card measures the others again; **Take out** applies the cut.
+
+**Limits.** The proposal shares the forecast's limits, and:
+
+- A card's value is its size and priority; the engine does not know what
+  matters to customers beyond that. Unchecking a card, or keeping it, is how
+  someone says so.
+- When 85% cannot be reached, the proposal is the best chance it found. It
+  proposes nothing when no cut raises the chance at all.
+- It only cuts whole cards. Splitting a large card, or moving work to someone
+  else, can also save a date; the engine does not suggest either yet.
+
 ## Concurrent changes
 
 Adding a dependency runs under a per-board lock (`IBoardStore.RunExclusiveAsync`), so the cycle check and the write cannot interleave with another request. When two requests would close a cycle together, one succeeds and the other gets `409`. Sending the same dependency several times stores it once, and every request succeeds.
 
-Creating a list, a card or a subtask, and moving or completing a card, take the same lock, because the new position is the current maximum plus one. Rows that already share a position, from before this lock, are ordered by creation time and then id, so they always load in the same order.
+Creating a list, a card or a subtask, and moving or completing a card, take the same lock, because the new position is the current maximum plus one. Cutting a milestone's scope takes it too, so the dependencies it removes are the ones it measured. Rows that already share a position, from before this lock, are ordered by creation time and then id, so they always load in the same order.
 
 ## API surface
 
@@ -215,6 +288,9 @@ PATCH  /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{ca
 DELETE /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
 GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/graph
 GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-proposal
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-evaluation
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-cut
 ```
 
 ## Project shell and board system

@@ -99,4 +99,24 @@ describe("milestone banner", () => {
     )
     expect(screen.getByText("Milestone d")).toBeTruthy()
   })
+
+  it("offers a cut only for milestones that may miss their date", () => {
+    const scopeActions = {
+      propose: vi.fn(() => new Promise<never>(() => undefined)),
+      evaluate: vi.fn(),
+      cut: vi.fn(),
+    }
+    render(
+      <BoardMilestoneBanner
+        milestones={[late, shipped]}
+        onSelectCard={vi.fn()}
+        scopeActions={scopeActions}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Propose a scope" }))
+
+    expect(scopeActions.propose).toHaveBeenCalledWith("launch")
+    expect(screen.getByText("Cut the scope of Launch v1")).toBeTruthy()
+  })
 })
