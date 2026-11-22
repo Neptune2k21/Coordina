@@ -47,12 +47,17 @@ bool ScopeSearch::exhausted() const
   return evaluations_ >= options_->evaluation_limit || timed_out(2 * full_run_cost_);
 }
 
-// A card can be cut when nothing its cut takes out has to stay.
+// A card can be cut when nothing its cut takes out has to stay. A card only
+// one other card of the scope needs leaves with that card and takes it out
+// too, so only the one closer to the milestone is proposed.
 void ScopeSearch::find_cuttable()
 {
   for (std::size_t card = 0U; card < model_->card_count(); ++card)
   {
-    if (card == graph_.milestone() || !graph_.is_reachable(card) || blocked_[card] != 0U)
+    const auto dependents = model_->dependents(card);
+
+    if (card == graph_.milestone() || !graph_.is_reachable(card) || blocked_[card] != 0U
+      || (dependents.size() == 1U && dependents.front() != graph_.milestone()))
     {
       continue;
     }

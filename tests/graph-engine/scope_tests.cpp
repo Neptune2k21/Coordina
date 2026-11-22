@@ -240,8 +240,9 @@ void takes_out_what_only_the_cut_needs_and_keeps_shared_work()
   const auto board = shared_work();
   const auto result = board.propose(board.options(17.0));
 
+  // Card 2 leaves with feature 1 either way; the proposal names the feature.
   assert(result.status == COORDINA_GRAPH_OK);
-  assert(result.cuts.size() == 1U);
+  assert(result.cuts == Ids{1U});
   assert(result.dropped == (Ids{1U, 2U}));
   assert(result.dropped_by == (std::vector<std::uint32_t>{0U, 0U}));
   assert(result.output.on_time_after == 1.0);
