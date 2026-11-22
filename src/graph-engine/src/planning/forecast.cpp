@@ -190,9 +190,11 @@ Forecast forecast(const ForecastModel& model, const ForecastOptions& options)
 
   const auto p50 = finishes.begin() + static_cast<std::ptrdiff_t>(rank_of(runs, 50U));
   const auto p85 = finishes.begin() + static_cast<std::ptrdiff_t>(rank_of(runs, 85U));
+  // The second partition reorders everything from the median on, so the
+  // median is read before it.
   std::nth_element(finishes.begin(), p50, finishes.end());
-  std::nth_element(p50, p85, finishes.end());
   result.p50_days = *p50 / focus_hours_per_day;
+  std::nth_element(p50, p85, finishes.end());
   result.p85_days = *p85 / focus_hours_per_day;
 
   auto merged = ChunkTotals(cards);

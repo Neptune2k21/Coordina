@@ -1,7 +1,9 @@
 #include "abi_fixtures.h"
 #include "coordina_graph_engine.h"
 #include "planning/forecast.h"
+#include "planning/sampling.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -288,6 +290,47 @@ void measures_how_much_each_card_moves_the_date()
     }
   }
 }
+
+void reports_the_middle_run_as_p50()
+{
+  // One person works through every card, so each run ends after the sum of
+  // its draws, and the median of those sums is the 50% date.
+  auto board = release_board();
+  board.assignees.clear();
+  const coordina_graph_forecast_options options{node(6U), 42U, 1U, 2000U, 1U, 0U};
+  std::vector<coordina_graph_card_forecast> cards(6U);
+  coordina_graph_milestone_forecast output{};
+  assert(run_forecast(board, options, cards, output) == COORDINA_GRAPH_OK);
+
+  std::vector<coordina::graph::NodeId> ids;
+  std::vector<coordina::graph::Triangular> durations;
+
+  for (const auto& item : board.items)
+  {
+    ids.push_back(coordina::graph::to_node_id(item.node));
+    durations.emplace_back(
+      coordina::graph::planned_range(coordina::graph::to_card_size(item.size)));
+  }
+
+  const coordina::graph::CardStreams streams(42U, ids);
+  std::vector<double> finishes;
+
+  for (std::uint64_t run = 0U; run < 2000U; ++run)
+  {
+    auto finish = 0.0;
+
+    for (std::size_t card = 0U; card < ids.size(); ++card)
+    {
+      finish += durations[card](streams.unit(card, run));
+    }
+
+    finishes.push_back(finish);
+  }
+
+  const auto median = finishes.begin() + 999;
+  std::ranges::nth_element(finishes, median);
+  assert(std::abs(output.p50_days - (*median / 6.0)) < 1e-9);
+}
 }
 
 int main()
@@ -297,6 +340,7 @@ int main()
   keeps_the_forecast_when_an_unrelated_card_arrives();
   gives_the_same_forecast_with_any_thread_count();
   measures_how_much_each_card_moves_the_date();
+  reports_the_middle_run_as_p50();
 
   return 0;
 }
