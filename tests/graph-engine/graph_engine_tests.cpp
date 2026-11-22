@@ -1,160 +1,58 @@
+#include "abi_fixtures.h"
 #include "coordina_graph_engine.h"
-#include "planning/card_size.h"
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <vector>
 
 namespace
 {
-coordina_graph_node_id node(unsigned long long value)
+using namespace coordina::graph::fixtures;
+
+// 2 depends on 1; 3 and 4 depend on 2.
+Graph dependency_tree()
 {
-  return coordina_graph_node_id{0U, value};
-}
-
-coordina_graph_work_item work_item(unsigned long long id, std::uint32_t position)
-{
-  coordina_graph_work_item item{};
-  item.node = node(id);
-  item.due_days = std::numeric_limits<std::int32_t>::max();
-  item.position = position;
-  return item;
-}
-
-coordina_graph_planning_options options(
-  std::uint32_t max_size,
-  std::uint32_t prefer_assigned = 1U,
-  std::uint32_t include_unassigned = 1U)
-{
-  return coordina_graph_planning_options{max_size, prefer_assigned, include_unassigned};
-}
-
-std::vector<coordina_graph_work_recommendation> plan(
-  const std::vector<coordina_graph_work_item>& items,
-  const coordina_graph_planning_options* planning_options,
-  const std::vector<coordina_graph_edge>& edges = {})
-{
-  std::vector<coordina_graph_node_id> nodes;
-  nodes.reserve(items.size());
-
-  for (const auto& item : items)
-  {
-    nodes.push_back(item.node);
-  }
-
-  for (const auto& edge : edges)
-  {
-    nodes.push_back(edge.target);
-  }
-
-  std::vector<coordina_graph_work_recommendation> output(nodes.size());
-  const auto count = coordina_graph_plan_work(
-    nodes.data(),
-    nodes.size(),
-    edges.data(),
-    edges.size(),
-    items.data(),
-    items.size(),
-    planning_options,
-    output.data(),
-    output.size());
-  output.resize(count);
-  return output;
+  return Graph(4U, {{2U, 1U}, {3U, 2U}, {4U, 2U}});
 }
 
 void detects_cycles()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(1U), node(2U)},
-    coordina_graph_edge{node(2U), node(3U)}
-  };
+  const Graph chain(3U, {{1U, 2U}, {2U, 3U}});
 
-  const auto status = coordina_graph_evaluate_edge(nodes, 3U, edges, 2U, node(3U), node(1U));
-
-  assert(status == COORDINA_GRAPH_EDGE_CYCLE);
+  assert(chain.call(coordina_graph_evaluate_edge, node(3U), node(1U)) == COORDINA_GRAPH_EDGE_CYCLE);
 }
 
 void suggests_only_safe_targets()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(1U), node(2U)},
-    coordina_graph_edge{node(3U), node(1U)}
-  };
-  coordina_graph_node_id output[4U] = {};
+  const Graph graph(4U, {{1U, 2U}, {3U, 1U}});
 
-  const auto count = coordina_graph_suggest_targets(nodes, 4U, edges, 2U, node(1U), output, 4U);
-
-  assert(count == 1U);
-  assert(output[0U].low == 4U);
+  assert(graph.ids(coordina_graph_suggest_targets, node(1U)) == Ids{4U});
 }
 
 void sorts_dependency_first()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(4U), node(2U)}
-  };
-  coordina_graph_node_id output[4U] = {};
-
-  const auto count = coordina_graph_topological_sort(nodes, 4U, edges, 3U, output, 4U);
-
-  assert(count == 4U);
-  assert(output[0U].low == 1U);
-  assert(output[1U].low == 2U);
-  assert(output[2U].low == 3U);
-  assert(output[3U].low == 4U);
+  assert(dependency_tree().ids(coordina_graph_topological_sort) == (Ids{1U, 2U, 3U, 4U}));
 }
 
 void finds_ready_nodes()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(1U)}
-  };
-  coordina_graph_node_id output[3U] = {};
+  const Graph graph(3U, {{2U, 1U}, {3U, 1U}});
 
-  const auto count = coordina_graph_ready_nodes(nodes, 3U, edges, 2U, output, 3U);
-
-  assert(count == 1U);
-  assert(output[0U].low == 1U);
+  assert(graph.ids(coordina_graph_ready_nodes) == Ids{1U});
 }
 
 void finds_impacted_dependents()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(4U), node(2U)}
-  };
-  coordina_graph_node_id output[4U] = {};
-
-  const auto count = coordina_graph_impacted_dependents(nodes, 4U, edges, 3U, node(1U), output, 4U);
-
-  assert(count == 3U);
-  assert(output[0U].low == 2U);
-  assert(output[1U].low == 3U);
-  assert(output[2U].low == 4U);
+  assert(dependency_tree().ids(coordina_graph_impacted_dependents, node(1U)) == (Ids{2U, 3U, 4U}));
 }
 
 void analyzes_node_pressure()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(4U), node(2U)}
-  };
-  coordina_graph_node_analysis output[4U] = {};
+  std::vector<coordina_graph_node_analysis> output(4U);
 
-  const auto count = coordina_graph_analyze_nodes(nodes, 4U, edges, 3U, output, 4U);
+  const auto count =
+    dependency_tree().call(coordina_graph_analyze_nodes, output.data(), output.size());
 
   assert(count == 4U);
   assert(output[0U].node.low == 1U);
@@ -173,205 +71,7 @@ void analyzes_node_pressure()
 
 void finds_critical_path()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(4U), node(2U)}
-  };
-  coordina_graph_node_id output[4U] = {};
-
-  const auto count = coordina_graph_critical_path(nodes, 4U, edges, 3U, nullptr, 0U, output, 4U);
-
-  assert(count == 3U);
-  assert(output[0U].low == 1U);
-  assert(output[1U].low == 2U);
-  assert(output[2U].low == 3U);
-}
-
-void has_no_critical_path_without_dependencies()
-{
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U)};
-  coordina_graph_node_id output[2U] = {};
-
-  const auto count = coordina_graph_critical_path(nodes, 2U, nullptr, 0U, nullptr, 0U, output, 2U);
-
-  assert(count == 0U);
-
-  const auto plan_output = plan({work_item(1U, 0U), work_item(2U, 1U)}, nullptr);
-  assert(plan_output[0U].is_critical_path == 0U);
-  assert(plan_output[1U].is_critical_path == 0U);
-}
-
-void ranks_actionable_work_by_impact()
-{
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)}
-  };
-  const coordina_graph_work_item work_items[] = {
-    coordina_graph_work_item{node(1U), 0U, 1U, 7, 0U, 0U, 0U, 0U, 0U, 0U, 0U},
-    coordina_graph_work_item{node(2U), 0U, 3U, 0, 3U, 1U, 1U, 0U, 0U, 0U, 0U},
-    coordina_graph_work_item{node(3U), 0U, 3U, -1, 2U, 0U, 2U, 0U, 0U, 0U, 0U},
-    coordina_graph_work_item{node(4U), 0U, 3U, 0, 0U, 0U, 3U, 0U, 0U, 0U, 0U}
-  };
-  coordina_graph_work_recommendation output[4U] = {};
-
-  const auto count =
-    coordina_graph_plan_work(nodes, 4U, edges, 2U, work_items, 4U, nullptr, output, 4U);
-
-  assert(count == 4U);
-  assert(output[0U].node.low == 1U);
-  assert(output[0U].blocker_count == 0U);
-  assert(output[0U].is_critical_path == 1U);
-  assert(output[0U].unlock_score > output[1U].unlock_score);
-  assert(output[1U].node.low == 4U);
-  assert(output[1U].blocker_count == 0U);
-  assert(output[2U].blocker_count > 0U);
-}
-
-void prefers_work_that_fits_the_focus_block()
-{
-  auto quick = work_item(1U, 2U);
-  quick.size = COORDINA_GRAPH_SIZE_XS;
-  auto unknown = work_item(2U, 0U);
-  auto long_task = work_item(3U, 1U);
-  long_task.size = COORDINA_GRAPH_SIZE_M;
-  const auto focus = options(COORDINA_GRAPH_SIZE_S);
-
-  const auto output = plan({quick, unknown, long_task}, &focus);
-
-  assert(output.size() == 3U);
-  assert(output[0U].node.low == 1U);
-  assert(output[0U].fits_max_size == 1U);
-  assert(output[0U].effort_score > 0);
-  assert(output[1U].node.low == 2U);
-  assert(output[1U].fits_max_size == 0U);
-  assert(output[1U].effort_score == 0);
-  assert(output[2U].node.low == 3U);
-  assert(output[2U].fits_max_size == 0U);
-  assert(output[2U].effort_score < 0);
-}
-
-void ignores_effort_without_a_time_limit()
-{
-  auto quick = work_item(1U, 1U);
-  quick.size = COORDINA_GRAPH_SIZE_XS;
-  auto long_task = work_item(2U, 0U);
-  long_task.size = COORDINA_GRAPH_SIZE_XL;
-  const auto unrestricted = options(COORDINA_GRAPH_SIZE_NONE);
-
-  const auto output = plan({quick, long_task}, &unrestricted);
-
-  assert(output[0U].node.low == 2U);
-  assert(output[0U].fits_max_size == 1U);
-  assert(output[1U].fits_max_size == 1U);
-  assert(output[0U].effort_score == 0);
-}
-
-void orders_size_ranges_from_xs_to_xxl()
-{
-  using coordina::graph::CardSize;
-  using coordina::graph::size_range;
-
-  const CardSize sizes[] =
-    {CardSize::xs, CardSize::s, CardSize::m, CardSize::l, CardSize::xl, CardSize::xxl};
-  auto previous = size_range(CardSize::none);
-
-  assert(previous.likely_hours == 0.0);
-
-  for (const auto size : sizes)
-  {
-    const auto range = size_range(size);
-
-    assert(range.low_hours > 0.0);
-    assert(range.low_hours <= range.likely_hours && range.likely_hours <= range.high_hours);
-    assert(range.likely_hours > previous.likely_hours);
-    assert(range.high_hours >= previous.high_hours);
-    // Bigger cards are less certain: the spread never narrows.
-    assert(range.high_hours / range.low_hours >= 1.5);
-    assert(range.should_split == (size == CardSize::xxl));
-    previous = range;
-  }
-}
-
-void reads_unknown_sizes_as_none()
-{
-  using coordina::graph::CardSize;
-  using coordina::graph::fits_size_limit;
-  using coordina::graph::to_card_size;
-
-  assert(to_card_size(COORDINA_GRAPH_SIZE_XXL) == CardSize::xxl);
-  assert(to_card_size(7U) == CardSize::none);
-  assert(fits_size_limit(CardSize::xxl, CardSize::none));
-  assert(fits_size_limit(CardSize::s, CardSize::s));
-  assert(!fits_size_limit(CardSize::m, CardSize::s));
-  assert(!fits_size_limit(CardSize::none, CardSize::m));
-}
-
-void ranks_requester_work_before_others()
-{
-  auto mine = work_item(1U, 2U);
-  mine.assignment = 1U;
-  auto unassigned = work_item(2U, 1U);
-  auto theirs = work_item(3U, 0U);
-  theirs.assignment = 2U;
-  const auto preferred = options(0U, 1U, 1U);
-  const auto owned_only = options(0U, 1U, 0U);
-  const auto neutral = options(0U, 0U, 1U);
-
-  const auto ranked = plan({mine, unassigned, theirs}, &preferred);
-  assert(ranked[0U].node.low == 1U);
-  assert(ranked[0U].is_assignment_match == 1U);
-  assert(ranked[0U].assignment_score > 0);
-  assert(ranked[1U].node.low == 2U);
-  assert(ranked[2U].node.low == 3U);
-  assert(ranked[2U].assignment_score < 0);
-
-  const auto strict = plan({mine, unassigned, theirs}, &owned_only);
-  assert(strict[0U].node.low == 1U);
-  assert(strict[1U].node.low == 3U);
-  assert(strict[2U].node.low == 2U);
-
-  const auto by_position = plan({mine, unassigned, theirs}, &neutral);
-  assert(by_position[0U].node.low == 3U);
-  assert(by_position[2U].node.low == 1U);
-}
-
-void finishes_started_work_first()
-{
-  auto todo = work_item(1U, 0U);
-  auto started = work_item(2U, 1U);
-  started.is_in_progress = 1U;
-
-  const auto output = plan({todo, started}, nullptr);
-
-  assert(output[0U].node.low == 2U);
-  assert(output[0U].is_in_progress == 1U);
-  assert(output[0U].momentum_score > 0U);
-  assert(output[1U].momentum_score == 0U);
-}
-
-void prefers_matching_context()
-{
-  auto other = work_item(1U, 0U);
-  auto matching = work_item(2U, 1U);
-  matching.is_context_match = 1U;
-
-  const auto output = plan({other, matching}, nullptr);
-
-  assert(output[0U].node.low == 2U);
-  assert(output[0U].is_context_match == 1U);
-  assert(output[0U].context_score > 0U);
-}
-
-void breaks_full_ties_by_node_id()
-{
-  const auto output = plan({work_item(9U, 0U), work_item(3U, 0U)}, nullptr);
-
-  assert(output[0U].node.low == 3U);
-  assert(output[1U].node.low == 9U);
+  assert(dependency_tree().ids(coordina_graph_critical_path, nullptr, 0U) == (Ids{1U, 2U, 3U}));
 }
 
 struct BatchBuffers
@@ -396,66 +96,43 @@ struct BatchBuffers
   coordina_graph_board_analysis output{};
 };
 
-bool same_node(coordina_graph_node_id left, coordina_graph_node_id right)
+Ids written(const std::vector<coordina_graph_node_id>& buffer, std::size_t count)
 {
-  return left.high == right.high && left.low == right.low;
+  return ids_of({buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(count)});
 }
 
 void transitive_counts_match_reachable_dependents()
 {
   constexpr std::size_t size = 300U;
-  std::vector<coordina_graph_node_id> nodes;
-  std::vector<coordina_graph_edge> edges;
+  Graph graph(size, {});
 
   for (std::size_t index = 0U; index < size; ++index)
   {
-    nodes.push_back(node(index + 1U));
-
     if (index > 0U && index % 4U != 0U)
     {
-      edges.push_back(coordina_graph_edge{node(index + 1U), node(index)});
+      graph.edges.push_back(coordina_graph_edge{node(index + 1U), node(index)});
     }
 
     if (index > 2U)
     {
-      edges.push_back(coordina_graph_edge{node(index + 1U), node((index / 3U) + 1U)});
+      graph.edges.push_back(coordina_graph_edge{node(index + 1U), node((index / 3U) + 1U)});
     }
   }
 
   std::vector<coordina_graph_node_analysis> analyses(size);
-  const auto count = coordina_graph_analyze_nodes(
-    nodes.data(),
-    size,
-    edges.data(),
-    edges.size(),
-    analyses.data(),
-    size);
+  const auto count = graph.call(coordina_graph_analyze_nodes, analyses.data(), size);
   assert(count == size);
-
-  std::vector<coordina_graph_node_id> reachable(size);
 
   for (const auto& analysis : analyses)
   {
-    const auto expected = coordina_graph_impacted_dependents(
-      nodes.data(),
-      size,
-      edges.data(),
-      edges.size(),
-      analysis.node,
-      reachable.data(),
-      size);
+    const auto expected = graph.ids(coordina_graph_impacted_dependents, analysis.node).size();
     assert(analysis.transitive_dependent_count == expected);
   }
 }
 
 void batch_analysis_matches_individual_calls()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U), node(4U), node(5U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(4U), node(2U)}
-  };
+  const Graph board(5U, {{2U, 1U}, {3U, 2U}, {4U, 2U}});
   std::vector<coordina_graph_work_item> items;
 
   for (unsigned long long id = 1U; id <= 5U; ++id)
@@ -470,52 +147,23 @@ void batch_analysis_matches_individual_calls()
   const auto focus = options(COORDINA_GRAPH_SIZE_M);
   BatchBuffers batch(5U);
 
-  const auto status = coordina_graph_analyze_board(
-    nodes,
-    5U,
-    edges,
-    3U,
-    items.data(),
-    items.size(),
-    &focus,
-    &batch.output);
+  const auto status =
+    board.call(coordina_graph_analyze_board, items.data(), items.size(), &focus, &batch.output);
 
   assert(status == COORDINA_GRAPH_OK);
   assert(batch.output.is_acyclic == 1U);
-  assert(coordina_graph_is_acyclic(nodes, 5U, edges, 3U) == 1);
-
-  coordina_graph_node_id expected_nodes[5U] = {};
-  auto count = coordina_graph_ready_nodes(nodes, 5U, edges, 3U, expected_nodes, 5U);
-  assert(count == batch.output.ready_nodes.count);
-  for (std::size_t index = 0U; index < count; ++index)
-  {
-    assert(same_node(expected_nodes[index], batch.ready[index]));
-  }
-
-  count = coordina_graph_topological_sort(nodes, 5U, edges, 3U, expected_nodes, 5U);
-  assert(count == batch.output.dependency_order.count);
-  for (std::size_t index = 0U; index < count; ++index)
-  {
-    assert(same_node(expected_nodes[index], batch.order[index]));
-  }
-
-  count = coordina_graph_critical_path(
-    nodes,
-    5U,
-    edges,
-    3U,
-    items.data(),
-    items.size(),
-    expected_nodes,
-    5U);
-  assert(count == batch.output.critical_path.count);
-  for (std::size_t index = 0U; index < count; ++index)
-  {
-    assert(same_node(expected_nodes[index], batch.critical[index]));
-  }
+  assert(board.call(coordina_graph_is_acyclic) == 1);
+  assert(
+    board.ids(coordina_graph_ready_nodes) == written(batch.ready, batch.output.ready_nodes.count));
+  assert(
+    board.ids(coordina_graph_topological_sort)
+    == written(batch.order, batch.output.dependency_order.count));
+  assert(
+    board.ids(coordina_graph_critical_path, items.data(), items.size())
+    == written(batch.critical, batch.output.critical_path.count));
 
   coordina_graph_node_analysis expected_analyses[5U] = {};
-  count = coordina_graph_analyze_nodes(nodes, 5U, edges, 3U, expected_analyses, 5U);
+  auto count = board.call(coordina_graph_analyze_nodes, expected_analyses, 5U);
   assert(count == batch.output.node_analysis_count);
   for (std::size_t index = 0U; index < count; ++index)
   {
@@ -527,16 +175,8 @@ void batch_analysis_matches_individual_calls()
   }
 
   coordina_graph_work_recommendation expected_plan[5U] = {};
-  count = coordina_graph_plan_work(
-    nodes,
-    5U,
-    edges,
-    3U,
-    items.data(),
-    items.size(),
-    &focus,
-    expected_plan,
-    5U);
+  count =
+    board.call(coordina_graph_plan_work, items.data(), items.size(), &focus, expected_plan, 5U);
   assert(count == batch.output.recommendation_count);
   for (std::size_t index = 0U; index < count; ++index)
   {
@@ -548,22 +188,14 @@ void batch_analysis_matches_individual_calls()
 
 void batch_analysis_reports_missing_capacity_without_writing()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U), node(3U)};
-  const coordina_graph_edge edges[] = {coordina_graph_edge{node(2U), node(1U)}};
+  const Graph board(3U, {{2U, 1U}});
   const std::vector<coordina_graph_work_item> items =
     {work_item(1U, 0U), work_item(2U, 1U), work_item(3U, 2U)};
   BatchBuffers batch(1U);
   batch.ready[0U] = node(99U);
 
-  const auto status = coordina_graph_analyze_board(
-    nodes,
-    3U,
-    edges,
-    1U,
-    items.data(),
-    items.size(),
-    nullptr,
-    &batch.output);
+  const auto status =
+    board.call(coordina_graph_analyze_board, items.data(), items.size(), nullptr, &batch.output);
 
   assert(status == COORDINA_GRAPH_INSUFFICIENT_CAPACITY);
   assert(batch.output.ready_nodes.count == 2U);
@@ -591,188 +223,18 @@ void batch_analysis_rejects_invalid_arguments()
 
 void batch_analysis_flags_cycles()
 {
-  const coordina_graph_node_id nodes[] = {node(1U), node(2U)};
-  const coordina_graph_edge edges[] = {
-    coordina_graph_edge{node(1U), node(2U)},
-    coordina_graph_edge{node(2U), node(1U)}
-  };
+  const Graph board(2U, {{1U, 2U}, {2U, 1U}});
   const std::vector<coordina_graph_work_item> items = {work_item(1U, 0U), work_item(2U, 1U)};
   BatchBuffers batch(2U);
 
-  const auto status = coordina_graph_analyze_board(
-    nodes,
-    2U,
-    edges,
-    2U,
-    items.data(),
-    items.size(),
-    nullptr,
-    &batch.output);
+  const auto status =
+    board.call(coordina_graph_analyze_board, items.data(), items.size(), nullptr, &batch.output);
 
   assert(status == COORDINA_GRAPH_OK);
   assert(batch.output.is_acyclic == 0U);
   assert(batch.output.dependency_order.count == 0U);
   assert(batch.output.critical_path.count == 0U);
   assert(batch.output.recommendation_count == 0U);
-}
-
-void keeps_preference_order_below_the_score_floor()
-{
-  auto theirs = work_item(1U, 0U);
-  theirs.size = COORDINA_GRAPH_SIZE_XS;
-  theirs.assignment = 2U;
-  auto long_mine = work_item(2U, 1U);
-  long_mine.size = COORDINA_GRAPH_SIZE_L;
-  long_mine.assignment = 1U;
-  const auto focus = options(COORDINA_GRAPH_SIZE_S);
-
-  const auto output = plan({theirs, long_mine}, &focus);
-
-  assert(output[0U].score == 1U);
-  assert(output[1U].score == 1U);
-  assert(output[0U].node.low == 2U);
-}
-
-void clamps_heavily_blocked_work()
-{
-  std::vector<coordina_graph_edge> edges;
-
-  for (unsigned long long id = 100U; id < 5100U; ++id)
-  {
-    edges.push_back(coordina_graph_edge{node(1U), node(id)});
-  }
-
-  const auto output = plan({work_item(1U, 0U), work_item(2U, 1U)}, nullptr, edges);
-
-  assert(output.size() == 2U);
-  assert(output[0U].node.low == 2U);
-  assert(output[1U].blocker_count == 5000U);
-  assert(output[1U].score == 1U);
-}
-
-coordina_graph_work_item sized_item(
-  unsigned long long id,
-  std::uint32_t size,
-  std::uint32_t position,
-  bool is_completed = false)
-{
-  auto item = work_item(id, position);
-  item.size = size;
-  item.is_completed = is_completed ? 1U : 0U;
-  return item;
-}
-
-std::vector<coordina_graph_node_id> weighted_path(
-  const std::vector<coordina_graph_work_item>& items,
-  const std::vector<coordina_graph_edge>& edges)
-{
-  std::vector<coordina_graph_node_id> nodes;
-  nodes.reserve(items.size());
-
-  for (const auto& item : items)
-  {
-    nodes.push_back(item.node);
-  }
-
-  std::vector<coordina_graph_node_id> output(nodes.size());
-  const auto count = coordina_graph_critical_path(
-    nodes.data(),
-    nodes.size(),
-    edges.data(),
-    edges.size(),
-    items.data(),
-    items.size(),
-    output.data(),
-    output.size());
-  output.resize(count);
-  return output;
-}
-
-bool is_path(
-  const std::vector<coordina_graph_node_id>& path,
-  const std::vector<unsigned long long>& expected)
-{
-  if (path.size() != expected.size())
-  {
-    return false;
-  }
-
-  for (std::size_t index = 0U; index < path.size(); ++index)
-  {
-    if (path[index].low != expected[index])
-    {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-void weighs_the_critical_path_by_size()
-{
-  // Three XS cards in a row take 1.5 h; an M after an L takes 24 h.
-  const std::vector<coordina_graph_work_item> items = {
-    sized_item(1U, COORDINA_GRAPH_SIZE_XS, 0U),
-    sized_item(2U, COORDINA_GRAPH_SIZE_XS, 1U),
-    sized_item(3U, COORDINA_GRAPH_SIZE_XS, 2U),
-    sized_item(4U, COORDINA_GRAPH_SIZE_L, 3U),
-    sized_item(5U, COORDINA_GRAPH_SIZE_M, 4U)
-  };
-  const std::vector<coordina_graph_edge> edges = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(5U), node(4U)}
-  };
-
-  assert(is_path(weighted_path(items, edges), {4U, 5U}));
-
-  // Unsized cards count as M: two of them (12 h) beat three S (6 h).
-  const std::vector<coordina_graph_work_item> unsized = {
-    sized_item(1U, COORDINA_GRAPH_SIZE_S, 0U),
-    sized_item(2U, COORDINA_GRAPH_SIZE_S, 1U),
-    sized_item(3U, COORDINA_GRAPH_SIZE_S, 2U),
-    sized_item(4U, COORDINA_GRAPH_SIZE_NONE, 3U),
-    sized_item(5U, COORDINA_GRAPH_SIZE_NONE, 4U)
-  };
-
-  assert(is_path(weighted_path(unsized, edges), {4U, 5U}));
-}
-
-void leaves_completed_cards_out_of_the_critical_path()
-{
-  // 3 depends on 2, which depends on 1; 5 depends on 4.
-  const std::vector<coordina_graph_edge> edges = {
-    coordina_graph_edge{node(2U), node(1U)},
-    coordina_graph_edge{node(3U), node(2U)},
-    coordina_graph_edge{node(5U), node(4U)}
-  };
-  const std::vector<coordina_graph_work_item> first_done = {
-    sized_item(1U, COORDINA_GRAPH_SIZE_XXL, 0U, true),
-    sized_item(2U, COORDINA_GRAPH_SIZE_M, 1U),
-    sized_item(3U, COORDINA_GRAPH_SIZE_M, 2U),
-    sized_item(4U, COORDINA_GRAPH_SIZE_S, 3U),
-    sized_item(5U, COORDINA_GRAPH_SIZE_S, 4U)
-  };
-
-  assert(is_path(weighted_path(first_done, edges), {2U, 3U}));
-
-  // A completed card in the middle cuts the chain: 3 no longer waits for 1.
-  auto middle_done = first_done;
-  middle_done[0U].is_completed = 0U;
-  middle_done[1U].is_completed = 1U;
-
-  assert(is_path(weighted_path(middle_done, edges), {4U, 5U}));
-
-  // A lone card has no path, however long it is.
-  const std::vector<coordina_graph_work_item> lone = {
-    sized_item(1U, COORDINA_GRAPH_SIZE_XXL, 0U),
-    sized_item(2U, COORDINA_GRAPH_SIZE_XS, 1U, true),
-    sized_item(3U, COORDINA_GRAPH_SIZE_XS, 2U),
-    sized_item(4U, COORDINA_GRAPH_SIZE_XS, 3U),
-    sized_item(5U, COORDINA_GRAPH_SIZE_XS, 4U, true)
-  };
-
-  assert(weighted_path(lone, edges).empty());
 }
 }
 
@@ -785,25 +247,11 @@ int main()
   finds_impacted_dependents();
   analyzes_node_pressure();
   finds_critical_path();
-  has_no_critical_path_without_dependencies();
-  ranks_actionable_work_by_impact();
-  prefers_work_that_fits_the_focus_block();
-  ignores_effort_without_a_time_limit();
-  orders_size_ranges_from_xs_to_xxl();
-  reads_unknown_sizes_as_none();
-  ranks_requester_work_before_others();
-  finishes_started_work_first();
-  prefers_matching_context();
-  breaks_full_ties_by_node_id();
-  keeps_preference_order_below_the_score_floor();
-  clamps_heavily_blocked_work();
   transitive_counts_match_reachable_dependents();
   batch_analysis_matches_individual_calls();
   batch_analysis_reports_missing_capacity_without_writing();
   batch_analysis_rejects_invalid_arguments();
   batch_analysis_flags_cycles();
-  weighs_the_critical_path_by_size();
-  leaves_completed_cards_out_of_the_critical_path();
 
   return 0;
 }
