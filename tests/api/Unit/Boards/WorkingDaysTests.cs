@@ -35,4 +35,26 @@ public sealed class WorkingDaysTests
   {
     Assert.Equal(Wednesday.AddDays(1), WorkingDays.Finish(Wednesday, 2.0 + 1e-12));
   }
+
+  [Theory]
+  [InlineData("2026-11-17", 0)]
+  [InlineData("2026-11-18", 1)]
+  [InlineData("2026-11-20", 3)]
+  [InlineData("2026-11-22", 3)]
+  [InlineData("2026-11-23", 4)]
+  [InlineData("2026-12-01", 10)]
+  public void Until_CountsTheWeekdaysUpToTheTarget(string target, int expected)
+  {
+    Assert.Equal(expected, WorkingDays.Until(Wednesday, DateOnly.Parse(target, CultureInfo.InvariantCulture)));
+  }
+
+  [Fact]
+  public void Until_IsTheLongestStretchThatStillFinishesByTheTarget()
+  {
+    var target = new DateOnly(2026, 12, 4);
+    var days = WorkingDays.Until(Wednesday, target);
+
+    Assert.True(WorkingDays.Finish(Wednesday, days) <= target);
+    Assert.True(WorkingDays.Finish(Wednesday, days + 0.1) > target);
+  }
 }

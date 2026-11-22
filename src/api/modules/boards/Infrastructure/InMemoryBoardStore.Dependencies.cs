@@ -42,12 +42,12 @@ public sealed partial class InMemoryBoardStore
     return Task.FromResult<ProjectBoard?>(ToBoard(_boards[boardId]));
   }
 
-  public Task<bool> DeleteCardDependencyAsync(
+  public Task<int> DeleteCardDependenciesAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
     Guid cardId,
-    Guid dependsOnCardId,
+    IReadOnlyCollection<Guid> dependsOnCardIds,
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken)
   {
@@ -56,20 +56,15 @@ public sealed partial class InMemoryBoardStore
     if (!TryGetBoard(workspaceId, projectId, boardId, out var board)
       || !TryGetCard(workspaceId, projectId, boardId, cardId, out var card))
     {
-      return Task.FromResult(false);
+      return Task.FromResult(0);
     }
 
-    var dependency = _dependencies.Values.FirstOrDefault(candidate =>
-      candidate.CardId == cardId
-      && candidate.DependsOnCardId == dependsOnCardId);
+    var deleted = _dependencies.Values
+      .Where(candidate => candidate.CardId == cardId
+        && dependsOnCardIds.Contains(candidate.DependsOnCardId))
+      .Count(dependency => _dependencies.TryRemove(dependency.Id, out _));
 
-    if (dependency is null)
-    {
-      return Task.FromResult(false);
-    }
-
-    var deleted = _dependencies.TryRemove(dependency.Id, out _);
-    if (deleted)
+    if (deleted > 0)
     {
       _cards[cardId] = card with { UpdatedAt = updatedAt };
       _boards[boardId] = board with { UpdatedAt = updatedAt };

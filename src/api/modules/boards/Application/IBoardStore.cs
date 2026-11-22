@@ -183,12 +183,13 @@ public interface IBoardStore
     DateTimeOffset createdAt,
     CancellationToken cancellationToken);
 
-  Task<bool> DeleteCardDependencyAsync(
+  /// <summary>Drops the card's dependencies on the given cards; returns how many it dropped.</summary>
+  Task<int> DeleteCardDependenciesAsync(
     Guid workspaceId,
     Guid projectId,
     Guid boardId,
     Guid cardId,
-    Guid dependsOnCardId,
+    IReadOnlyCollection<Guid> dependsOnCardIds,
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken);
 

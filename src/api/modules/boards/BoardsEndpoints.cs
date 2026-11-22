@@ -37,10 +37,7 @@ public static class BoardsEndpoints
       .WithSummary("Get board dependency graph")
       .WithDescription("Returns graph-derived planning signals for the board.");
 
-    boardGroup.MapGet("/milestones", GetMilestones)
-      .Produces<IReadOnlyCollection<BoardMilestoneResponse>>(StatusCodes.Status200OK)
-      .WithSummary("Forecast board milestones")
-      .WithDescription("Returns the board's milestones, soonest target first, each with the dates its work is forecast to be done by (one chance in two, and 85%), the cards that drive those dates, and how many of its open cards have no size.");
+    MapMilestoneEndpoints(boardGroup);
 
     boardGroup.MapGet("/planning-preferences", GetPlanningPreferences)
       .Produces<BoardPlanningPreferencesResponse>(StatusCodes.Status200OK)
@@ -184,24 +181,6 @@ public static class BoardsEndpoints
         context,
         preferAssigned,
         includeUnassigned),
-      cancellationToken);
-
-    return result.ToOkResult();
-  }
-
-  private static async Task<IResult> GetMilestones(
-    Guid workspaceId,
-    Guid projectId,
-    Guid boardId,
-    CurrentUser user,
-    IBoardMilestoneService milestones,
-    CancellationToken cancellationToken)
-  {
-    var result = await milestones.GetMilestonesAsync(
-      workspaceId,
-      projectId,
-      boardId,
-      user.Id,
       cancellationToken);
 
     return result.ToOkResult();
@@ -593,5 +572,114 @@ public static class BoardsEndpoints
       cancellationToken);
 
     return result.ToNoContentResult();
+  }
+
+  private static void MapMilestoneEndpoints(RouteGroupBuilder boardGroup)
+  {
+    boardGroup.MapGet("/milestones", GetMilestones)
+      .Produces<IReadOnlyCollection<BoardMilestoneResponse>>(StatusCodes.Status200OK)
+      .WithSummary("Forecast board milestones")
+      .WithDescription("Returns the board's milestones, soonest target first, each with the dates its work is forecast to be done by (one chance in two, and 85%), the cards that drive those dates, and how many of its open cards have no size.");
+
+    var milestone = boardGroup.MapGroup("/milestones/{milestoneId:guid}");
+
+    milestone.MapPost("/scope-proposal", ProposeScope)
+      .Produces<BoardMilestoneScopeResponse>(StatusCodes.Status200OK)
+      .WithSummary("Propose what to cut from a milestone")
+      .WithDescription("Proposes cards to take out of the milestone so it has an 85% chance of shipping by its target date, giving up as little as possible: a card is worth its size, weighted by priority. Taking a card out also takes out the cards of the scope that depend on it, and those the milestone then no longer needs. Cards in progress, the cards in keep and whatever they need are never proposed. Changes nothing.");
+
+    milestone.MapPost("/scope-evaluation", EvaluateScope)
+      .Produces<BoardMilestoneScopeResponse>(StatusCodes.Status200OK)
+      .WithSummary("Measure a cut of a milestone")
+      .WithDescription("Returns what taking the chosen cards out of the milestone would buy, as a proposal does. Changes nothing.");
+
+    milestone.MapPost("/scope-cut", CutScope)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
+      .WithSummary("Cut a milestone's scope")
+      .WithDescription("Takes the chosen cards out of the milestone: it stops depending on every card that leaves its scope with them. No card is deleted.");
+  }
+
+  private static async Task<IResult> GetMilestones(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    CurrentUser user,
+    IBoardMilestoneService milestones,
+    CancellationToken cancellationToken)
+  {
+    var result = await milestones.GetMilestonesAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> ProposeScope(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid milestoneId,
+    BoardMilestoneScopeRequest request,
+    CurrentUser user,
+    IBoardMilestoneScopeService scopes,
+    CancellationToken cancellationToken)
+  {
+    var result = await scopes.ProposeAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      milestoneId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> EvaluateScope(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid milestoneId,
+    BoardMilestoneCutRequest request,
+    CurrentUser user,
+    IBoardMilestoneScopeService scopes,
+    CancellationToken cancellationToken)
+  {
+    var result = await scopes.EvaluateAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      milestoneId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> CutScope(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid milestoneId,
+    BoardMilestoneCutRequest request,
+    CurrentUser user,
+    IBoardMilestoneScopeService scopes,
+    CancellationToken cancellationToken)
+  {
+    var result = await scopes.CutAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      milestoneId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
   }
 }

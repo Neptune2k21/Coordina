@@ -155,6 +155,22 @@ public sealed record BoardMilestoneResponse(
   int UnsizedCardCount,
   IReadOnlyCollection<BoardMilestoneDriverResponse> Drivers);
 
+public sealed record BoardMilestoneScopeResponse(
+  string MilestoneId,
+  DateOnly TargetDate,
+  double OnTimeBefore,
+  double OnTimeAfter,
+  DateOnly ForecastDate,
+  DateOnly CommitDate,
+  IReadOnlyCollection<BoardMilestoneCutResponse> Cuts);
+
+public sealed record BoardMilestoneCutResponse(
+  string CardId,
+  string Title,
+  IReadOnlyCollection<BoardMilestoneCutCardResponse> AlsoRemoved);
+
+public sealed record BoardMilestoneCutCardResponse(string CardId, string Title);
+
 public sealed record BoardMilestoneDriverResponse(
   string CardId,
   string Title,

@@ -2111,6 +2111,213 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-proposal": {
+      "post": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Propose what to cut from a milestone",
+        "description": "Proposes cards to take out of the milestone so it has an 85% chance of shipping by its target date, giving up as little as possible: a card is worth its size, weighted by priority. Taking a card out also takes out the cards of the scope that depend on it, and those the milestone then no longer needs. Cards in progress, the cards in keep and whatever they need are never proposed. Changes nothing.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneScopeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardMilestoneScopeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-evaluation": {
+      "post": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Measure a cut of a milestone",
+        "description": "Returns what taking the chosen cards out of the milestone would buy, as a proposal does. Changes nothing.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneCutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardMilestoneScopeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-cut": {
+      "post": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Cut a milestone\u0027s scope",
+        "description": "Takes the chosen cards out of the milestone: it stops depending on every card that leaves its scope with them. No card is deleted.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneCutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/work": {
       "get": {
         "tags": [
@@ -2819,6 +3026,63 @@
           }
         }
       },
+      "BoardMilestoneCutCardResponse": {
+        "required": [
+          "cardId",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "BoardMilestoneCutRequest": {
+        "required": [
+          "cardIds"
+        ],
+        "type": "object",
+        "properties": {
+          "cardIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "BoardMilestoneCutResponse": {
+        "required": [
+          "cardId",
+          "title",
+          "alsoRemoved"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "alsoRemoved": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneCutCardResponse"
+            }
+          }
+        }
+      },
       "BoardMilestoneDriverResponse": {
         "required": [
           "cardId",
@@ -2914,6 +3178,68 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardMilestoneDriverResponse"
+            }
+          }
+        }
+      },
+      "BoardMilestoneScopeRequest": {
+        "required": [
+          "keep"
+        ],
+        "type": "object",
+        "properties": {
+          "keep": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "BoardMilestoneScopeResponse": {
+        "required": [
+          "milestoneId",
+          "targetDate",
+          "onTimeBefore",
+          "onTimeAfter",
+          "forecastDate",
+          "commitDate",
+          "cuts"
+        ],
+        "type": "object",
+        "properties": {
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "onTimeBefore": {
+            "type": "number",
+            "format": "double"
+          },
+          "onTimeAfter": {
+            "type": "number",
+            "format": "double"
+          },
+          "forecastDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "commitDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "cuts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneCutResponse"
             }
           }
         }

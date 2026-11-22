@@ -6,6 +6,9 @@ namespace Coordina.Api.Modules.Boards.Domain;
 /// </summary>
 public static class WorkingDays
 {
+  /// <summary>The focus hours a person works in a day, as the graph engine plans them.</summary>
+  public const double FocusHoursPerDay = 6;
+
   /// <summary>The day work resumes: the day itself, or Monday after a weekend.</summary>
   public static DateOnly FirstOnOrAfter(DateOnly day) =>
     day.DayOfWeek switch
@@ -14,6 +17,23 @@ public static class WorkingDays
       DayOfWeek.Sunday => day.AddDays(1),
       _ => day
     };
+
+  /// <summary>
+  /// The working days from <paramref name="today"/> to the end of
+  /// <paramref name="target"/>: the longest stretch that still ends
+  /// (<see cref="Finish"/>) on or before it. 0 when the target has passed.
+  /// </summary>
+  public static int Until(DateOnly today, DateOnly target)
+  {
+    var count = 0;
+
+    for (var day = FirstOnOrAfter(today); day <= target; day = day.AddDays(1))
+    {
+      count += day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0 : 1;
+    }
+
+    return count;
+  }
 
   /// <summary>The date a stretch of <paramref name="workingDays"/> started on <paramref name="today"/> ends.</summary>
   public static DateOnly Finish(DateOnly today, double workingDays)

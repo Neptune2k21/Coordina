@@ -188,15 +188,15 @@ public sealed class BoardDependencyService(
       return access.Error;
     }
 
-    var deleted = await boards.DeleteCardDependencyAsync(
+    var deleted = await boards.DeleteCardDependenciesAsync(
       workspaceId,
       projectId,
       boardId,
       cardId,
-      dependsOnCardId,
+      [dependsOnCardId],
       clock.GetUtcNow(),
       cancellationToken);
 
-    return deleted ? Result.Success() : Error.NotFound();
+    return deleted > 0 ? Result.Success() : Error.NotFound();
   }
 }
