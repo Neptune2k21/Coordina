@@ -12,11 +12,7 @@
 
 namespace coordina::graph
 {
-bool has_invalid_pointer(
-  const coordina_graph_node_id* nodes,
-  std::size_t node_count,
-  const coordina_graph_edge* edges,
-  std::size_t edge_count) noexcept;
+bool is_missing(const void* items, std::size_t count) noexcept;
 
 GraphSnapshot build_snapshot(
   const coordina_graph_node_id* nodes,

@@ -1,3 +1,4 @@
+#include "abi_fixtures.h"
 #include "coordina_graph_engine.h"
 #include "planning/forecast.h"
 
@@ -5,33 +6,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <vector>
 
 namespace
 {
-coordina_graph_node_id node(unsigned long long value)
-{
-  return coordina_graph_node_id{0U, value};
-}
-
-bool same_node(coordina_graph_node_id left, coordina_graph_node_id right)
-{
-  return left.high == right.high && left.low == right.low;
-}
-
-coordina_graph_work_item sized_item(
-  unsigned long long id,
-  std::uint32_t size,
-  std::uint32_t position)
-{
-  coordina_graph_work_item item{};
-  item.node = node(id);
-  item.due_days = std::numeric_limits<std::int32_t>::max();
-  item.position = position;
-  item.size = size;
-  return item;
-}
+using namespace coordina::graph::fixtures;
 
 struct ForecastBoard
 {
