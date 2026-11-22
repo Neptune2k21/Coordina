@@ -1,8 +1,11 @@
-import { FlagPennant, WarningCircle } from "@phosphor-icons/react"
+import { FlagPennant, Scissors, WarningCircle } from "@phosphor-icons/react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { MilestoneScopeDialog } from "@/features/board/components/milestone-scope-dialog"
+import type { MilestoneScopeActions } from "@/features/board/hooks/use-milestone-scope"
 import { shortDate } from "@/features/board/model/board-format"
+import { canProposeScope } from "@/features/board/model/milestone-scope"
 import {
   describeDriver,
   describeSlip,
@@ -18,13 +21,19 @@ const collapsedCount = 3
 type BoardMilestoneBannerProps = {
   milestones: BoardMilestone[]
   onSelectCard: (cardId: string) => void
+  // Without them the banner only shows the forecasts.
+  scopeActions?: MilestoneScopeActions | null
+  isReadOnly?: boolean
 }
 
 export function BoardMilestoneBanner({
   milestones,
   onSelectCard,
+  scopeActions = null,
+  isReadOnly = false,
 }: BoardMilestoneBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [scoping, setScoping] = useState<BoardMilestone | null>(null)
 
   if (milestones.length === 0) {
     return null
@@ -40,6 +49,7 @@ export function BoardMilestoneBanner({
           key={milestone.cardId}
           milestone={milestone}
           onSelectCard={onSelectCard}
+          onProposeScope={scopeActions ? setScoping : null}
         />
       ))}
       {ordered.length > collapsedCount ? (
@@ -55,6 +65,14 @@ export function BoardMilestoneBanner({
             : `Show all ${ordered.length} milestones`}
         </Button>
       ) : null}
+      {scoping && scopeActions ? (
+        <MilestoneScopeDialog
+          milestone={scoping}
+          actions={scopeActions}
+          isReadOnly={isReadOnly}
+          onClose={() => setScoping(null)}
+        />
+      ) : null}
     </section>
   )
 }
@@ -62,9 +80,14 @@ export function BoardMilestoneBanner({
 type MilestoneRowProps = {
   milestone: BoardMilestone
   onSelectCard: (cardId: string) => void
+  onProposeScope: ((milestone: BoardMilestone) => void) | null
 }
 
-function MilestoneRow({ milestone, onSelectCard }: MilestoneRowProps) {
+function MilestoneRow({
+  milestone,
+  onSelectCard,
+  onProposeScope,
+}: MilestoneRowProps) {
   const slip = describeSlip(milestone.slipDays ?? null)
   const unsized = describeUnsized(milestone)
 
@@ -125,6 +148,18 @@ function MilestoneRow({ milestone, onSelectCard }: MilestoneRowProps) {
           <WarningCircle className="size-3.5" weight="fill" />
           {unsized}
         </span>
+      ) : null}
+      {onProposeScope && canProposeScope(milestone.status) ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-6 rounded-md px-2 text-[11px]"
+          onClick={() => onProposeScope(milestone)}
+        >
+          <Scissors className="size-3.5" />
+          Propose a scope
+        </Button>
       ) : null}
     </div>
   )

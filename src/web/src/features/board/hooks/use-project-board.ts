@@ -4,6 +4,7 @@ import { useAuth } from "@/features/auth"
 import { getPlanningPreferences } from "@/features/board/api/board-api"
 import { useBoardFilters } from "@/features/board/hooks/use-board-filters"
 import { useBoardMutations } from "@/features/board/hooks/use-board-mutations"
+import { useMilestoneScope } from "@/features/board/hooks/use-milestone-scope"
 import {
   useBoardResource,
   useCardDependencyAnalysis,
@@ -75,6 +76,11 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     isReadOnly,
     onError: reportError,
     clearError,
+  })
+  const milestoneScope = useMilestoneScope({
+    ...scope,
+    boardId: board?.id,
+    setBoard: resource.setBoard,
   })
   const dependency = useCardDependencyAnalysis({
     ...scope,
@@ -260,6 +266,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     members: resource.members,
     metrics,
     milestones: resource.milestones,
+    milestoneScope,
     myCardCount,
     notice: mutations.notice,
     planningPreferences,
