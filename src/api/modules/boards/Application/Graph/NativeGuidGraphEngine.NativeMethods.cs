@@ -194,5 +194,43 @@ public sealed partial class NativeGuidGraphEngine
       UIntPtr cutCount,
       ref NativeGraphScopeOptions options,
       ref NativeGraphScopeCut output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_propose_staffing",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus ProposeStaffing(
+      NativeGraphNodeId[] nodes,
+      UIntPtr nodeCount,
+      NativeGraphEdge[] edges,
+      UIntPtr edgeCount,
+      NativeGraphWorkItem[] workItems,
+      UIntPtr workItemCount,
+      NativeGraphAssignee[] assignees,
+      UIntPtr assigneeCount,
+      uint[] receivers,
+      UIntPtr receiverCount,
+      NativeGraphAssignee[] skilled,
+      UIntPtr skilledCount,
+      ref NativeGraphStaffingOptions options,
+      ref NativeGraphStaffing output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_evaluate_staffing",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus EvaluateStaffing(
+      NativeGraphNodeId[] nodes,
+      UIntPtr nodeCount,
+      NativeGraphEdge[] edges,
+      UIntPtr edgeCount,
+      NativeGraphWorkItem[] workItems,
+      UIntPtr workItemCount,
+      NativeGraphAssignee[] assignees,
+      UIntPtr assigneeCount,
+      NativeGraphAssignee[] changes,
+      UIntPtr changeCount,
+      ref NativeGraphStaffingOptions options,
+      ref NativeGraphStaffing output);
   }
 }

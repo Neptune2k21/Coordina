@@ -4,9 +4,13 @@
 #include "interop/native_bridge.h"
 #include "planning/forecast.h"
 #include "planning/scope_cut.h"
+#include "planning/staffing.h"
 
-// The exports that simulate a milestone's work: its forecast, and what to cut
-// so it ships on time.
+#include <algorithm>
+#include <limits>
+
+// The exports that simulate a milestone's work: its forecast, what to cut so
+// it ships on time, and who should take which card.
 namespace
 {
 using coordina::graph::GraphSnapshot;
@@ -93,6 +97,44 @@ coordina_graph_status write_scope(
   }
 
   coordina::graph::write_scope_cut(cut, output);
+  return COORDINA_GRAPH_OK;
+}
+
+bool is_valid(const coordina_graph_staffing_options* options, const coordina_graph_staffing* output)
+{
+  return options != nullptr && output != nullptr && options->run_count > 0U
+    && options->person_count < std::numeric_limits<std::uint32_t>::max();
+}
+
+// A staffing call numbers its people below person_count; the model adds one
+// more, nobody in particular, whom no card names.
+bool names_people(
+  const coordina_graph_assignee* pairs,
+  std::size_t count,
+  std::uint32_t person_count)
+{
+  return !coordina::graph::is_missing(pairs, count)
+    && std::all_of(
+      pairs,
+      pairs + count,
+      [person_count](const coordina_graph_assignee& pair)
+      {
+        return pair.person < person_count;
+      });
+}
+
+coordina_graph_status write_plan(
+  const coordina::graph::StaffingPlan& plan,
+  coordina_graph_staffing& output)
+{
+  output.change_count = plan.changes.size();
+
+  if (!fits(output.change_count, output.changes, output.change_capacity))
+  {
+    return COORDINA_GRAPH_INSUFFICIENT_CAPACITY;
+  }
+
+  coordina::graph::write_staffing(plan, output);
   return COORDINA_GRAPH_OK;
 }
 }
@@ -233,6 +275,112 @@ extern "C" coordina_graph_status coordina_graph_evaluate_scope(
           coordina::graph::to_node_id(options->milestone),
           coordina::graph::build_node_ids(cuts, cut_count),
           coordina::graph::build_scope_options(*options)),
+        *output);
+    });
+}
+
+extern "C" coordina_graph_status coordina_graph_propose_staffing(
+  const coordina_graph_node_id* nodes,
+  std::size_t node_count,
+  const coordina_graph_edge* edges,
+  std::size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  std::size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  std::size_t assignee_count,
+  const std::uint32_t* receivers,
+  std::size_t receiver_count,
+  const coordina_graph_assignee* skilled,
+  std::size_t skilled_count,
+  const coordina_graph_staffing_options* options,
+  coordina_graph_staffing* output)
+{
+  if (!is_valid(options, output) || options->screen_run_count == 0U
+    || !names_people(assignees, assignee_count, options->person_count)
+    || !names_people(skilled, skilled_count, options->person_count)
+    || coordina::graph::is_missing(receivers, receiver_count)
+    || std::any_of(
+      receivers,
+      receivers + receiver_count,
+      [options](std::uint32_t person)
+      {
+        return person >= options->person_count;
+      }))
+  {
+    return COORDINA_GRAPH_INVALID_ARGUMENT;
+  }
+
+  return query_model(
+    nodes,
+    node_count,
+    edges,
+    edge_count,
+    work_items,
+    work_item_count,
+    assignees,
+    assignee_count,
+    options->milestone,
+    options->person_count + 1U,
+    [&](const ForecastModel& model, const std::vector<WorkItem>& items)
+    {
+      return write_plan(
+        coordina::graph::propose_staffing(
+          model,
+          items,
+          coordina::graph::StaffingTeam{
+            .receivers = std::vector<std::uint32_t>(receivers, receivers + receiver_count),
+            .assignees = coordina::graph::build_assignees(assignees, assignee_count),
+            .skilled = coordina::graph::build_assignees(skilled, skilled_count)
+          },
+          coordina::graph::build_staffing_options(*options)),
+        *output);
+    });
+}
+
+extern "C" coordina_graph_status coordina_graph_evaluate_staffing(
+  const coordina_graph_node_id* nodes,
+  std::size_t node_count,
+  const coordina_graph_edge* edges,
+  std::size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  std::size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  std::size_t assignee_count,
+  const coordina_graph_assignee* changes,
+  std::size_t change_count,
+  const coordina_graph_staffing_options* options,
+  coordina_graph_staffing* output)
+{
+  if (!is_valid(options, output) || !names_people(assignees, assignee_count, options->person_count)
+    || !names_people(changes, change_count, options->person_count))
+  {
+    return COORDINA_GRAPH_INVALID_ARGUMENT;
+  }
+
+  return query_model(
+    nodes,
+    node_count,
+    edges,
+    edge_count,
+    work_items,
+    work_item_count,
+    assignees,
+    assignee_count,
+    options->milestone,
+    options->person_count + 1U,
+    [&](const ForecastModel& model, const std::vector<WorkItem>& items)
+    {
+      return write_plan(
+        coordina::graph::evaluate_staffing(
+          model,
+          items,
+          coordina::graph::StaffingTeam{
+            .receivers = {},
+            .assignees = coordina::graph::build_assignees(assignees, assignee_count),
+            .skilled = {}
+          },
+          coordina::graph::build_assignees(changes, change_count),
+          coordina::graph::build_staffing_options(*options)),
         *output);
     });
 }

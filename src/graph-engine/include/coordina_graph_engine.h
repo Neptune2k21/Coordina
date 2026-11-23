@@ -254,6 +254,63 @@ typedef struct coordina_graph_scope_cut
   double p85_days;
 } coordina_graph_scope_cut;
 
+/* Options of coordina_graph_propose_staffing and coordina_graph_evaluate_staffing. */
+typedef struct coordina_graph_staffing_options
+{
+  coordina_graph_node_id milestone;
+  /* The same seed gives the same plan, whatever thread_count is. */
+  uint64_t seed;
+  /* Everyone the plan involves: the assignees of open cards and the receivers. */
+  uint32_t person_count;
+  /* Runs that measure the plan before and after. */
+  uint32_t run_count;
+  /* Runs that compare plans during the search, on the same draws. */
+  uint32_t screen_run_count;
+  /* 0 uses every core. */
+  uint32_t thread_count;
+  /* 1 lets the search move cards that already have assignees. */
+  uint32_t allow_reassignment;
+  /*
+   * The search compares at most evaluation_limit plans. When time_limit_ms is
+   * not 0, it also stops early enough for the whole call to end within it.
+   * Only the time limit makes the result depend on the machine.
+   */
+  uint32_t evaluation_limit;
+  uint32_t time_limit_ms;
+  uint32_t reserved;
+} coordina_graph_staffing_options;
+
+typedef struct coordina_graph_staff_change
+{
+  coordina_graph_node_id node;
+  /* The card's only assignee once the plan is applied. */
+  uint32_t person;
+  uint32_t reserved;
+  /* Working days from now until the card starts, if every card takes its likely time. */
+  double start_days_before;
+  double start_days_after;
+} coordina_graph_staff_change;
+
+/*
+ * Output of coordina_graph_propose_staffing and
+ * coordina_graph_evaluate_staffing. The caller owns the change buffer and
+ * sets its capacity; node_count is always enough. If it is too small the call
+ * returns COORDINA_GRAPH_INSUFFICIENT_CAPACITY, sets change_count and writes
+ * no change.
+ */
+typedef struct coordina_graph_staffing
+{
+  /* The cards to give to someone else, the first to start first. */
+  coordina_graph_staff_change* changes;
+  size_t change_capacity;
+  size_t change_count;
+  /* Working days until the scope is done, before and after: one chance in two, and 85%. */
+  double p50_days_before;
+  double p85_days_before;
+  double p50_days_after;
+  double p85_days_after;
+} coordina_graph_staffing;
+
 COORDINA_GRAPH_EXPORT const char* coordina_graph_version(void);
 
 COORDINA_GRAPH_EXPORT coordina_graph_edge_status coordina_graph_evaluate_edge(
@@ -436,6 +493,64 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_scope(
   size_t cut_count,
   const coordina_graph_scope_options* options,
   coordina_graph_scope_cut* output);
+
+/*
+ * Proposes who should take which card so a milestone ships soonest: its 85%
+ * date first, then its 50% one. Cards are scheduled as in
+ * coordina_graph_forecast, on the same random streams, with one difference
+ * that a plan can change: the team is whoever is assigned to an open card,
+ * and only they take unassigned cards; while no one is, a single person
+ * nobody in particular does the work. The assignees are those of every open
+ * card of the board, so the dates after are the forecast the milestone shows
+ * once the plan is applied.
+ *
+ * A change gives a card to one of the receivers, who becomes its only
+ * assignee. Cards in progress never move, nor cards with assignees unless
+ * allow_reassignment is 1. A card goes preferably to someone skilled for it,
+ * a skilled pair saying that person has done cards like it; giving it to
+ * someone else must ship the milestone two focus hours sooner. The search
+ * compares plans on screen_run_count runs (simulated annealing in a fixed
+ * number of chains), drops the changes the plan does not need, and proposes
+ * nothing when the plan found would not bring a date in.
+ *
+ * Returns COORDINA_GRAPH_INVALID_ARGUMENT when the milestone is not a node,
+ * run_count or screen_run_count is 0, or a person is outside person_count, and
+ * COORDINA_GRAPH_CYCLE when the open cards depend on each other in a loop.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_staffing(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  size_t assignee_count,
+  const uint32_t* receivers,
+  size_t receiver_count,
+  const coordina_graph_assignee* skilled,
+  size_t skilled_count,
+  const coordina_graph_staffing_options* options,
+  coordina_graph_staffing* output);
+
+/*
+ * Measures changes someone chose, each giving a card to one person, as
+ * coordina_graph_propose_staffing measures its plans. Cards outside the scope
+ * are ignored, and so are changes that give a card to its only assignee.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_staffing(
+  const coordina_graph_node_id* nodes,
+  size_t node_count,
+  const coordina_graph_edge* edges,
+  size_t edge_count,
+  const coordina_graph_work_item* work_items,
+  size_t work_item_count,
+  const coordina_graph_assignee* assignees,
+  size_t assignee_count,
+  const coordina_graph_assignee* changes,
+  size_t change_count,
+  const coordina_graph_staffing_options* options,
+  coordina_graph_staffing* output);
 
 #ifdef __cplusplus
 }

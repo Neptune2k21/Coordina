@@ -37,6 +37,17 @@ public sealed class WorkingDaysTests
   }
 
   [Theory]
+  [InlineData(0.0, "2026-11-18")]
+  [InlineData(0.9, "2026-11-18")]
+  [InlineData(1.0, "2026-11-19")]
+  [InlineData(1.0 - 1e-12, "2026-11-19")]
+  [InlineData(3.0, "2026-11-23")]
+  public void Start_IsTheWorkingDayAfterTheWorkBeforeIt(double workingDays, string expected)
+  {
+    Assert.Equal(DateOnly.Parse(expected, CultureInfo.InvariantCulture), WorkingDays.Start(Wednesday, workingDays));
+  }
+
+  [Theory]
   [InlineData("2026-11-17", 0)]
   [InlineData("2026-11-18", 1)]
   [InlineData("2026-11-20", 3)]

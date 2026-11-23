@@ -193,6 +193,18 @@ public interface IBoardStore
     DateTimeOffset updatedAt,
     CancellationToken cancellationToken);
 
+  /// <summary>
+  /// Makes each person the only assignee of their card, keeping the
+  /// assignment date of those already on it. Returns how many cards changed.
+  /// </summary>
+  Task<int> ReassignCardsAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    IReadOnlyCollection<BoardCardReassignment> reassignments,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken);
+
   /// <summary>Drops a user from every card of the workspace they were assigned to.</summary>
   Task UnassignFromWorkspaceAsync(
     Guid workspaceId,
@@ -219,6 +231,8 @@ public sealed record BoardCardMutation(
   bool IsCompleted,
   DateTimeOffset? CompletedAt,
   Guid? CompletedByUserId);
+
+public sealed record BoardCardReassignment(Guid CardId, Guid UserId);
 
 public sealed record BoardCardCompletion(
   bool IsCompleted,

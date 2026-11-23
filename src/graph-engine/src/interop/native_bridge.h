@@ -6,6 +6,7 @@
 #include "core/graph_snapshot.h"
 #include "planning/forecast.h"
 #include "planning/scope_cut.h"
+#include "planning/staffing.h"
 #include "planning/work_planner.h"
 
 #include <cstddef>
@@ -47,6 +48,11 @@ ScopeOptions build_scope_options(const coordina_graph_scope_options& options) no
 
 // Writes every card; the caller has checked both capacities.
 void write_scope_cut(const ScopeCut& cut, coordina_graph_scope_cut& output);
+
+StaffingOptions build_staffing_options(const coordina_graph_staffing_options& options) noexcept;
+
+// Writes every change; the caller has checked the capacity.
+void write_staffing(const StaffingPlan& plan, coordina_graph_staffing& output);
 
 std::size_t write_card_forecasts(
   const std::vector<CardForecast>& cards,

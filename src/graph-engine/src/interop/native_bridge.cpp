@@ -212,6 +212,38 @@ void write_scope_cut(const ScopeCut& cut, coordina_graph_scope_cut& output)
   output.p85_days = cut.p85_days;
 }
 
+StaffingOptions build_staffing_options(const coordina_graph_staffing_options& options) noexcept
+{
+  return StaffingOptions{
+    .seed = options.seed,
+    .run_count = options.run_count,
+    .screen_run_count = options.screen_run_count,
+    .thread_count = options.thread_count,
+    .allow_reassignment = options.allow_reassignment != 0U,
+    .evaluation_limit = options.evaluation_limit,
+    .time_limit = std::chrono::milliseconds(options.time_limit_ms)
+  };
+}
+
+void write_staffing(const StaffingPlan& plan, coordina_graph_staffing& output)
+{
+  for (std::size_t index = 0U; index < plan.changes.size(); ++index)
+  {
+    output.changes[index] = coordina_graph_staff_change{
+      .node = to_abi_node_id(plan.changes[index].node),
+      .person = plan.changes[index].person,
+      .reserved = 0U,
+      .start_days_before = plan.changes[index].start_days_before,
+      .start_days_after = plan.changes[index].start_days_after
+    };
+  }
+
+  output.p50_days_before = plan.p50_days_before;
+  output.p85_days_before = plan.p85_days_before;
+  output.p50_days_after = plan.p50_days_after;
+  output.p85_days_after = plan.p85_days_after;
+}
+
 std::size_t write_card_forecasts(
   const std::vector<CardForecast>& cards,
   coordina_graph_card_forecast* output,

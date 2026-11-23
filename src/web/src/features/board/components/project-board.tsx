@@ -76,6 +76,7 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
     metrics,
     milestones,
     milestoneScope,
+    milestoneStaffing,
     myCardCount,
     notice,
     planningPreferences,
@@ -217,6 +218,8 @@ export function ProjectBoard({ project, workspace }: ProjectBoardProps) {
           milestones={milestones}
           onSelectCard={setSelectedCardId}
           scopeActions={milestoneScope}
+          staffingActions={milestoneStaffing}
+          members={members}
           isReadOnly={isReadOnly}
         />
         {isPlanningPanelVisible ? (

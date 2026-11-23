@@ -597,6 +597,8 @@ public static class BoardsEndpoints
       .Produces<BoardResponse>(StatusCodes.Status200OK)
       .WithSummary("Cut a milestone's scope")
       .WithDescription("Takes the chosen cards out of the milestone: it stops depending on every card that leaves its scope with them. No card is deleted.");
+
+    MapStaffingEndpoints(milestone);
   }
 
   private static async Task<IResult> GetMilestones(
@@ -672,6 +674,90 @@ public static class BoardsEndpoints
     CancellationToken cancellationToken)
   {
     var result = await scopes.CutAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      milestoneId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static void MapStaffingEndpoints(RouteGroupBuilder milestone)
+  {
+    milestone.MapPost("/staffing-proposal", ProposeStaffing)
+      .Produces<BoardMilestoneStaffingResponse>(StatusCodes.Status200OK)
+      .WithSummary("Propose who does what on a milestone")
+      .WithDescription("Proposes which people should take which cards so the milestone ships soonest: its 85% date first, then its 50% one. A card only goes to one of the people named (by default whoever is assigned to an open card of the board, or the whole workspace when nobody is), preferably to someone who has completed cards with one of its labels. Cards in progress never move, nor cards that have assignees unless allowReassignment is set. Changes nothing.");
+
+    milestone.MapPost("/staffing-evaluation", EvaluateStaffing)
+      .Produces<BoardMilestoneStaffingResponse>(StatusCodes.Status200OK)
+      .WithSummary("Measure who does what on a milestone")
+      .WithDescription("Returns what giving the chosen cards to the chosen people would buy, as a proposal does. Changes nothing.");
+
+    milestone.MapPost("/staffing", ApplyStaffing)
+      .Produces<BoardResponse>(StatusCodes.Status200OK)
+      .WithSummary("Give cards to people")
+      .WithDescription("Makes each chosen person the only assignee of their card.");
+  }
+
+  private static async Task<IResult> ProposeStaffing(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid milestoneId,
+    BoardMilestoneStaffingRequest request,
+    CurrentUser user,
+    IBoardMilestoneStaffingService staffing,
+    CancellationToken cancellationToken)
+  {
+    var result = await staffing.ProposeAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      milestoneId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> EvaluateStaffing(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid milestoneId,
+    BoardMilestoneStaffChangesRequest request,
+    CurrentUser user,
+    IBoardMilestoneStaffingService staffing,
+    CancellationToken cancellationToken)
+  {
+    var result = await staffing.EvaluateAsync(
+      workspaceId,
+      projectId,
+      boardId,
+      milestoneId,
+      request,
+      user.Id,
+      cancellationToken);
+
+    return result.ToOkResult();
+  }
+
+  private static async Task<IResult> ApplyStaffing(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    Guid milestoneId,
+    BoardMilestoneStaffChangesRequest request,
+    CurrentUser user,
+    IBoardMilestoneStaffingService staffing,
+    CancellationToken cancellationToken)
+  {
+    var result = await staffing.ApplyAsync(
       workspaceId,
       projectId,
       boardId,

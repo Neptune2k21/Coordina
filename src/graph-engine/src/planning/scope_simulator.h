@@ -22,9 +22,10 @@ struct ScopeSample
   double p85_hours = 0.0;
 };
 
-// Simulates versions of a scope on the cards' own random streams, so every
-// version is measured on the same draws and their differences come from the
-// cut alone. Every buffer is allocated once, for the largest run count.
+// Simulates versions of a scope, which cards stay and who takes them, on the
+// cards' own random streams, so every version is measured on the same draws
+// and their differences come from the change alone. Every buffer is allocated
+// once, for the largest run count.
 class ScopeSimulator
 {
 public:
@@ -37,7 +38,8 @@ public:
   ScopeSample run(
     std::span<const std::uint8_t> active,
     std::size_t runs,
-    std::vector<double>* contribution);
+    std::vector<double>* contribution,
+    const Staffing& staffing = {});
 
 private:
   struct Runner
@@ -60,6 +62,7 @@ private:
   void simulate(
     Runner& runner,
     std::span<const std::uint8_t> active,
+    const Staffing& staffing,
     std::size_t first,
     std::size_t end,
     Chunk& chunk,

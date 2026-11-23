@@ -1,5 +1,6 @@
 #include "planning/sampling.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace coordina::graph
@@ -36,6 +37,22 @@ CardStreams::CardStreams(std::uint64_t seed, const std::vector<NodeId>& cards)
 double CardStreams::unit(std::size_t card, std::uint64_t run) const noexcept
 {
   return to_unit(mix(keys_[card] ^ ((run + 1U) * golden_gamma)));
+}
+
+SplitMix::SplitMix(std::uint64_t seed) noexcept : state_(mix(seed))
+{
+}
+
+double SplitMix::unit() noexcept
+{
+  state_ += golden_gamma;
+  return to_unit(mix(state_));
+}
+
+std::size_t SplitMix::below(std::size_t bound) noexcept
+{
+  const auto drawn = static_cast<std::size_t>(unit() * static_cast<double>(bound));
+  return std::min(drawn, bound - 1U);
 }
 
 Triangular::Triangular(const SizeRange& range) noexcept

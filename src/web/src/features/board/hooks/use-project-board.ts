@@ -5,6 +5,7 @@ import { getPlanningPreferences } from "@/features/board/api/board-api"
 import { useBoardFilters } from "@/features/board/hooks/use-board-filters"
 import { useBoardMutations } from "@/features/board/hooks/use-board-mutations"
 import { useMilestoneScope } from "@/features/board/hooks/use-milestone-scope"
+import { useMilestoneStaffing } from "@/features/board/hooks/use-milestone-staffing"
 import {
   useBoardResource,
   useCardDependencyAnalysis,
@@ -78,6 +79,11 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     clearError,
   })
   const milestoneScope = useMilestoneScope({
+    ...scope,
+    boardId: board?.id,
+    setBoard: resource.setBoard,
+  })
+  const milestoneStaffing = useMilestoneStaffing({
     ...scope,
     boardId: board?.id,
     setBoard: resource.setBoard,
@@ -267,6 +273,7 @@ export function useProjectBoard(project: Project, workspace: Workspace) {
     metrics,
     milestones: resource.milestones,
     milestoneScope,
+    milestoneStaffing,
     myCardCount,
     notice: mutations.notice,
     planningPreferences,

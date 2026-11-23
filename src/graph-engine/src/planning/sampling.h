@@ -26,6 +26,21 @@ private:
   std::vector<std::uint64_t> keys_;
 };
 
+// A fast stream of random numbers for searches (splitmix64): the same seed
+// gives the same numbers on every machine.
+class SplitMix
+{
+public:
+  explicit SplitMix(std::uint64_t seed = 0U) noexcept;
+
+  double unit() noexcept;
+  // A number from 0 to bound - 1; bound is not 0.
+  std::size_t below(std::size_t bound) noexcept;
+
+private:
+  std::uint64_t state_;
+};
+
 // The inverse of the triangular distribution's CDF over a size's range: the
 // ranges lean high, so cards slip further than they come in early.
 class Triangular
