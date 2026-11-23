@@ -311,6 +311,37 @@ int main()
     COORDINA_FIELD(coordina_graph_scope_cut, p50_days),
     COORDINA_FIELD(coordina_graph_scope_cut, p85_days));
 
+  COORDINA_STRUCT(
+    coordina_graph_staffing_options,
+    COORDINA_FIELD(coordina_graph_staffing_options, milestone),
+    COORDINA_FIELD(coordina_graph_staffing_options, seed),
+    COORDINA_FIELD(coordina_graph_staffing_options, person_count),
+    COORDINA_FIELD(coordina_graph_staffing_options, run_count),
+    COORDINA_FIELD(coordina_graph_staffing_options, screen_run_count),
+    COORDINA_FIELD(coordina_graph_staffing_options, thread_count),
+    COORDINA_FIELD(coordina_graph_staffing_options, allow_reassignment),
+    COORDINA_FIELD(coordina_graph_staffing_options, evaluation_limit),
+    COORDINA_FIELD(coordina_graph_staffing_options, time_limit_ms),
+    COORDINA_FIELD(coordina_graph_staffing_options, reserved));
+
+  COORDINA_STRUCT(
+    coordina_graph_staff_change,
+    COORDINA_FIELD(coordina_graph_staff_change, node),
+    COORDINA_FIELD(coordina_graph_staff_change, person),
+    COORDINA_FIELD(coordina_graph_staff_change, reserved),
+    COORDINA_FIELD(coordina_graph_staff_change, start_days_before),
+    COORDINA_FIELD(coordina_graph_staff_change, start_days_after));
+
+  COORDINA_STRUCT(
+    coordina_graph_staffing,
+    COORDINA_FIELD(coordina_graph_staffing, changes),
+    COORDINA_FIELD(coordina_graph_staffing, change_capacity),
+    COORDINA_FIELD(coordina_graph_staffing, change_count),
+    COORDINA_FIELD(coordina_graph_staffing, p50_days_before),
+    COORDINA_FIELD(coordina_graph_staffing, p85_days_before),
+    COORDINA_FIELD(coordina_graph_staffing, p50_days_after),
+    COORDINA_FIELD(coordina_graph_staffing, p85_days_after));
+
   std::printf("\n  ],\n  \"enums\": [");
   first_entry = true;
 

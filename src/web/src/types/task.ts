@@ -21,6 +21,9 @@ export type BoardMilestone = Schemas["BoardMilestoneResponse"]
 export type BoardMilestoneStatus = BoardMilestone["status"]
 export type BoardMilestoneScope = Schemas["BoardMilestoneScopeResponse"]
 export type BoardMilestoneCut = Schemas["BoardMilestoneCutResponse"]
+export type BoardMilestoneStaffing = Schemas["BoardMilestoneStaffingResponse"]
+export type BoardMilestoneStaffChange =
+  Schemas["BoardMilestoneStaffChangeResponse"]
 export type BoardCardDependencyAnalysis =
   Schemas["BoardCardDependencyAnalysisResponse"]
 export type BoardTemplateDefinition = Schemas["BoardTemplateResponse"]

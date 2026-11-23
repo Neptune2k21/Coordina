@@ -138,29 +138,17 @@ public sealed class BoardMilestoneScopeService(
     Func<ProjectBoard, Result<ScopeCut>> measure,
     CancellationToken cancellationToken)
   {
-    var access = await projectAccess.AuthorizeReadAsync(
-      target.WorkspaceId,
-      target.ProjectId,
-      target.UserId,
+    var board = await boards.FindReadableAsync(
+      projectAccess,
+      new BoardTarget(target.WorkspaceId, target.ProjectId, target.BoardId, target.UserId),
       cancellationToken);
 
-    if (!access.IsSuccess)
+    if (!board.IsSuccess)
     {
-      return access.Error;
+      return board.Error;
     }
 
-    var board = await boards.FindInProjectAsync(
-      target.WorkspaceId,
-      target.ProjectId,
-      target.BoardId,
-      cancellationToken);
-
-    if (board is null)
-    {
-      return Error.NotFound();
-    }
-
-    var cut = measure(board);
+    var cut = measure(board.Value);
 
     return cut.IsSuccess ? Result.Success(cut.Value.ToResponse()) : cut.Error;
   }

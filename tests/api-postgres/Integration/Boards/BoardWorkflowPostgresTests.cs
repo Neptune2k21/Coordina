@@ -295,7 +295,63 @@ public sealed class BoardWorkflowPostgresTests(PostgresContainerFixture postgres
       $"SELECT count(*) FROM board_cards WHERE id IN ('{string.Join("', '", cards.Values)}')"));
   }
 
+  [Fact]
+  public async Task MilestoneStaffing_MakesEachPersonTheOnlyAssigneeOfTheirCard()
+  {
+    var flow = await CreateFlowAsync("BASIC", null);
+    var ownerId = await Database.ScalarAsync<Guid>(
+      $"SELECT user_id FROM workspace_members WHERE workspace_id = '{flow.WorkspaceId}'");
+    var member = await Api.RegisterAsync();
+    var invite = await Api.SendForAsync<InviteResponse>(
+      HttpMethod.Post, $"/workspaces/{flow.WorkspaceId}/invites", flow.AccessToken);
+    (await Api.SendAsync(HttpMethod.Post, "/workspaces/join", member.AccessToken, new { inviteCode = invite.Code }))
+      .EnsureSuccessStatusCode();
+    var todo = flow.Board.Lists.Single(list => list.TaskStatus == "TODO");
+    var cards = new Dictionary<string, Guid>(StringComparer.Ordinal);
+
+    foreach (var (title, assigneeIds) in new[] { ("Export", new[] { ownerId }), ("Import", []), ("Launch", []) })
+    {
+      var board = await Api.SendForAsync<BoardResponse>(
+        HttpMethod.Post,
+        $"{flow.BoardPath}/lists/{todo.Id}/cards",
+        flow.AccessToken,
+        new { title, size = "M", assigneeIds });
+      cards[title] = board.Lists.SelectMany(list => list.Cards).Single(card => card.Title == title).Id;
+    }
+
+    await Api.SendForAsync<BoardResponse>(
+      HttpMethod.Patch,
+      $"{flow.BoardPath}/cards/{cards["Launch"]}",
+      flow.AccessToken,
+      new { milestoneDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30) });
+    var changes = new[]
+    {
+      new { cardId = cards["Export"], userId = member.Id },
+      new { cardId = cards["Import"], userId = member.Id }
+    };
+
+    // Applying the same plan twice changes nothing the second time.
+    for (var attempt = 0; attempt < 2; attempt++)
+    {
+      await Api.SendForAsync<BoardResponse>(
+        HttpMethod.Post,
+        $"{flow.BoardPath}/milestones/{cards["Launch"]}/staffing",
+        flow.AccessToken,
+        new { changes });
+    }
+
+    foreach (var title in new[] { "Export", "Import" })
+    {
+      Assert.Equal(member.Id, await Database.ScalarAsync<Guid>(
+        $"SELECT user_id FROM board_card_assignees WHERE card_id = '{cards[title]}'"));
+      Assert.Equal(1L, await Database.ScalarAsync<long>(
+        $"SELECT count(*) FROM board_card_assignees WHERE card_id = '{cards[title]}'"));
+    }
+  }
+
   private sealed record MilestoneResponse(Guid CardId, DateOnly TargetDate, string Status);
+
+  private sealed record InviteResponse(string Code);
 
   private async Task<Flow> CreateFlowAsync(string template, string[]? customListTitles)
   {

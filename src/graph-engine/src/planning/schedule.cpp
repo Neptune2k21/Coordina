@@ -31,21 +31,20 @@ constexpr bool finishes_later(
 
 Scheduler::Scheduler(const ForecastModel& model)
     : model_(&model), cards_(model.card_count()), last_card_(model.person_count()),
-      free_people_((model.person_count() + word_bits - 1U) / word_bits),
+      free_people_((model.person_count() + word_bits - 1U) / word_bits), pool_(free_people_.size()),
       own_(model.person_count(), ReadySet(model.card_count())), shared_(model.card_count())
 {
   running_.reserve(model.person_count());
 }
 
-double Scheduler::run(std::span<const double> hours)
-{
-  return run(hours, {});
-}
-
-double Scheduler::run(std::span<const double> hours, std::span<const std::uint8_t> active)
+double Scheduler::run(
+  std::span<const double> hours,
+  std::span<const std::uint8_t> active,
+  const Staffing& staffing)
 {
   const auto count = model_->card_count();
   hours_ = hours;
+  staff(staffing);
   std::ranges::fill(last_card_, no_card);
   std::ranges::fill(free_people_, ~std::uint64_t{0U});
   running_.clear();
@@ -150,9 +149,39 @@ void Scheduler::leave_out(std::span<const std::uint8_t> active) noexcept
   }
 }
 
+void Scheduler::staff(const Staffing& staffing) noexcept
+{
+  chosen_ = staffing.people;
+
+  if (!staffing.pool.empty())
+  {
+    std::ranges::fill(pool_, 0U);
+    const auto words = std::min(staffing.pool.size(), pool_.size());
+    std::ranges::copy(staffing.pool.first(words), pool_.begin());
+    return;
+  }
+
+  std::ranges::fill(pool_, ~std::uint64_t{0U});
+
+  if (const auto extra = model_->person_count() % word_bits; extra != 0U)
+  {
+    pool_.back() = (std::uint64_t{1U} << extra) - 1U;
+  }
+}
+
+std::span<const std::uint32_t> Scheduler::people(std::size_t card) const noexcept
+{
+  if (!chosen_.empty() && chosen_[card] != Staffing::keep_assignees)
+  {
+    return chosen_.subspan(card, 1U);
+  }
+
+  return model_->people(card);
+}
+
 void Scheduler::release(std::size_t card) noexcept
 {
-  const auto people = model_->people(card);
+  const auto people = this->people(card);
 
   if (people.empty())
   {
@@ -174,10 +203,12 @@ bool Scheduler::is_free(std::uint32_t person) const noexcept
 std::size_t Scheduler::next_card() const noexcept
 {
   auto next = none;
-  auto anyone_free = false;
+  auto pool_free = false;
 
   for (std::size_t word = 0U; word < free_people_.size(); ++word)
   {
+    pool_free = pool_free || (free_people_[word] & pool_[word]) != 0U;
+
     for (auto bits = free_people_[word]; bits != 0U; bits &= bits - 1U)
     {
       const auto person = (word * word_bits) + static_cast<std::size_t>(std::countr_zero(bits));
@@ -187,25 +218,25 @@ std::size_t Scheduler::next_card() const noexcept
         break;
       }
 
-      anyone_free = true;
       next = std::min(next, own_[person].min());
     }
   }
 
-  return anyone_free ? std::min(next, shared_.min()) : none;
+  return pool_free ? std::min(next, shared_.min()) : next;
 }
 
 std::uint32_t Scheduler::person_for(std::size_t card) const noexcept
 {
-  const auto people = model_->people(card);
+  const auto people = this->people(card);
 
   if (people.empty())
   {
-    for (std::uint32_t person = 0U; person < own_.size(); ++person)
+    for (std::size_t word = 0U; word < free_people_.size(); ++word)
     {
-      if (is_free(person))
+      if (const auto bits = free_people_[word] & pool_[word]; bits != 0U)
       {
-        return person;
+        return static_cast<std::uint32_t>(
+          (word * word_bits) + static_cast<std::size_t>(std::countr_zero(bits)));
       }
     }
   }
@@ -226,7 +257,7 @@ void Scheduler::start_cards(double now)
   for (auto card = next_card(); card != none; card = next_card())
   {
     const auto person = person_for(card);
-    const auto people = model_->people(card);
+    const auto people = this->people(card);
 
     if (people.empty())
     {

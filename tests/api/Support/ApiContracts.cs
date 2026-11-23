@@ -171,6 +171,25 @@ public sealed record BoardMilestoneCutResponse(
 
 public sealed record BoardMilestoneCutCardResponse(string CardId, string Title);
 
+public sealed record BoardMilestoneStaffingResponse(
+  string MilestoneId,
+  DateOnly TargetDate,
+  DateOnly ForecastDateBefore,
+  DateOnly CommitDateBefore,
+  DateOnly ForecastDateAfter,
+  DateOnly CommitDateAfter,
+  IReadOnlyCollection<BoardCardAssigneeResponse> People,
+  IReadOnlyCollection<BoardMilestoneStaffChangeResponse> Changes);
+
+public sealed record BoardMilestoneStaffChangeResponse(
+  string CardId,
+  string Title,
+  IReadOnlyCollection<BoardCardAssigneeResponse> From,
+  BoardCardAssigneeResponse To,
+  DateOnly StartBefore,
+  DateOnly StartAfter,
+  IReadOnlyCollection<string> MatchingLabels);
+
 public sealed record BoardMilestoneDriverResponse(
   string CardId,
   string Title,

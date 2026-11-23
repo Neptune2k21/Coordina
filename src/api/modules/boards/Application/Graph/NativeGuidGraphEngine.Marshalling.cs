@@ -299,6 +299,39 @@ public sealed partial class NativeGuidGraphEngine
   }
 
   [StructLayout(LayoutKind.Sequential)]
+  private record struct NativeGraphStaffingOptions(
+    NativeGraphNodeId Milestone,
+    ulong Seed,
+    uint PersonCount,
+    uint RunCount,
+    uint ScreenRunCount,
+    uint ThreadCount,
+    uint AllowReassignment,
+    uint EvaluationLimit,
+    uint TimeLimitMs,
+    uint Reserved);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphStaffChange(
+    NativeGraphNodeId Node,
+    uint Person,
+    uint Reserved,
+    double StartDaysBefore,
+    double StartDaysAfter);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphStaffing
+  {
+    public IntPtr Changes;
+    public UIntPtr ChangeCapacity;
+    public UIntPtr ChangeCount;
+    public double P50DaysBefore;
+    public double P85DaysBefore;
+    public double P50DaysAfter;
+    public double P85DaysAfter;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
   private struct NativeGraphMilestoneForecast
   {
     public IntPtr Cards;

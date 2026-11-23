@@ -1,4 +1,5 @@
 #include "benchmark_board.h"
+#include "benchmark_planning.h"
 #include "coordina_graph_engine.h"
 
 #include <algorithm>
@@ -6,7 +7,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <limits>
 #include <string>
 #include <vector>
 
@@ -151,133 +151,6 @@ bool same_ranking(const BoardGraph& graph, const coordina_graph_planning_options
   }
 
   return true;
-}
-
-constexpr std::uint32_t forecast_runs = 2000U;
-constexpr std::uint32_t forecast_team = 5U;
-
-// Forecasts a release that depends on every card of the board, so its scope
-// is the whole board. Assigned cards are spread over a team of five.
-struct ForecastResult
-{
-  coordina_graph_status status;
-  coordina_graph_milestone_forecast output;
-};
-
-BoardGraph with_release(const BoardGraph& board)
-{
-  auto graph = board;
-  const auto release = node(board.nodes.size());
-  graph.nodes.push_back(release);
-
-  for (const auto card : board.nodes)
-  {
-    graph.edges.push_back(coordina_graph_edge{release, card});
-  }
-
-  coordina_graph_work_item item{};
-  item.node = release;
-  item.due_days = std::numeric_limits<std::int32_t>::max();
-  item.position = static_cast<std::uint32_t>(board.nodes.size());
-  item.size = COORDINA_GRAPH_SIZE_XS;
-  graph.items.push_back(item);
-  return graph;
-}
-
-std::vector<coordina_graph_assignee> team_of(const BoardGraph& graph)
-{
-  std::vector<coordina_graph_assignee> assignees;
-
-  for (std::size_t index = 0U; index < graph.items.size(); ++index)
-  {
-    if (graph.items[index].assignment != COORDINA_GRAPH_UNASSIGNED)
-    {
-      assignees.push_back(
-        coordina_graph_assignee{
-          graph.items[index].node,
-          static_cast<std::uint32_t>(index % forecast_team),
-          0U
-        });
-    }
-  }
-
-  return assignees;
-}
-
-ForecastResult run_forecast(const BoardGraph& graph, std::uint32_t thread_count)
-{
-  const auto assignees = team_of(graph);
-  std::vector<coordina_graph_card_forecast> cards(graph.nodes.size());
-  ForecastResult result{COORDINA_GRAPH_OK, {}};
-  result.output.cards = cards.data();
-  result.output.card_capacity = cards.size();
-  const coordina_graph_forecast_options
-    options{graph.nodes.back(), 42U, forecast_team, forecast_runs, thread_count, 0U};
-  result.status = coordina_graph_forecast(
-    graph.nodes.data(),
-    graph.nodes.size(),
-    graph.edges.data(),
-    graph.edges.size(),
-    graph.items.data(),
-    graph.items.size(),
-    assignees.data(),
-    assignees.size(),
-    &options,
-    &result.output);
-  result.output.cards = nullptr;
-  return result;
-}
-
-// The API's settings: the whole proposal fits in 450 ms, which leaves room
-// under the half second the issue asks for.
-constexpr std::uint32_t scope_time_limit_ms = 450U;
-constexpr double scope_budget_ms = 500.0;
-
-struct ScopeResult
-{
-  coordina_graph_status status;
-  coordina_graph_scope_cut output;
-};
-
-// Asks for the release to ship in 70% of its likely time.
-ScopeResult run_scope(const BoardGraph& graph, double p50_days)
-{
-  const auto assignees = team_of(graph);
-  std::vector<coordina_graph_node_id> cuts(graph.nodes.size());
-  std::vector<coordina_graph_dropped_card> dropped(graph.nodes.size());
-  ScopeResult result{COORDINA_GRAPH_OK, {}};
-  result.output.cuts = cuts.data();
-  result.output.cut_capacity = cuts.size();
-  result.output.dropped = dropped.data();
-  result.output.dropped_capacity = dropped.size();
-  const coordina_graph_scope_options options{
-    .milestone = graph.nodes.back(),
-    .seed = 42U,
-    .target_hours = p50_days * 6.0 * 0.7,
-    .goal = 0.85,
-    .person_count = forecast_team,
-    .run_count = forecast_runs,
-    .screen_run_count = 256U,
-    .thread_count = 0U,
-    .evaluation_limit = 120U,
-    .time_limit_ms = scope_time_limit_ms
-  };
-  result.status = coordina_graph_propose_scope(
-    graph.nodes.data(),
-    graph.nodes.size(),
-    graph.edges.data(),
-    graph.edges.size(),
-    graph.items.data(),
-    graph.items.size(),
-    assignees.data(),
-    assignees.size(),
-    nullptr,
-    0U,
-    &options,
-    &result.output);
-  result.output.cuts = nullptr;
-  result.output.dropped = nullptr;
-  return result;
 }
 
 int runs_for(std::size_t size)
@@ -434,6 +307,51 @@ int main(int argc, char** argv)
       result.output.dropped_count,
       result.output.on_time_before,
       result.output.on_time_after,
+      elapsed,
+      within_budget ? "ok" : "FAILED");
+
+    if (!within_budget)
+    {
+      return 1;
+    }
+  }
+
+  std::printf(
+    "\n%8s %8s %8s %10s %10s %12s %7s\n",
+    "nodes",
+    "people",
+    "changes",
+    "p85_days",
+    "after",
+    "staffing_ms",
+    "budget");
+
+  for (const auto size : sizes)
+  {
+    const auto graph = with_release(build_board(size));
+    StaffingResult result{COORDINA_GRAPH_OK, {}};
+    const auto elapsed = median_milliseconds(
+      size <= 1000U ? 3 : 1,
+      [&]
+      {
+        result = run_staffing(graph);
+      });
+    const auto within_budget = size > 1000U || elapsed < staffing_budget_ms;
+
+    if (result.status != COORDINA_GRAPH_OK
+      || result.output.p85_days_after > result.output.p85_days_before)
+    {
+      std::fprintf(stderr, "staffing proposal failed with status %d\n", result.status);
+      return 1;
+    }
+
+    std::printf(
+      "%8zu %8u %8zu %10.1f %10.1f %12.3f %7s\n",
+      size,
+      staffing_team,
+      result.output.change_count,
+      result.output.p85_days_before,
+      result.output.p85_days_after,
       elapsed,
       within_budget ? "ok" : "FAILED");
 

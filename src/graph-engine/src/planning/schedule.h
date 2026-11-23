@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <vector>
 
@@ -21,6 +22,19 @@ struct ScheduledCard
 
 // Time counts focus hours on a shared clock: day d runs from
 // d * focus_hours_per_day to the start of day d + 1.
+// Who takes the cards in a run where a plan changes the model's assignees.
+struct Staffing
+{
+  static constexpr auto keep_assignees = std::numeric_limits<std::uint32_t>::max();
+
+  // One per card: the only person who may take it, or keep_assignees for the
+  // model's own. Empty keeps every card's.
+  std::span<const std::uint32_t> people;
+  // Bit p of word p / 64 marks the people who take the cards nobody is
+  // assigned to. Empty means everyone does.
+  std::span<const std::uint64_t> pool;
+};
+
 struct Schedule
 {
   std::vector<ScheduledCard> cards;
@@ -33,7 +47,8 @@ struct Schedule
 // Simulates one way the work unfolds. Each person works on one card at a
 // time and a card starts once its open dependencies are done. Whenever people
 // are free, the first card in order that one of them can take goes to the
-// first of them who can: one of its assignees, or anyone when it has none.
+// first of them who can: one of its assignees, or anyone in the pool when it
+// has none.
 //
 // A scheduler owns every buffer a run needs, so running it again allocates
 // nothing: the forecast keeps one per thread for thousands of runs.
@@ -42,11 +57,13 @@ class Scheduler
 public:
   explicit Scheduler(const ForecastModel& model);
 
-  // One duration per card; returns when the last card is done.
-  double run(std::span<const double> hours);
-  // Leaves out the cards whose active flag is 0, as if they were not in the
-  // scope: they never start, and the active cards stop waiting for them.
-  double run(std::span<const double> hours, std::span<const std::uint8_t> active);
+  // One duration per card; returns when the last card is done. When active is
+  // not empty, the cards whose flag is 0 are left out, as if they were not in
+  // the scope: they never start, and the active cards stop waiting for them.
+  double run(
+    std::span<const double> hours,
+    std::span<const std::uint8_t> active = {},
+    const Staffing& staffing = {});
   void driving_chain(std::vector<std::size_t>& chain) const;
   Schedule schedule() const;
 
@@ -70,6 +87,8 @@ private:
   };
 
   void leave_out(std::span<const std::uint8_t> active) noexcept;
+  void staff(const Staffing& staffing) noexcept;
+  std::span<const std::uint32_t> people(std::size_t card) const noexcept;
   void release(std::size_t card) noexcept;
   std::size_t next_card() const noexcept;
   std::uint32_t person_for(std::size_t card) const noexcept;
@@ -82,6 +101,8 @@ private:
   std::vector<CardState> cards_;
   std::vector<std::uint32_t> last_card_;
   std::vector<std::uint64_t> free_people_;
+  std::vector<std::uint64_t> pool_;
+  std::span<const std::uint32_t> chosen_;
   std::vector<ReadySet> own_;
   ReadySet shared_;
   std::vector<Running> running_;

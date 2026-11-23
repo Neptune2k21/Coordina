@@ -35,6 +35,10 @@ public static class WorkingDays
     return count;
   }
 
+  /// <summary>The date work starts once <paramref name="workingDays"/> of work from <paramref name="today"/> are done.</summary>
+  public static DateOnly Start(DateOnly today, double workingDays) =>
+    Finish(today, Math.Floor(Math.Max(0, workingDays) + 1e-9) + 1);
+
   /// <summary>The date a stretch of <paramref name="workingDays"/> started on <paramref name="today"/> ends.</summary>
   public static DateOnly Finish(DateOnly today, double workingDays)
   {

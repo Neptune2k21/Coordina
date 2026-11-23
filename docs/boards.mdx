@@ -180,8 +180,9 @@ The forecast is as good as what the board says, and it knows nothing else:
   it is not tracked yet.
 - Work outside the board, and cards outside the milestone's scope, take
   nobody's time, so a team busy elsewhere makes the forecast optimistic.
-- Unassigned cards go to whoever is free; the forecast does not decide who
-  should do what, or reorder work to ship sooner.
+- Unassigned cards go to whoever is free. The forecast does not decide who
+  should do what ([Who does what](#who-does-what) proposes that) or reorder
+  work to ship sooner.
 - Sizes are ranges, not measurements: until forecasts are calibrated on how
   long cards really take, a team that is systematically slow or fast shifts
   every date the same way.
@@ -259,14 +260,104 @@ a card measures the others again; **Take out** applies the cut.
   someone says so.
 - When 85% cannot be reached, the proposal is the best chance it found. It
   proposes nothing when no cut raises the chance at all.
-- It only cuts whole cards. Splitting a large card, or moving work to someone
-  else, can also save a date; the engine does not suggest either yet.
+- It only cuts whole cards. Splitting a large card can also save a date; the
+  engine does not suggest it yet. Moving work to someone else is what
+  [Who does what](#who-does-what) proposes.
+
+### Who does what
+
+On any milestone with work left, the engine can propose who should take which
+card so it ships sooner, as a list of changes to accept one by one.
+
+```http
+POST /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-proposal
+     { "people": ["..."], "allowReassignment": false }
+POST /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-evaluation
+     { "changes": [{ "cardId": "...", "userId": "..." }] }
+POST /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing
+     { "changes": [{ "cardId": "...", "userId": "..." }] }
+```
+
+A change gives a card to one person, who becomes its only assignee: applying
+it (`staffing`) changes the card's assignees and nothing else. The proposal
+and the evaluation change nothing, and anyone who can read the project can
+ask for them; applying needs write access, and only open cards of the board
+can be given (`400`). Everyone named must belong to the workspace (`400`). A
+done milestone cannot be planned (`400`).
+
+**What a proposal looks for.** The plan that ships the milestone soonest: its
+85% date first, then its 50% one. The constraints:
+
+- A card only goes to one of `people`. Without them, the proposal plans with
+  the people assigned to open cards of the board, or with the whole
+  workspace when nobody is.
+- A card that has assignees stays with them unless `allowReassignment` is
+  set. A card in progress never moves.
+- A card goes preferably to someone who has completed cards with one of its
+  labels (an assignee of a done card, or whoever completed it when it had
+  none). Giving it to someone else costs the plan two focus hours: it only
+  happens when that ships the milestone sooner than that.
+
+**The dates are the forecast's.** Plans are measured exactly as the forecast
+measures the board, on the same random streams, with one rule made explicit:
+the team is whoever is assigned to an open card, and only they pick up
+unassigned cards. Giving a card to someone outside the team brings them in;
+taking someone's last card off them takes them out. So the dates after a
+proposal are the ones the milestone shows once it is applied, to the day.
+
+**How the engine searches** (`coordina_graph_propose_staffing`). Assigning
+cards to people under dependencies is resource-constrained project
+scheduling, which is NP-hard, so the engine uses a heuristic:
+
+1. **Simulated annealing.** Four chains each change who takes one card at a
+   time, half the time a card on the chain that sets the date. A change that
+   makes the plan worse is kept less and less often as the search cools. Two
+   chains start from the current plan, two from everyone in `people` picking
+   up unassigned cards, which finds idle people quickly.
+2. **Screening.** Plans are compared on 8 runs drawn once from the cards' own
+   streams, so a plan that leaves room to absorb a slip beats one that only
+   fits the likely durations.
+3. **Pruning and confirmation.** The best plan gives back every change it does
+   not need, then is measured on the forecast's 2,000 runs. When it would not
+   bring a date in, the proposal has no change.
+
+The chains always split the same way, so the same board gives the same
+proposal with any number of threads, unless the time limit stops the search
+first: the whole proposal takes at most 800 ms. On the benchmark board with
+eight people and reassignment allowed (`make graph-engine-benchmark`), 500
+cards take about 720 ms on 20 cores and bring the 85% date from 312 to about
+200 working days; 1,000 cards stay under 800 ms.
+
+| Field | Meaning |
+| --- | --- |
+| `forecastDateBefore`, `commitDateBefore` | P50 and P85 dates of the plan as it is: the milestone's forecast |
+| `forecastDateAfter`, `commitDateAfter` | The same dates once the changes are applied |
+| `people` | Who the proposal could give cards to |
+| `changes` | Each card to give: `from` (its assignees now, empty when none), `to`, `startBefore` and `startAfter` (the day it starts if every card takes its likely time) and `matchingLabels` (its labels its new person has completed cards with). Empty when no better plan exists |
+
+The banner shows **Optimize the plan** on every milestone with work left. The
+dialog says how many days sooner the plan ships, then each change with its
+reason: when the card can start, whom it frees, and what its person has done
+before. Choosing who to plan with, or letting assigned cards move, asks again;
+unchecking a change measures the others; **Apply** gives the cards.
+
+**Limits.** The proposal shares the forecast's limits, and:
+
+- It moves cards between people but never changes the order cards are picked
+  up in. That order is the planning order, which list positions barely move,
+  so an order the engine found would not show in the forecast once applied.
+- Skills are labels: a person who has done `backend` cards is preferred for
+  the next one, but the engine does not know who is learning, who is senior,
+  or who is on holiday.
+- With many people and many cards, it can propose many changes. Each one
+  helps the plan, but the dialog is the place to keep only those the team
+  agrees with.
 
 ## Concurrent changes
 
 Adding a dependency runs under a per-board lock (`IBoardStore.RunExclusiveAsync`), so the cycle check and the write cannot interleave with another request. When two requests would close a cycle together, one succeeds and the other gets `409`. Sending the same dependency several times stores it once, and every request succeeds.
 
-Creating a list, a card or a subtask, and moving or completing a card, take the same lock, because the new position is the current maximum plus one. Cutting a milestone's scope takes it too, so the dependencies it removes are the ones it measured. Rows that already share a position, from before this lock, are ordered by creation time and then id, so they always load in the same order.
+Creating a list, a card or a subtask, and moving or completing a card, take the same lock, because the new position is the current maximum plus one. Cutting a milestone's scope takes it too, so the dependencies it removes are the ones it measured, and so does giving cards to people from a milestone's plan. Rows that already share a position, from before this lock, are ordered by creation time and then id, so they always load in the same order.
 
 ## API surface
 
@@ -291,6 +382,9 @@ GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestone
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-proposal
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-evaluation
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/scope-cut
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-proposal
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-evaluation
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing
 ```
 
 ## Project shell and board system

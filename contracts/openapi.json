@@ -2318,6 +2318,213 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-proposal": {
+      "post": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Propose who does what on a milestone",
+        "description": "Proposes which people should take which cards so the milestone ships soonest: its 85% date first, then its 50% one. A card only goes to one of the people named (by default whoever is assigned to an open card of the board, or the whole workspace when nobody is), preferably to someone who has completed cards with one of its labels. Cards in progress never move, nor cards that have assignees unless allowReassignment is set. Changes nothing.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneStaffingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardMilestoneStaffingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-evaluation": {
+      "post": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Measure who does what on a milestone",
+        "description": "Returns what giving the chosen cards to the chosen people would buy, as a proposal does. Changes nothing.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneStaffChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardMilestoneStaffingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing": {
+      "post": {
+        "tags": [
+          "Boards"
+        ],
+        "summary": "Give cards to people",
+        "description": "Makes each chosen person the only assignee of their card.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneStaffChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/work": {
       "get": {
         "tags": [
@@ -3240,6 +3447,157 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardMilestoneCutResponse"
+            }
+          }
+        }
+      },
+      "BoardMilestoneStaffChangeRequest": {
+        "required": [
+          "cardId",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BoardMilestoneStaffChangeResponse": {
+        "required": [
+          "cardId",
+          "title",
+          "from",
+          "to",
+          "startBefore",
+          "startAfter",
+          "matchingLabels"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "from": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardCardAssigneeResponse"
+            }
+          },
+          "to": {
+            "$ref": "#/components/schemas/BoardCardAssigneeResponse"
+          },
+          "startBefore": {
+            "type": "string",
+            "format": "date"
+          },
+          "startAfter": {
+            "type": "string",
+            "format": "date"
+          },
+          "matchingLabels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BoardMilestoneStaffChangesRequest": {
+        "required": [
+          "changes"
+        ],
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneStaffChangeRequest"
+            }
+          }
+        }
+      },
+      "BoardMilestoneStaffingRequest": {
+        "required": [
+          "people",
+          "allowReassignment"
+        ],
+        "type": "object",
+        "properties": {
+          "people": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "allowReassignment": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BoardMilestoneStaffingResponse": {
+        "required": [
+          "milestoneId",
+          "targetDate",
+          "forecastDateBefore",
+          "commitDateBefore",
+          "forecastDateAfter",
+          "commitDateAfter",
+          "people",
+          "changes"
+        ],
+        "type": "object",
+        "properties": {
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "forecastDateBefore": {
+            "type": "string",
+            "format": "date"
+          },
+          "commitDateBefore": {
+            "type": "string",
+            "format": "date"
+          },
+          "forecastDateAfter": {
+            "type": "string",
+            "format": "date"
+          },
+          "commitDateAfter": {
+            "type": "string",
+            "format": "date"
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardCardAssigneeResponse"
+            }
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneStaffChangeResponse"
             }
           }
         }

@@ -119,4 +119,27 @@ describe("milestone banner", () => {
     expect(scopeActions.propose).toHaveBeenCalledWith("launch")
     expect(screen.getByText("Cut the scope of Launch v1")).toBeTruthy()
   })
+
+  it("offers a better plan for every milestone with work left", () => {
+    const staffingActions = {
+      propose: vi.fn(() => new Promise<never>(() => undefined)),
+      evaluate: vi.fn(),
+      apply: vi.fn(),
+    }
+    render(
+      <BoardMilestoneBanner
+        milestones={[late, shipped]}
+        onSelectCard={vi.fn()}
+        staffingActions={staffingActions}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Optimize the plan" }))
+
+    expect(staffingActions.propose).toHaveBeenCalledWith("launch", {
+      people: undefined,
+      allowReassignment: false,
+    })
+    expect(screen.getByText("Optimize the plan for Launch v1")).toBeTruthy()
+  })
 })

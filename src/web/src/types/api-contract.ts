@@ -1911,6 +1911,150 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-proposal": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Propose who does what on a milestone
+     * @description Proposes which people should take which cards so the milestone ships soonest: its 85% date first, then its 50% one. A card only goes to one of the people named (by default whoever is assigned to an open card of the board, or the whole workspace when nobody is), preferably to someone who has completed cards with one of its labels. Cards in progress never move, nor cards that have assignees unless allowReassignment is set. Changes nothing.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneStaffingRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneStaffingResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-evaluation": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Measure who does what on a milestone
+     * @description Returns what giving the chosen cards to the chosen people would buy, as a proposal does. Changes nothing.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneStaffChangesRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneStaffingResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Give cards to people
+     * @description Makes each chosen person the only assignee of their card.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneStaffChangesRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/me/work": {
     parameters: {
       query?: never
@@ -2188,6 +2332,48 @@ export interface components {
       /** Format: date */
       commitDate: string
       cuts: components["schemas"]["BoardMilestoneCutResponse"][]
+    }
+    BoardMilestoneStaffChangeRequest: {
+      /** Format: uuid */
+      cardId: string
+      /** Format: uuid */
+      userId: string
+    }
+    BoardMilestoneStaffChangeResponse: {
+      /** Format: uuid */
+      cardId: string
+      title: string
+      from: components["schemas"]["BoardCardAssigneeResponse"][]
+      to: components["schemas"]["BoardCardAssigneeResponse"]
+      /** Format: date */
+      startBefore: string
+      /** Format: date */
+      startAfter: string
+      matchingLabels: string[]
+    }
+    BoardMilestoneStaffChangesRequest: {
+      changes:
+        null | components["schemas"]["BoardMilestoneStaffChangeRequest"][]
+    }
+    BoardMilestoneStaffingRequest: {
+      people: null | string[]
+      allowReassignment: boolean
+    }
+    BoardMilestoneStaffingResponse: {
+      /** Format: uuid */
+      milestoneId: string
+      /** Format: date */
+      targetDate: string
+      /** Format: date */
+      forecastDateBefore: string
+      /** Format: date */
+      commitDateBefore: string
+      /** Format: date */
+      forecastDateAfter: string
+      /** Format: date */
+      commitDateAfter: string
+      people: components["schemas"]["BoardCardAssigneeResponse"][]
+      changes: components["schemas"]["BoardMilestoneStaffChangeResponse"][]
     }
     BoardPlanningPreferencesResponse: {
       /** @enum {null|string} */

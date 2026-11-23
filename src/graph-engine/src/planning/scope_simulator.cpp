@@ -49,7 +49,8 @@ ScopeSimulator::ScopeSimulator(const ForecastModel& model, const ScopeOptions& o
 ScopeSample ScopeSimulator::run(
   std::span<const std::uint8_t> active,
   std::size_t runs,
-  std::vector<double>* contribution)
+  std::vector<double>* contribution,
+  const Staffing& staffing)
 {
   const auto chunks = chunk_count_for(runs);
   const auto threads =
@@ -73,6 +74,7 @@ ScopeSample ScopeSimulator::run(
       simulate(
         runner,
         active,
+        staffing,
         chunk_start(runs, chunks, chunk),
         chunk_start(runs, chunks, chunk + 1U),
         chunks_[chunk],
@@ -85,6 +87,7 @@ ScopeSample ScopeSimulator::run(
 void ScopeSimulator::simulate(
   Runner& runner,
   std::span<const std::uint8_t> active,
+  const Staffing& staffing,
   std::size_t first,
   std::size_t end,
   Chunk& chunk,
@@ -100,7 +103,7 @@ void ScopeSimulator::simulate(
         active[card] == 0U ? 0.0 : model_->duration(card)(streams_.unit(card, run));
     }
 
-    const auto finish = runner.scheduler.run(runner.hours, active);
+    const auto finish = runner.scheduler.run(runner.hours, active, staffing);
     finishes_[run] = finish;
     chunk.on_time += finish > target_hours_ ? 0U : 1U;
 

@@ -83,4 +83,27 @@ public interface IGraphEngine<TNode>
     IReadOnlyCollection<GraphAssignee<TNode>> assignees,
     IReadOnlyCollection<TNode> cuts,
     GraphScopeOptions<TNode> options);
+
+  /// <summary>
+  /// Proposes who should take which card so the milestone ships soonest. A
+  /// card only goes to one of the <paramref name="receivers"/>, preferably a
+  /// <paramref name="skilled"/> one; see <c>coordina_graph_propose_staffing</c>.
+  /// </summary>
+  GraphStaffing<TNode> ProposeStaffing(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
+    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    IReadOnlyCollection<int> receivers,
+    IReadOnlyCollection<GraphAssignee<TNode>> skilled,
+    GraphStaffingOptions<TNode> options);
+
+  /// <summary>Measures changes someone chose, each giving a card to one person.</summary>
+  GraphStaffing<TNode> EvaluateStaffing(
+    IReadOnlyCollection<TNode> nodes,
+    IReadOnlyCollection<GraphEdge<TNode>> edges,
+    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
+    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    IReadOnlyCollection<GraphAssignee<TNode>> changes,
+    GraphStaffingOptions<TNode> options);
 }

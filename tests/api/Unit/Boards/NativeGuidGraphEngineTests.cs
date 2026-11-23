@@ -307,6 +307,51 @@ public sealed class NativeGuidGraphEngineTests
   }
 
   [Fact]
+  public void ProposeStaffing_GivesOneCardToEachIdlePerson()
+  {
+    var signup = Guid.NewGuid();
+    var invoices = Guid.NewGuid();
+    var launch = Guid.NewGuid();
+    Guid[] nodes = [signup, invoices, launch];
+    GraphEdge<Guid>[] edges = [new(launch, signup), new(launch, invoices)];
+    GraphWorkItem<Guid>[] items = [Item(signup, 0, GraphSize.M), Item(invoices, 1, GraphSize.M), Item(launch, 2, GraphSize.Xs)];
+
+    // Nobody is assigned, so one person nobody in particular does both cards.
+    var plan = _graphEngine.ProposeStaffing(nodes, edges, items, [], [0, 1], [], StaffingOptions(launch, 2));
+    var chosen = _graphEngine.EvaluateStaffing(
+      nodes,
+      edges,
+      items,
+      [],
+      [new GraphAssignee<Guid>(signup, 0), new GraphAssignee<Guid>(invoices, 1)],
+      StaffingOptions(launch, 2));
+
+    Assert.Equal([0, 1], plan.Changes.Select(change => change.Person).Order());
+    Assert.Equal(new[] { signup, invoices }.Order(), plan.Changes.Select(change => change.Node).Order());
+    Assert.All(plan.Changes, change => Assert.Equal(0, change.StartDaysAfter));
+    Assert.True(plan.P85DaysAfter < plan.P85DaysBefore);
+    Assert.True(plan.P50DaysAfter <= plan.P85DaysAfter);
+    Assert.Equal(plan.P85DaysAfter, chosen.P85DaysAfter);
+  }
+
+  [Fact]
+  public void ProposeStaffing_WithAReceiverOutsideTheTeam_Throws()
+  {
+    var card = Guid.NewGuid();
+
+    var error = Assert.Throws<GraphEngineException>(() => _graphEngine.ProposeStaffing(
+      [card],
+      [],
+      [Item(card, 0)],
+      [],
+      [3],
+      [],
+      StaffingOptions(card, 2)));
+
+    Assert.Equal("propose_staffing", error.Operation);
+  }
+
+  [Fact]
   public void PlanWork_RanksActionableCardsByProductImpact()
   {
     var dependency = Guid.NewGuid();
@@ -446,6 +491,9 @@ public sealed class NativeGuidGraphEngineTests
 
   private static GraphScopeOptions<Guid> ScopeOptions(Guid milestone, double targetHours) =>
     new(milestone, 1, targetHours, 0.85, 2000, 256, 131, 200, TimeSpan.Zero, 1);
+
+  private static GraphStaffingOptions<Guid> StaffingOptions(Guid milestone, int personCount) =>
+    new(milestone, personCount, false, 2000, 8, 133, 400, TimeSpan.Zero, 1);
 
   private static GraphWorkItem<Guid> Item(Guid node, int position, GraphSize size = GraphSize.None) =>
     new(node, false, 0, GraphWorkItem<Guid>.NoDueDate, 0, 0, position, Size: size);

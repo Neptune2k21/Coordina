@@ -139,6 +139,43 @@ public sealed partial class InMemoryBoardStore
     return TouchedAsync(board, updatedAt);
   }
 
+  public Task<int> ReassignCardsAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    IReadOnlyCollection<BoardCardReassignment> reassignments,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    if (!TryGetBoard(workspaceId, projectId, boardId, out var board))
+    {
+      return Task.FromResult(0);
+    }
+
+    var changed = 0;
+
+    foreach (var group in reassignments.GroupBy(reassignment => reassignment.CardId))
+    {
+      var userId = group.Last().UserId;
+
+      if (TryGetCard(workspaceId, projectId, boardId, group.Key, out var card)
+        && !card.AssigneeIds.SequenceEqual([userId]))
+      {
+        _cards[card.Id] = card with { AssigneeIds = [userId], UpdatedAt = updatedAt };
+        changed++;
+      }
+    }
+
+    if (changed > 0)
+    {
+      _boards[boardId] = board with { UpdatedAt = updatedAt };
+    }
+
+    return Task.FromResult(changed);
+  }
+
   public Task UnassignFromWorkspaceAsync(
     Guid workspaceId,
     Guid userId,

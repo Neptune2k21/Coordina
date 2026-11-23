@@ -278,6 +278,46 @@ public sealed partial class PostgresBoardStore
       cancellationToken);
   }
 
+  public async Task<int> ReassignCardsAsync(
+    Guid workspaceId,
+    Guid projectId,
+    Guid boardId,
+    IReadOnlyCollection<BoardCardReassignment> reassignments,
+    DateTimeOffset updatedAt,
+    CancellationToken cancellationToken)
+  {
+    var userByCard = reassignments
+      .GroupBy(reassignment => reassignment.CardId)
+      .ToDictionary(group => group.Key, group => group.Last().UserId);
+    var cardIds = userByCard.Keys.ToArray();
+    var cards = await BoardCards
+      .Include(card => card.Assignees)
+      .Where(card => card.WorkspaceId == workspaceId
+        && card.ProjectId == projectId
+        && card.BoardId == boardId
+        && cardIds.Contains(card.Id))
+      .ToListAsync(cancellationToken);
+    var changed = cards
+      .Where(card => card.Assignees.Count != 1 || card.Assignees.Single().UserId != userByCard[card.Id])
+      .ToArray();
+
+    if (changed.Length == 0)
+    {
+      return 0;
+    }
+
+    foreach (var card in changed)
+    {
+      SyncAssignees(card, [userByCard[card.Id]], updatedAt);
+      card.UpdatedAt = updatedAt;
+    }
+
+    await TouchBoardAsync(boardId, updatedAt, cancellationToken);
+    await _dbContext.SaveChangesAsync(cancellationToken);
+
+    return changed.Length;
+  }
+
   public async Task UnassignFromWorkspaceAsync(
     Guid workspaceId,
     Guid userId,
