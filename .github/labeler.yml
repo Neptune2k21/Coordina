@@ -2,8 +2,9 @@
   - changed-files:
       - any-glob-to-any-file:
           - src/api/**
-          - tests/api/**
-          - tests/api-postgres/**
+          - tests/api-unit/**
+          - tests/api-integration/**
+          - tests/support/**
 
 "area: web":
   - changed-files:

@@ -29,9 +29,9 @@ The Makefile is the main local workflow interface.
 | `make dev` | Run API watcher and web dev server together |
 | `make api` | Apply migrations and run the API |
 | `make web` | Run the Vite dev server |
-| `make api-test` | Run all .NET tests (fast and PostgreSQL) |
-| `make api-test-fast` | Run .NET tests against in-memory stores |
-| `make api-test-postgres` | Run .NET tests against a disposable PostgreSQL container (Docker required) |
+| `make api-test` | Run all .NET tests (unit and integration) |
+| `make api-test-unit` | Run .NET unit tests, without Docker |
+| `make api-test-integration` | Run .NET tests against the test database (Docker required) |
 | `make web-test` | Run Vitest tests |
 | `make web-e2e` | Run Playwright tests |
 | `make lint` | Run format verification, lint, and typecheck |
@@ -56,7 +56,7 @@ The gate verifies:
 | Web formatting | Prettier |
 | Web lint | ESLint |
 | Web type safety | TypeScript |
-| API tests | xUnit (in-memory and real PostgreSQL via Testcontainers) |
+| API tests | xUnit (unit, and integration on a disposable PostgreSQL) |
 | Web tests | Vitest |
 | End-to-end flow | Playwright Chromium |
 | API build | `dotnet build` |

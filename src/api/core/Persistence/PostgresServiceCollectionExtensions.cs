@@ -8,13 +8,10 @@ public static class PostgresServiceCollectionExtensions
     this IServiceCollection services,
     IConfiguration configuration)
   {
-    var options = PostgresOptions.FromEnvironment(configuration);
-
-    services.AddSingleton(options);
-    services.AddDbContext<CoordinaDbContext>(dbContextOptions =>
-    {
-      dbContextOptions.UseNpgsql(options.ToConnectionString());
-    });
+    services.AddSingleton(PostgresOptions.FromEnvironment(configuration));
+    services.AddDbContext<CoordinaDbContext>((provider, dbContextOptions) =>
+      dbContextOptions.UseNpgsql(
+        provider.GetRequiredService<PostgresOptions>().ToConnectionString()));
 
     return services;
   }

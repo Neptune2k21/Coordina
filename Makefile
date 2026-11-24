@@ -1,18 +1,20 @@
-.PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-fast api-test-postgres api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
+.PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-unit api-test-integration api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down docker-logs docker-test-up docker-test-down docker-build clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
 
 .PHONY: api-migrations-check
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
-API_TEST_PROJECT := tests/api/Coordina.Api.Tests.csproj
+API_UNIT_TEST_PROJECT := tests/api-unit/Coordina.Api.Unit.Tests.csproj
+API_INTEGRATION_TEST_PROJECT := tests/api-integration/Coordina.Api.Integration.Tests.csproj
 QUALITY_PROJECT := tools/quality/Coordina.Quality/Coordina.Quality.csproj
 QUALITY_TEST_PROJECT := tests/quality/Coordina.Quality.Tests.csproj
 QUALITY := dotnet run --project $(QUALITY_PROJECT) --configuration Release --
-API_POSTGRES_TEST_PROJECT := tests/api-postgres/Coordina.Api.Postgres.Tests.csproj
 API_URL := http://localhost:5050
 WEB_DIR := src/web
 DOCS_DIR := docs
-DOCKER_COMPOSE := docker compose --env-file .env -f docker/docker-compose.yml -p coordina
+DOCKER_COMPOSE := docker compose --env-file .env -f docker/compose.yml
+DOCKER_COMPOSE_TEST := docker compose -f docker/compose.test.yml
+API_IMAGE := coordina-api
 GRAPH_ENGINE_DIR := src/graph-engine
 GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
 GRAPH_ENGINE_TEST_OUT := tests/graph-engine/bin
@@ -27,7 +29,7 @@ CLANG_FORMAT := $(CLANG_TOOLS_DIR)/clang_format/data/bin/clang-format
 
 help:
 	@echo "Commandes disponibles :"
-	@echo "  make dev          Lance l'API C# et le front React"
+	@echo "  make dev          Lance l'infra de dev, l'API C# et le front React"
 	@echo "  make graph-engine-test Lance les tests natifs du moteur de graphe C++"
 	@echo "  make graph-engine-sanitize Lance les tests natifs sous AddressSanitizer et UBSan"
 	@echo "  make graph-engine-format Formate le C++ du moteur avec clang-format"
@@ -41,9 +43,9 @@ help:
 	@echo "  make api-migration name=Nom  Cree une migration EF Core"
 	@echo "  make api-migrations-check Verifie les changements de modele sans migration"
 	@echo "  make api-migrate  Applique les migrations EF Core"
-	@echo "  make api-test     Lance tous les tests .NET (rapides + PostgreSQL)"
-	@echo "  make api-test-fast Lance les tests .NET en memoire"
-	@echo "  make api-test-postgres Lance les tests .NET sur PostgreSQL reel (Docker requis)"
+	@echo "  make api-test     Lance tous les tests .NET (unitaires + integration)"
+	@echo "  make api-test-unit Lance les tests unitaires .NET, sans Docker"
+	@echo "  make api-test-integration Lance les tests de l'API sur la base de test (Docker requis)"
 	@echo "  make web          Lance le front React"
 	@echo "  make web-build    Build le front React"
 	@echo "  make web-test     Lance les tests React"
@@ -60,9 +62,13 @@ help:
 	@echo "  make quality-baseline Reecrit la baseline des erreurs connues"
 	@echo "  make hooks        Active les hooks git (pre-commit et commit-msg)"
 	@echo "  make contract     Regenere contracts/openapi.json et les types web apres un changement d'API"
-	@echo "  make docker-up    Lance les services Docker"
-	@echo "  make docker-down  Stoppe les services Docker"
-	@echo "  make clean        Supprime les conteneurs, volumes et images Docker"
+	@echo "  make docker-up    Lance l'infra de dev (PostgreSQL, Adminer) et attend qu'elle soit prete"
+	@echo "  make docker-down  Stoppe l'infra de dev, sans perdre les donnees"
+	@echo "  make docker-logs  Suit les logs de l'infra de dev"
+	@echo "  make docker-test-up Lance la base de test (les cibles de test le font deja)"
+	@echo "  make docker-test-down Stoppe et vide la base de test"
+	@echo "  make docker-build Construit l'image de production de l'API"
+	@echo "  make clean        Supprime les conteneurs, volumes et images Docker, donnees de dev comprises"
 
 # clang-format and clang-tidy at the versions the quality tool expects, so
 # every machine formats and analyses the C++ the same way. The copy of the
@@ -129,14 +135,14 @@ api-format: api-restore
 api-format-check: api-restore
 	dotnet format $(SOLUTION) --no-restore --verify-no-changes
 
-api-test: api-restore
+api-test: api-restore docker-test-up
 	dotnet test $(SOLUTION) --configuration Release --no-restore -m:1 --collect:"XPlat Code Coverage"
 
-api-test-fast: api-restore
-	dotnet test $(API_TEST_PROJECT) --configuration Release --no-restore -m:1
+api-test-unit: api-restore
+	dotnet test $(API_UNIT_TEST_PROJECT) --configuration Release --no-restore -m:1
 
-api-test-postgres: api-restore
-	dotnet test $(API_POSTGRES_TEST_PROJECT) --configuration Release --no-restore -m:1
+api-test-integration: api-restore docker-test-up
+	dotnet test $(API_INTEGRATION_TEST_PROJECT) --configuration Release --no-restore -m:1
 
 api-migrations-check: api-restore api-tools
 	dotnet tool run dotnet-ef migrations has-pending-model-changes --project $(API_PROJECT)
@@ -211,8 +217,8 @@ quality-rules:
 quality-test:
 	dotnet test $(QUALITY_TEST_PROJECT) --configuration Release -m:1
 
-contract:
-	UPDATE_API_CONTRACT=1 dotnet test $(API_TEST_PROJECT) --configuration Release -m:1 --filter "FullyQualifiedName~ApiContractTests"
+contract: docker-test-up
+	UPDATE_API_CONTRACT=1 dotnet test $(API_INTEGRATION_TEST_PROJECT) --configuration Release -m:1 --filter "FullyQualifiedName~ApiContractTests"
 	pnpm --dir $(WEB_DIR) contract
 
 web-contract-check:
@@ -223,16 +229,29 @@ hooks:
 	git config core.hooksPath .githooks
 	@echo "Hooks enabled: pre-commit runs 'make check-staged', commit-msg checks the message."
 
-dev:
+dev: docker-up
 	$(MAKE) -j2 api-watch web
 
 docker-up:
-	$(DOCKER_COMPOSE) up -d --build
+	$(DOCKER_COMPOSE) up -d --wait
 
 docker-down:
 	$(DOCKER_COMPOSE) down --remove-orphans
 
-clean:
+docker-logs:
+	$(DOCKER_COMPOSE) logs --follow
+
+docker-test-up:
+	$(DOCKER_COMPOSE_TEST) up -d --wait
+
+# The data is in memory, so it goes with the container.
+docker-test-down:
+	$(DOCKER_COMPOSE_TEST) down --remove-orphans
+
+docker-build:
+	docker build -f docker/api/Dockerfile -t $(API_IMAGE) .
+
+clean: docker-test-down
 	$(DOCKER_COMPOSE) down -v --rmi all --remove-orphans
 
 start-api: api

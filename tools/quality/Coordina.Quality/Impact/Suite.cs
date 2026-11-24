@@ -5,7 +5,7 @@ internal sealed record Suite(string Name, string Description, IReadOnlyList<stri
 {
   public static Suite Api { get; } = new(
     "api",
-    "EF migration check, .NET format check, unit and PostgreSQL tests",
+    "EF migration check, .NET format check, unit and integration tests",
     ["api-migrations-check", "api-format-check", "api-test"]);
 
   public static Suite Web { get; } = new(

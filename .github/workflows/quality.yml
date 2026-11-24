@@ -133,7 +133,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           web: "true"
-      # The PostgreSQL tests start their own container with Testcontainers.
+      # api-test starts the test database (docker/compose.test.yml).
       - run: make suite name=api
 
   web:

@@ -8,8 +8,7 @@ internal sealed class TypePlacementRule : ModuleRule
   [
     (name => name.EndsWith("EntityConfiguration", StringComparison.Ordinal), "Infrastructure", "EF configuration"),
     (name => name.EndsWith("Entity", StringComparison.Ordinal), "Infrastructure", "EF entity"),
-    (name => name.EndsWith("Store", StringComparison.Ordinal)
-      && (name.StartsWith("Postgres", StringComparison.Ordinal) || name.StartsWith("InMemory", StringComparison.Ordinal)),
+    (name => name.EndsWith("Store", StringComparison.Ordinal) && name.StartsWith("Postgres", StringComparison.Ordinal),
       "Infrastructure", "store implementation"),
     (name => name.EndsWith("Request", StringComparison.Ordinal) || name.EndsWith("Response", StringComparison.Ordinal),
       "Contracts", "HTTP contract"),

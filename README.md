@@ -58,8 +58,6 @@ Requirements: .NET SDK 10.x, Node.js 24.x, pnpm 10.17.x, and Docker.
 ```bash
 cp .env.example .env
 pnpm --dir src/web install
-make docker-up
-make api-migrate
 make dev
 ```
 
@@ -80,7 +78,8 @@ The checked-in environment example is for local development only. Use a unique s
 
 | Command | Purpose |
 | --- | --- |
-| `make dev` | Run the API watcher and web dev server |
+| `make dev` | Start PostgreSQL, the API watcher and the web dev server |
+| `make docker-up` / `make docker-down` | Start / stop PostgreSQL and Adminer |
 | `make api` | Apply migrations and run the API |
 | `make web` | Run the Vite dev server |
 | `make test` | Run API, web, and end-to-end tests |

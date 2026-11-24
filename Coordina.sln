@@ -11,13 +11,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coordina.Api", "src\api\Coo
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api", "api", "{97094B24-3C9A-C0DB-C982-4A4025DE3508}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api-integration", "api-integration", "{97094B24-3C9A-C0DB-C982-4A4025DE3508}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coordina.Api.Tests", "tests\api\Coordina.Api.Tests.csproj", "{DC1C306A-1F6B-4701-8EF0-AFC39B63F590}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coordina.Api.Integration.Tests", "tests\api-integration\Coordina.Api.Integration.Tests.csproj", "{DC1C306A-1F6B-4701-8EF0-AFC39B63F590}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api-postgres", "api-postgres", "{32A09F3B-9E02-36F0-0893-9A9DA1A8BD2E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api-unit", "api-unit", "{32A09F3B-9E02-36F0-0893-9A9DA1A8BD2E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coordina.Api.Postgres.Tests", "tests\api-postgres\Coordina.Api.Postgres.Tests.csproj", "{21F0F4C9-3667-49A3-BE26-208DB4B56C04}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coordina.Api.Unit.Tests", "tests\api-unit\Coordina.Api.Unit.Tests.csproj", "{21F0F4C9-3667-49A3-BE26-208DB4B56C04}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
 EndProject

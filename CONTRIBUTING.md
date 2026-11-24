@@ -31,7 +31,7 @@ Create your environment file:
 cp .env.example .env
 ```
 
-Start local infrastructure:
+Start local infrastructure (Docker is required to run the app and the API tests):
 
 ```bash
 make docker-up
@@ -418,8 +418,21 @@ it with the rest of the graph-engine suite.
 
 ## Testing
 
-Endpoint tests derive from `ApiTest`, which provides an in-memory API and an
-`ApiTestClient` (`Api`) for setup and requests:
+A test goes to the lowest level that can catch the bug. For the API:
+
+| Project | Use it for | Needs |
+| --- | --- | --- |
+| `tests/api-unit` | A rule or a calculation, without starting the API | Nothing |
+| `tests/api-integration` | Anything that needs the API running or a database | Docker |
+
+Integration tests run the real API on PostgreSQL. `make api-test` starts their
+database (`docker/compose.test.yml`), which is separate from your development
+one. To run them from an editor, start it first with `make docker-test-up`.
+[docs/testing.mdx](docs/testing.mdx) describes every level and the rules tests
+follow.
+
+Integration tests derive from `ApiTest`, which provides an API with a database of
+its own and an `ApiTestClient` (`Api`) for setup and requests:
 
 ```csharp
 public sealed class ProjectRulesTests(ApiTestApplicationFactory factory)
@@ -443,14 +456,15 @@ public sealed class ProjectRulesTests(ApiTestApplicationFactory factory)
 }
 ```
 
-Response shapes live in `tests/api/Support/ApiContracts.cs`. They describe the
+Response shapes live in `tests/api-integration/Support/ApiContracts.cs`. They describe the
 JSON the web client receives, so update them when a contract changes on purpose.
 Add a setup helper to `ApiTestClient` when a second test file needs it.
 
 Run focused tests while developing:
 
 ```bash
-make api-test
+make api-test-unit
+make api-test-integration
 make web-test
 make web-typecheck
 ```
@@ -484,7 +498,7 @@ Before requesting review, confirm:
 ```text
 [ ] The change is focused and explained clearly.
 [ ] The change fits the current pre-MVP direction.
-[ ] Backend behavior has API or unit tests where appropriate.
+[ ] Backend behavior has a test at the lowest level that can catch a regression.
 [ ] Backend code uses core/shared building blocks instead of local copies.
 [ ] Frontend behavior has component, state, or e2e tests where appropriate.
 [ ] Database changes include an EF migration.

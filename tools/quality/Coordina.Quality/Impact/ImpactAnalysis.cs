@@ -53,8 +53,8 @@ internal static class ImpactAnalysis
       "API contract, which the web app depends on"),
     new(
       path => path.StartsWith("src/api/", StringComparison.Ordinal)
-        || path.StartsWith("tests/api/", StringComparison.Ordinal)
-        || path.StartsWith("tests/api-postgres/", StringComparison.Ordinal)
+        || path.StartsWith("tests/api-unit/", StringComparison.Ordinal)
+        || path.StartsWith("tests/api-integration/", StringComparison.Ordinal)
         || path.StartsWith("tests/support/", StringComparison.Ordinal)
         || path.StartsWith(".config/", StringComparison.Ordinal),
       [Suite.Api, Suite.EndToEnd],

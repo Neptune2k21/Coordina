@@ -1,27 +1,15 @@
-# VCS
-.git
-.github
+# The build context holds what docker/api/Dockerfile needs and nothing else:
+# everything is ignored, then the API's sources are let back in. A file that is
+# not listed, .env first of all, cannot end up in an image.
+*
 
-# Environment
-.env
-.env.*
-!.env.example
+!.editorconfig
+!Directory.Build.props
+!Directory.Build.targets
+!src/api
+!src/graph-engine
+!tools/analyzers
 
-# .NET
 **/bin
 **/obj
-**/TestResults
-coverage
-coverage.cobertura.xml
-
-# Node
-**/node_modules
-src/web/dist
-src/web/test-results
-src/web/playwright-report
-
-# Editor / OS
-.vscode
-.idea
-.DS_Store
-*.log
+**/*.user

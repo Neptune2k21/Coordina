@@ -6,7 +6,7 @@ namespace Coordina.Quality.Tests.Rules;
 public sealed class NamingRulesTests
 {
   private const string ApiFile = "src/api/modules/boards/Application/Sample.cs";
-  private const string TestFile = "tests/api/Unit/Boards/SampleTests.cs";
+  private const string TestFile = "tests/api-unit/Boards/SampleTests.cs";
 
   [Fact]
   public void PascalCase_FlagsTypesMembersAndConstants()

@@ -44,11 +44,7 @@ public static class CoreHostingExtensions
       });
     });
 
-    if (!environment.IsEnvironment(TestingEnvironment))
-    {
-      services.AddPostgres(configuration);
-    }
-
+    services.AddPostgres(configuration);
     services.AddAuthRateLimiting(configuration, environment);
     services.AddAuthorization();
     services.AddOpenApi();
