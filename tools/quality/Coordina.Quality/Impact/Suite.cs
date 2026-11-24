@@ -20,7 +20,7 @@ internal sealed record Suite(string Name, string Description, IReadOnlyList<stri
 
   public static Suite EndToEnd { get; } = new(
     "e2e",
-    "Playwright end-to-end tests against the real API (needs the database)",
+    "Playwright end-to-end tests against the real API (needs Docker)",
     ["web-e2e"]);
 
   public static Suite Quality { get; } = new(
