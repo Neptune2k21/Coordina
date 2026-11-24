@@ -106,7 +106,7 @@
           "Auth"
         ],
         "summary": "Refresh the session",
-        "description": "Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in. Requires the X-Requested-With header.",
+        "description": "Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in, except just after its first use: that is a race, answered with 409 and the cookie left alone, so retry. Requires the X-Requested-With header.",
         "responses": {
           "200": {
             "description": "OK",
@@ -114,6 +114,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4110,6 +4120,17 @@
             "type": "string"
           },
           "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "required": [
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
             "type": "string"
           }
         }

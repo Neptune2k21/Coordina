@@ -3,6 +3,7 @@ using Coordina.Api.Core.Results;
 using Coordina.Api.Integration.Tests.Support;
 using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Contracts;
+using Coordina.Api.Modules.Auth.Domain;
 using Coordina.Api.Modules.Auth.Infrastructure;
 
 namespace Coordina.Api.Integration.Tests.Auth;
@@ -50,7 +51,7 @@ public sealed class RefreshTokenRotationTests(ApiTestApplicationFactory factory)
   }
 
   [Fact]
-  public async Task ReusingARotatedToken_WithinTheGracePeriod_IsRefusedWithoutRevoking()
+  public async Task ReusingARotatedToken_WithinTheGracePeriod_IsAConflictWithoutRevoking()
   {
     var first = await SignInAsync();
     var second = Success(await RefreshAsync(first.RefreshToken));
@@ -58,8 +59,21 @@ public sealed class RefreshTokenRotationTests(ApiTestApplicationFactory factory)
     var race = await RefreshAsync(first.RefreshToken);
     var winner = await RefreshAsync(second.RefreshToken);
 
-    Assert.False(race.IsSuccess);
+    Assert.Equal(ErrorKind.Conflict, race.Error?.Kind);
     Assert.True(winner.IsSuccess);
+  }
+
+  [Fact]
+  public async Task Refresh_AbandonedByTheCallerAfterTheRotation_StillStoresTheNewToken()
+  {
+    var first = await SignInAsync();
+    using var caller = new CancellationTokenSource();
+    await using var dbContext = factory.Database.CreateDbContext();
+    var tokens = new CancellingTokenStore(new PostgresRefreshTokenStore(dbContext), caller);
+
+    var second = Success(await CreateService(dbContext, tokens).RefreshAsync(first.RefreshToken, caller.Token));
+
+    Assert.True((await RefreshAsync(second.RefreshToken)).IsSuccess);
   }
 
   [Fact]
@@ -118,21 +132,47 @@ public sealed class RefreshTokenRotationTests(ApiTestApplicationFactory factory)
   {
     await using var dbContext = factory.Database.CreateDbContext();
 
-    return await call(CreateService(dbContext));
+    return await call(CreateService(dbContext, new PostgresRefreshTokenStore(dbContext)));
   }
 
-  private AuthService CreateService(CoordinaDbContext dbContext) => new(
+  private AuthService CreateService(CoordinaDbContext dbContext, IRefreshTokenStore tokens) => new(
     new PostgresUserStore(dbContext),
     new Pbkdf2PasswordHasher(),
     new JwtAccessTokenIssuer(Options, _clock),
     new RandomRefreshTokenIssuer(Options, _clock),
-    new PostgresRefreshTokenStore(dbContext),
+    tokens,
     _clock);
 
   private static AuthSession Success(Result<AuthSession> result)
   {
     Assert.True(result.IsSuccess);
     return result.Value;
+  }
+
+  /// <summary>Cancels the caller's request as soon as its token is revoked.</summary>
+  private sealed class CancellingTokenStore(IRefreshTokenStore tokens, CancellationTokenSource caller)
+    : IRefreshTokenStore
+  {
+    public Task AddAsync(RefreshToken token, CancellationToken cancellationToken) =>
+      tokens.AddAsync(token, cancellationToken);
+
+    public Task<RefreshToken?> FindByHashAsync(string tokenHash, CancellationToken cancellationToken) =>
+      tokens.FindByHashAsync(tokenHash, cancellationToken);
+
+    public async Task<bool> TryRevokeAsync(
+      Guid tokenId,
+      DateTimeOffset revokedAt,
+      Guid? replacedById,
+      CancellationToken cancellationToken)
+    {
+      var revoked = await tokens.TryRevokeAsync(tokenId, revokedAt, replacedById, cancellationToken);
+      await caller.CancelAsync();
+
+      return revoked;
+    }
+
+    public Task RevokeFamilyAsync(Guid familyId, DateTimeOffset revokedAt, CancellationToken cancellationToken) =>
+      tokens.RevokeFamilyAsync(familyId, revokedAt, cancellationToken);
   }
 
   private sealed class MovableClock(DateTimeOffset start) : TimeProvider

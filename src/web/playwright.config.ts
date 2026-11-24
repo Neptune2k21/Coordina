@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test"
 
+const webBuild = "node_modules/.cache/e2e-build"
+
 export default defineConfig({
+  // A test.only left behind would silently skip every other test.
+  forbidOnly: !!process.env.CI,
   testDir: "./e2e",
   fullyParallel: false,
   reporter: "list",
@@ -23,8 +27,10 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 300_000,
     },
+    // The production build, as users get it. The development server also
+    // compiles each module on demand, which makes page loads slow and uneven.
     {
-      command: "pnpm dev --host 127.0.0.1 --port 5174 --strictPort",
+      command: `pnpm exec vite build --outDir ${webBuild} && pnpm exec vite preview --outDir ${webBuild} --host 127.0.0.1 --port 5174 --strictPort`,
       env: { VITE_API_URL: "http://127.0.0.1:5051" },
       url: "http://127.0.0.1:5174",
       reuseExistingServer: false,

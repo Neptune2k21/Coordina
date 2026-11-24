@@ -3,13 +3,14 @@ title: "Authentication"
 description: "How the web app signs in and calls protected API routes."
 ---
 
-The login page calls the API and stores the returned session under
-`coordina.auth.session`. Protected API calls send the access token as a bearer
-token.
+Signing in returns a short-lived access token and sets a refresh token in an
+`HttpOnly` cookie scoped to `/auth`. The web app keeps the access token in
+memory only, and sends it as a bearer token:
 
 ```ts
 const response = await fetch("http://localhost:5050/auth/login", {
   method: "POST",
+  credentials: "include",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     email: "you@company.com",
@@ -17,9 +18,28 @@ const response = await fetch("http://localhost:5050/auth/login", {
   }),
 })
 
-const session = await response.json()
-localStorage.setItem("coordina.auth.session", JSON.stringify(session))
+const { accessToken } = await response.json()
 ```
+
+## Refreshing the session
+
+On load, and when the access token expires, the web app exchanges the cookie for
+a new access token and a new cookie with `POST /auth/refresh`. Requests that use
+the cookie need the `X-Requested-With` header.
+
+Each refresh token works once. What the second use of a token means depends on
+when it happens:
+
+| Second use | Answer | Effect |
+| --- | --- | --- |
+| Within 10 seconds of the first | `409` | None: two requests raced. The cookie is kept, so retry |
+| Later | `401` | The token may be stolen: the whole sign-in is revoked and the cookie cleared |
+
+The web app avoids the race: calls in a tab share one request, and a
+[Web Lock](https://developer.mozilla.org/docs/Web/API/Web_Locks_API) makes the
+other tabs wait for the new cookie. The request outlives a page reload
+(`keepalive`), so its cookie is not lost, and the next page retries on `409`
+until it arrives.
 
 ## Useful routes
 
@@ -27,6 +47,8 @@ localStorage.setItem("coordina.auth.session", JSON.stringify(session))
 | --- | --- |
 | `POST /auth/register` | Create an account and return a session |
 | `POST /auth/login` | Sign in and return a session |
+| `POST /auth/refresh` | Exchange the refresh cookie for a new session |
+| `POST /auth/logout` | Revoke the sign-in and clear the cookie |
 | `GET /auth/me` | Read the current authenticated user |
 
 All workspace, project, task, and board routes require
