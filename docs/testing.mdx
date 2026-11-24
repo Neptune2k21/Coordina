@@ -76,6 +76,21 @@ Without the database, integration tests fail at once and say to run
 `make docker-test-up`. A run that is killed leaves its databases behind;
 `make docker-test-down` removes them.
 
+## End-to-end tests
+
+`make web-e2e` runs them, and passes `args` to Playwright:
+
+```bash
+make web-e2e args="--ui"
+make web-e2e args="board-drag --repeat-each 10"
+```
+
+Playwright starts everything: the test database, the API on port `5051` with a
+new `coordina_e2e` database, and the web app on port `5174`. The API's settings
+come from the Makefile (`E2E_ENV`) instead of `.env`, so a run never reads or
+writes the development database. A server that already uses one of these ports
+makes the run fail, since it could serve other code or another database.
+
 ## Writing an integration test
 
 Test classes derive from `ApiTest`, which provides:

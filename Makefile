@@ -1,6 +1,6 @@
 .PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-unit api-test-integration api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down docker-logs docker-test-up docker-test-down docker-build clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
 
-.PHONY: api-migrations-check
+.PHONY: api-migrations-check e2e-api e2e-db
 
 SOLUTION := Coordina.sln
 API_PROJECT := src/api/Coordina.Api.csproj
@@ -15,6 +15,12 @@ DOCS_DIR := docs
 DOCKER_COMPOSE := docker compose --env-file .env -f docker/compose.yml
 DOCKER_COMPOSE_TEST := docker compose -f docker/compose.test.yml
 API_IMAGE := coordina-api
+POSTGRES_TEST_PORT ?= 5433
+export POSTGRES_TEST_PORT
+E2E_API_URL := http://127.0.0.1:5051
+E2E_DATABASE := coordina_e2e
+# Everything the API under test reads, so a run never depends on .env.
+E2E_ENV := POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=$(POSTGRES_TEST_PORT) POSTGRES_DB=$(E2E_DATABASE) POSTGRES_USER=coordina_test POSTGRES_PASSWORD=coordina_test Auth__Issuer=Coordina.Api Auth__Audience=Coordina.Web Auth__SigningKey=end-to-end-tests-only-signing-key-0123456789abcdef Auth__AccessTokenMinutes=15 Auth__RefreshTokenDays=14 RateLimiting__Auth__PermitLimit=10000
 GRAPH_ENGINE_DIR := src/graph-engine
 GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
 GRAPH_ENGINE_TEST_OUT := tests/graph-engine/bin
@@ -49,7 +55,7 @@ help:
 	@echo "  make web          Lance le front React"
 	@echo "  make web-build    Build le front React"
 	@echo "  make web-test     Lance les tests React"
-	@echo "  make web-e2e      Lance les tests end-to-end Playwright"
+	@echo "  make web-e2e      Lance les tests end-to-end Playwright sur la base de test (args=\"--ui\" optionnel)"
 	@echo "  make lint         Lance les linters"
 	@echo "  make test         Lance tous les tests"
 	@echo "  make docs         Lance la documentation Mintlify"
@@ -171,8 +177,17 @@ web-lint:
 web-test:
 	pnpm --dir $(WEB_DIR) test
 
-web-e2e: api-migrate
-	pnpm --dir $(WEB_DIR) e2e
+# Playwright starts the API with e2e-api.
+web-e2e:
+	pnpm --dir $(WEB_DIR) e2e $(args)
+
+# A new, migrated database on the test server for each run.
+e2e-db: docker-test-up api-restore api-tools
+	$(DOCKER_COMPOSE_TEST) exec -T db-test dropdb --username coordina_test --force --if-exists $(E2E_DATABASE)
+	$(E2E_ENV) dotnet tool run dotnet-ef database update --project $(API_PROJECT)
+
+e2e-api: e2e-db
+	$(E2E_ENV) dotnet run --project $(API_PROJECT) --urls $(E2E_API_URL)
 
 web-typecheck:
 	pnpm --dir $(WEB_DIR) typecheck

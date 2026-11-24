@@ -21,6 +21,13 @@ Auth__SigningKey=change-me-to-a-secure-random-secret-with-at-least-32-characters
 Auth__AccessTokenMinutes=60
 ```
 
+A variable already set in the environment wins over `.env`, so one command can
+use another database without editing the file:
+
+```bash
+POSTGRES_DB=coordina_demo make api
+```
+
 The test database does not read `.env`: its settings are in
 `docker/compose.test.yml`. See [Testing](/testing#test-database).
 

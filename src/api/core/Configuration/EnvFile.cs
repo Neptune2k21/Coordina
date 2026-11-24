@@ -2,6 +2,10 @@ namespace Coordina.Api.Core.Configuration;
 
 public static class EnvFile
 {
+  /// <summary>
+  /// Loads the nearest file, for local runs. A variable the process already
+  /// has wins over the file, so a run can be pointed at another database.
+  /// </summary>
   public static void LoadNearest(string fileName = ".env")
   {
     var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
@@ -42,7 +46,10 @@ public static class EnvFile
       var key = trimmedLine[..separatorIndex].Trim();
       var value = trimmedLine[(separatorIndex + 1)..].Trim().Trim('"');
 
-      Environment.SetEnvironmentVariable(key, value);
+      if (Environment.GetEnvironmentVariable(key) is null)
+      {
+        Environment.SetEnvironmentVariable(key, value);
+      }
     }
   }
 }

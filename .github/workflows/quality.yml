@@ -159,12 +159,8 @@ jobs:
         with:
           web: "true"
           playwright: "true"
-      - name: Start infrastructure
-        run: make docker-up
+      # Playwright starts the API, which starts the test database.
       - run: make suite name=e2e
-      - name: Stop infrastructure
-        if: always()
-        run: make docker-down
 
   ci-ok:
     name: CI OK

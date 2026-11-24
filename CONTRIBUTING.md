@@ -267,7 +267,7 @@ both give the same answer.
 | `make check` | Checks the files you changed since `origin/master`, then lists the suites they affect |
 | `make check-all` | Checks the whole repository. Part of `make lint`; CI runs it on every pull request |
 | `make affected` | Explains which suites your change needs, and why |
-| `make verify` | Runs only those suites. `make verify skip=e2e` leaves out the ones that need the database |
+| `make verify` | Runs only those suites. `make verify skip=e2e` leaves out the end-to-end tests |
 | `make suite name=api` | Runs one suite, exactly as its CI job does |
 | `make quality-rules` | Lists every rule with the reason it exists |
 | `make hooks` | Enables git hooks: staged files and the commit message are checked before each commit |
