@@ -21,6 +21,9 @@ Auth__SigningKey=change-me-to-a-secure-random-secret-with-at-least-32-characters
 Auth__AccessTokenMinutes=60
 ```
 
+The test database does not read `.env`: its settings are in
+`docker/compose.test.yml`. See [Testing](/testing#test-database).
+
 ## Allowed web origins
 
 Browsers only let the web app call the API, and send the refresh cookie, from

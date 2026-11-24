@@ -14,12 +14,12 @@ description: "Run Coordina locally with Docker, the .NET API, the React app, and
 ## Start the application
 
 ```bash
-make docker-up
-make api
-make web
+make dev
 ```
 
-`make api` applies EF Core migrations before starting the API. The web app uses
+`make dev` starts PostgreSQL and Adminer, applies EF Core migrations, then runs
+the API and the web app. To run them in separate terminals, use
+`make docker-up`, `make api` and `make web`. The web app uses
 `VITE_API_URL` when it is set, and otherwise falls back to
 `http://localhost:5050`.
 

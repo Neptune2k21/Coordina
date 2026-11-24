@@ -19,7 +19,7 @@ internal static partial class Naming
 
   public static bool IsDiscard(string name) => name.Trim('_').Length == 0;
 
-  /// <summary>Turns <c>api-postgres</c>, <c>graph_engine</c> or <c>boards</c> into PascalCase.</summary>
+  /// <summary>Turns <c>api-unit</c>, <c>graph_engine</c> or <c>boards</c> into PascalCase.</summary>
   public static string ToPascalCase(string name) =>
     string.Concat(name
       .Split(['-', '_', '.'], StringSplitOptions.RemoveEmptyEntries)

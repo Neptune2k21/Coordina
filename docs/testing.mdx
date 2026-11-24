@@ -1,18 +1,103 @@
 ---
 title: "Testing"
-description: "Quality checks for the API, web app, E2E suite, and graph engine."
+description: "Which tests Coordina has, where a new one goes, and how to run them."
 ---
 
-Run the focused checks while developing:
+## Levels
+
+Each behaviour is tested at one level: the lowest one that can catch the bug.
+
+| Level | What it proves | Where | Needs |
+| --- | --- | --- | --- |
+| Graph engine | Algorithms, the C ABI, memory safety | `tests/graph-engine` | g++ |
+| API unit | One rule or calculation, without starting the API | `tests/api-unit` | Nothing |
+| API integration | A request through the real API and PostgreSQL: access rules, persistence, concurrency, migrations | `tests/api-integration` | Docker |
+| Web | Components and state | `src/web/src/**/*.test.tsx` | Nothing |
+| End to end | The few user flows that cross every layer | `src/web/e2e` | Docker, Chromium |
+
+To place an API test, ask whether it needs the API running or a database. If it
+does, it is an integration test. `tests/api-unit` does not reference the test
+host, so it cannot start the API by accident.
+
+The quality tool and the analyzers have their own tests in `tests/quality` and
+`tests/analyzers`.
+
+## Rules
+
+- **A test creates the data it needs**, and only looks at that data. It never
+  counts the rows of a whole table, because other tests share it.
+- **A test waits for a state, not for a delay.** When time matters, it controls
+  the clock through `TimeProvider`.
+- **A flaky test is a bug.** Fix its cause instead of adding a retry.
+- **A bug fix comes with the test that would have caught it.**
+- **No code in `src` exists only for tests.** There is one implementation of
+  each store, the PostgreSQL one, and the tests run it.
+- **A test that measures time runs alone**, in the `TimingTestGroup` collection,
+  with a bound loose enough for a slow machine.
+
+## Commands
+
+| Command | What it runs |
+| --- | --- |
+| `make api-test-unit` | API unit tests, without Docker |
+| `make api-test-integration` | API integration tests |
+| `make api-test` | Every .NET test, with coverage collected in `TestResults` |
+| `make graph-engine-test` | Native engine tests |
+| `make web-test` | Web tests |
+| `make web-e2e` | End-to-end tests |
+| `make verify` | Only the suites your changes can break |
+| `make quality` | Everything, as before a merge |
+
+## Test database
+
+Integration tests use the PostgreSQL of `docker/compose.test.yml`. The make
+targets start it when they need it, and it stays up between runs.
+
+| Command | Effect |
+| --- | --- |
+| `make docker-test-up` | Starts it. Do this once before running the tests from an editor |
+| `make docker-test-down` | Stops it and discards its data |
+
+It is separate from the development database in every way: its own Compose
+project, container, port (`5433`) and credentials. Its files live in memory, so
+it starts empty each time. If the port is taken, choose another one for the
+whole command:
 
 ```bash
-make graph-engine-test
-make api-test-fast
-make api-test-postgres
-make web-test
-make web-typecheck
-make web-lint
+POSTGRES_TEST_PORT=5544 make api-test
 ```
+
+The first run migrates a template database, named after the migrations' SQL.
+Each test class then gets its own copy of that template, dropped when the class
+ends. Changing a migration changes the name, so a stale template is never
+reused. Classes run in parallel, and the tests of one class share its database.
+
+Without the database, integration tests fail at once and say to run
+`make docker-test-up`. A run that is killed leaves its databases behind;
+`make docker-test-down` removes them.
+
+## Writing an integration test
+
+Test classes derive from `ApiTest`, which provides:
+
+| Member | Use |
+| --- | --- |
+| `Api` | An `ApiTestClient`, to register users, build a scenario and send requests |
+| `Database` | SQL on the class's database, for what the API does not show |
+| `Factory` | The running API, to resolve a service or replace one |
+
+`BoardScope` creates an owner, a workspace, a project and a board in one line.
+A setup request that fails reports its method, URL, status and body. The records
+in `tests/api-integration/Support/ApiContracts.cs` mirror the JSON the web client
+receives.
+
+Check the result through the API first. Every board write answers with the board
+read back from PostgreSQL, so the response already proves what was stored. Use
+`Database` for what only SQL shows: row counts after a race, a constraint, a
+rollback.
+
+Migration tests do not need the API. They ask `TestDatabaseServer` for an empty
+database, or for one stopped at an earlier migration.
 
 ## Graph engine benchmark
 
@@ -38,64 +123,6 @@ The batch call builds the graph snapshot and topological order once and reuses
 them. Transitive dependent counts use one backward pass over the topological
 order with per-node bitsets, instead of a traversal per node. Graphs larger than
 16,384 nodes fall back to traversal to bound memory.
-
-## API test suites
-
-| Suite | Command | What it exercises |
-| --- | --- | --- |
-| Fast | `make api-test-fast` | Endpoints and services over in-memory stores. Runs in about a second, no Docker needed. |
-| PostgreSQL | `make api-test-postgres` | The same endpoints over the Postgres stores, with real EF Core migrations, constraints, and transactions. |
-
-`make api-test` runs both.
-
-The PostgreSQL suite needs Docker. It starts one `postgres:16` container per run
-with Testcontainers, migrates a template database once, and gives each test its
-own database cloned from that template. Each database is dropped after its test.
-If Docker is unavailable, tests fail with a message starting
-`PostgreSQL integration tests require Docker:`.
-
-Fast-suite endpoint tests derive from `ApiTest` and drive the API through
-`ApiTestClient` (`Api`). It registers users and builds common setup in one call
-(`CreateWorkspaceAsync`, `AddMemberAsync`, `CreateProjectAsync`,
-`CreateBoardAsync`, ...), and a failed setup request reports its method, URL,
-status, and body. Response records in `tests/api/Support/ApiContracts.cs`
-mirror the JSON the web client receives.
-
-The fast suite also runs the architecture and convention rules listed in
-`CONTRIBUTING.md`.
-
-Put a test in the PostgreSQL suite when the in-memory stores cannot catch the
-bug: migrations and data backfills, transactions and race conditions, unique or
-check constraints, and tenant scoping in SQL queries. Test classes derive from
-`PostgresApiTest`, which provides `Api`, `Database`, and `Factory`.
-
-Run the full quality gate before merging:
-
-```bash
-make quality
-```
-
-Run backend tests:
-
-```bash
-make api-test-fast      # in-memory stores, no Docker needed
-make api-test-postgres  # real PostgreSQL 16 in a disposable container
-```
-
-
-### Manual testing
-
-text
-1. Register or sign in at /login.
-2. Create a workspace from /app.
-3. Open /app/projects and create a project.
-4. Archive it and confirm it disappears from the default list.
-5. Enable Archived and confirm it appears with ARCHIVED status.
-6. Mark a project COMPLETED and confirm edits/archive return 409.
-7. Invite a second user and assign project ownership.
-8. Confirm the project owner can edit/archive that project.
-9. Confirm another member receives 403 for edit/archive/delete.
-10. Confirm a non-member receives 404 for project list/details.
 
 ## Manual smoke flow
 

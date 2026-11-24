@@ -10,8 +10,8 @@ public sealed class StructureRulesTests
   private static readonly string[] ProjectFiles =
   [
     "src/api/Coordina.Api.csproj",
-    "tests/api/Coordina.Api.Tests.csproj",
-    "tests/api-postgres/Coordina.Api.Postgres.Tests.csproj"
+    "tests/api-unit/Coordina.Api.Unit.Tests.csproj",
+    "tests/api-integration/Coordina.Api.Integration.Tests.csproj"
   ];
 
   [Fact]
@@ -41,8 +41,8 @@ public sealed class StructureRulesTests
   [Theory]
   [InlineData("src/api/modules/boards/Domain", "Coordina.Api.Modules.Boards.Domain")]
   [InlineData("src/api", "Coordina.Api")]
-  [InlineData("tests/api/Integration/Boards", "Coordina.Api.Tests.Integration.Boards")]
-  [InlineData("tests/api-postgres/Support", "Coordina.Api.Postgres.Tests.Support")]
+  [InlineData("tests/api-integration/Boards", "Coordina.Api.Integration.Tests.Boards")]
+  [InlineData("tests/api-unit/Core", "Coordina.Api.Unit.Tests.Core")]
   public void Namespace_IsTheProjectNameFollowedByFolders(string directory, string expected)
   {
     Assert.Equal(expected, new NamespaceMatchesFolderRule(ProjectFiles).ExpectedNamespace(directory));
@@ -54,8 +54,8 @@ public sealed class StructureRulesTests
     var rule = new NamespaceMatchesFolderRule(ProjectFiles);
 
     Assert.Equal(
-      ["Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Tests.Integration.Boards', which matches the folder."],
-      RuleHarness.Messages(rule, "tests/api/Integration/Boards/BoardTests.cs", "namespace Coordina.Api.Tests;\npublic class BoardTests { }"));
+      ["Change namespace 'Coordina.Api.Tests' to 'Coordina.Api.Integration.Tests.Boards', which matches the folder."],
+      RuleHarness.Messages(rule, "tests/api-integration/Boards/BoardTests.cs", "namespace Coordina.Api.Tests;\npublic class BoardTests { }"));
     Assert.Empty(RuleHarness.Check(rule, "src/api/modules/boards/Domain/Board.cs", "namespace Coordina.Api.Modules.Boards.Domain;\npublic class Board { }"));
     Assert.Empty(RuleHarness.Check(rule, "src/api/Program.cs", "var app = 1;\npublic partial class Program;"));
   }

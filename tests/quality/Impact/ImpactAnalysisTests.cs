@@ -9,7 +9,8 @@ public sealed class ImpactAnalysisTests
   [InlineData("README.md", "")]
   [InlineData("src/web/src/features/board/board-api.ts", "web,e2e")]
   [InlineData("src/api/modules/boards/Application/BoardRules.cs", "api,e2e")]
-  [InlineData("tests/api-postgres/Integration/Boards/BoardTests.cs", "api,e2e")]
+  [InlineData("tests/api-integration/Boards/BoardTests.cs", "api,e2e")]
+  [InlineData("tests/api-unit/Boards/WorkingDaysTests.cs", "api,e2e")]
   [InlineData("tests/support/AuthorizedRequests.cs", "api,e2e")]
   [InlineData("src/graph-engine/src/core/graph_types.cpp", "graph-engine,api,e2e")]
   [InlineData("src/graph-engine/include/coordina_graph_engine.h", "graph-engine,api,e2e")]
@@ -27,6 +28,7 @@ public sealed class ImpactAnalysisTests
   [InlineData("tools/analyzers/Coordina.Analyzers/Rules.cs", "api")]
   [InlineData("Makefile", "quality,graph-engine,api,web,e2e")]
   [InlineData(".github/workflows/quality.yml", "quality,graph-engine,api,web,e2e")]
+  [InlineData("docker/compose.test.yml", "quality,graph-engine,api,web,e2e")]
   [InlineData("src/web/README.md", "web,e2e")]
   [InlineData("src/web/pnpm-lock.yaml", "quality,web,e2e")]
   public void Change_SelectsTheSuitesItCanBreak(string path, string expected)

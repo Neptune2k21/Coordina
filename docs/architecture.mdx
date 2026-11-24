@@ -66,10 +66,10 @@ database columns alike).
 │   ├── graph-engine          # Native C++ graph engine
 │   └── web                  # React application
 ├── tests
-│   ├── api                  # Fast API tests (in-memory stores)
-│   ├── api-postgres         # API tests against PostgreSQL 16 (Testcontainers; Docker required)
+│   ├── api-unit             # API rules and calculations, without starting the API
+│   ├── api-integration      # API requests against PostgreSQL 16 (Docker required)
 │   └── graph-engine         # Native C++ graph engine tests
-├── docker                   # PostgreSQL and Adminer compose services
+├── docker                   # Compose files (development and tests) and the API image
 ├── .github                  # CI workflows, issue/PR templates, CODEOWNERS, Dependabot
 ├── Makefile                 # Local workflow entrypoint
 ├── CONTRIBUTING.md          # Contribution workflow
@@ -162,10 +162,8 @@ splits its application layer into `BoardCatalogService`, `BoardListService`,
 When a service grows past a single clear responsibility, split it.
 
 **Stores isolate persistence.** Each aggregate has an interface
-(`IBoardStore`, `IProjectStore`, …) with a Postgres implementation for runtime
-and an in-memory implementation for fast integration tests. The
-`tests/api-postgres` suite runs the same endpoints against the Postgres stores
-and real migrations. Handlers and services never touch `CoordinaDbContext`
+(`IBoardStore`, `IProjectStore`, …) with one implementation, on PostgreSQL, which
+the integration tests run too. Handlers and services never touch `CoordinaDbContext`
 directly. The context lives in `core` and declares no module `DbSet`: modules
 own their entities and `IEntityTypeConfiguration` classes, and stores reach
 their tables with `Set<TEntity>()`.
@@ -173,7 +171,7 @@ their tables with `Set<TEntity>()`.
 **Workflow state is explicit.** A board list has a `taskStatus` (`TODO`,
 `IN_PROGRESS`, `DONE`) that is stored, never inferred from its title. Card
 completion is derived from it: `isCompleted` is true exactly when the card sits in
-a `DONE` list. `BoardWorkflow` resolves target lists, and both stores apply list
+a `DONE` list. `BoardWorkflow` resolves target lists, and the store applies list
 and completion changes in one write.
 
 ## Frontend rules
