@@ -153,7 +153,7 @@ export interface paths {
     put?: never
     /**
      * Refresh the session
-     * @description Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in. Requires the X-Requested-With header.
+     * @description Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in, except just after its first use: that is a race, answered with 409 and the cookie left alone, so retry. Requires the X-Requested-With header.
      */
     post: {
       parameters: {
@@ -171,6 +171,15 @@ export interface paths {
           }
           content: {
             "application/json": components["schemas"]["AuthResponse"]
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"]
           }
         }
       }
@@ -2502,6 +2511,9 @@ export interface components {
       id: string
       email: string
       name: string
+    }
+    ErrorResponse: {
+      message: string
     }
     JoinWorkspaceRequest: {
       inviteCode: string

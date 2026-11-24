@@ -74,7 +74,7 @@ describe("AuthProvider", () => {
   })
 
   it("starts signed out, without a notice, when there is no refresh cookie", async () => {
-    serve({ "/auth/refresh": [{ status: 401 }, { status: 401 }] })
+    serve({ "/auth/refresh": [{ status: 401 }] })
 
     renderApp()
 
@@ -116,7 +116,6 @@ describe("AuthProvider", () => {
       "/auth/refresh": [
         { status: 200, body: session("token-a") },
         { status: 401 },
-        { status: 401 },
       ],
       "/projects": [{ status: 401 }],
     })
@@ -136,7 +135,7 @@ describe("AuthProvider", () => {
 
   it("does not show the notice when a sign-in fails", async () => {
     serve({
-      "/auth/refresh": [{ status: 401 }, { status: 401 }],
+      "/auth/refresh": [{ status: 401 }],
       "/auth/login": [{ status: 401 }],
     })
     renderApp()

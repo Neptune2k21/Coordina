@@ -86,10 +86,11 @@ make web-e2e args="board-drag --repeat-each 10"
 ```
 
 Playwright starts everything: the test database, the API on port `5051` with a
-new `coordina_e2e` database, and the web app on port `5174`. The API's settings
-come from the Makefile (`E2E_ENV`) instead of `.env`, so a run never reads or
-writes the development database. A server that already uses one of these ports
-makes the run fail, since it could serve other code or another database.
+new `coordina_e2e` database, and the production build of the web app on port
+`5174`. The API's settings come from the Makefile (`E2E_ENV`) instead of `.env`,
+so a run never reads or writes the development database. A server that already
+uses one of these ports makes the run fail, since it could serve other code or
+another database.
 
 ## Writing an integration test
 

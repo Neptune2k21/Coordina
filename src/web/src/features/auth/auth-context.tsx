@@ -30,17 +30,6 @@ type AuthState = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-// Two tabs reloading together race for one refresh cookie; the loser retries
-// once the winner's new cookie is in place.
-async function refreshWithRetry() {
-  try {
-    return await refreshSession()
-  } catch {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return refreshSession()
-  }
-}
-
 /**
  * Holds the session in memory only. The access token is never stored: on
  * load, and whenever it expires, the HttpOnly refresh cookie gets a new one.
@@ -55,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isCurrent = true
 
-    refreshWithRetry()
+    refreshSession()
       .then(
         (session) =>
           isCurrent && setState({ isLoading: false, session, notice: null })
@@ -90,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setSessionRenewer(async () => {
       try {
-        const renewed = await refreshWithRetry()
+        const renewed = await refreshSession()
         setState((current) => ({ ...current, session: renewed }))
         return renewed.accessToken
       } catch {

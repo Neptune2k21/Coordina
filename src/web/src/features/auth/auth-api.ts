@@ -11,6 +11,10 @@ const withCookie = { credentials: "include" } as const
 // CORS preflight, which other origins fail.
 const cookieHeaders = { "X-Requested-With": "coordina-web" }
 
+const refreshLock = "coordina.refresh"
+const refreshRetryDelays = [200, 400, 800, 1600]
+let refreshing: Promise<AuthSession> | null = null
+
 export async function register(input: {
   name: string
   email: string
@@ -37,12 +41,52 @@ export async function login(input: {
   })
 }
 
-/** Exchanges the refresh cookie for a new session. */
-export async function refreshSession(): Promise<AuthSession> {
+/**
+ * Exchanges the refresh cookie for a new session. Each exchange replaces the
+ * cookie the next one must send, so they run one at a time: calls in this tab
+ * share one, and other tabs wait for the lock.
+ */
+export function refreshSession(): Promise<AuthSession> {
+  refreshing ??= withRefreshLock(refreshWithRetry).finally(() => {
+    refreshing = null
+  })
+
+  return refreshing
+}
+
+function withRefreshLock(refresh: () => Promise<AuthSession>) {
+  // Browsers only offer locks in secure contexts.
+  return "locks" in navigator
+    ? navigator.locks.request(refreshLock, refresh)
+    : refresh()
+}
+
+// The lock cannot cover a page that reloads while its refresh is on the way:
+// the next page still has the old cookie, and gets a 409 until the new one
+// arrives.
+async function refreshWithRetry(): Promise<AuthSession> {
+  for (const delay of refreshRetryDelays) {
+    try {
+      return await requestRefresh()
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 409) {
+        throw error
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delay))
+  }
+
+  return requestRefresh()
+}
+
+function requestRefresh() {
   return apiRequest<AuthSession>("/auth/refresh", {
     ...withCookie,
     method: "POST",
     headers: cookieHeaders,
+    // Lets the new cookie arrive even if the page reloads meanwhile.
+    keepalive: true,
     errorMessage: "Session could not be refreshed.",
   })
 }

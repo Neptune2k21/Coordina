@@ -16,6 +16,8 @@ public sealed class AuthService(
 {
   private const string DuplicateEmailMessage =
     "An account already exists with this email.";
+  private const string LostRefreshRaceMessage =
+    "Another request just refreshed this session. Try again with its cookie.";
 
   /// <summary>
   /// Two tabs reloading together send the same token; the second one is a
@@ -102,10 +104,12 @@ public sealed class AuthService(
     {
       var isRecentRotation = stored.ReplacedById is not null && now - revokedAt < RotationGracePeriod;
 
-      if (!isRecentRotation)
+      if (isRecentRotation)
       {
-        await refreshTokens.RevokeFamilyAsync(stored.FamilyId, now, cancellationToken);
+        return Error.Conflict(LostRefreshRaceMessage);
       }
+
+      await refreshTokens.RevokeFamilyAsync(stored.FamilyId, now, cancellationToken);
 
       return Error.Unauthorized();
     }
@@ -114,14 +118,16 @@ public sealed class AuthService(
 
     if (!await refreshTokens.TryRevokeAsync(stored.Id, now, replacementId, cancellationToken))
     {
-      return Error.Unauthorized();
+      return Error.Conflict(LostRefreshRaceMessage);
     }
 
-    var user = await users.FindByIdAsync(stored.UserId, cancellationToken);
+    // The old token is gone, so a caller that gives up now must not stop its
+    // replacement from being stored: the sign-in would end with no valid token.
+    var user = await users.FindByIdAsync(stored.UserId, CancellationToken.None);
 
     return user is null
       ? Error.Unauthorized()
-      : Result.Success(await StartSessionAsync(user, stored.FamilyId, cancellationToken, replacementId));
+      : Result.Success(await StartSessionAsync(user, stored.FamilyId, CancellationToken.None, replacementId));
   }
 
   public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)

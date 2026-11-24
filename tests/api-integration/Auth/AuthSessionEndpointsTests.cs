@@ -41,7 +41,7 @@ public sealed class AuthSessionEndpointsTests(ApiTestApplicationFactory factory)
   }
 
   [Fact]
-  public async Task ConcurrentRefreshes_OfOneToken_RotateItOnce()
+  public async Task ConcurrentRefreshes_OfOneToken_RotateItOnce_AndLeaveTheNewCookieAlone()
   {
     using var registered = await RegisterAsync();
     var session = await registered.Content.ReadFromJsonAsync<AuthResponse>();
@@ -50,7 +50,12 @@ public sealed class AuthSessionEndpointsTests(ApiTestApplicationFactory factory)
     var responses = await Task.WhenAll(
       Enumerable.Range(0, 5).Select(_ => SendWithCookieAsync("/auth/refresh", cookie)));
 
-    Assert.Single(responses, response => response.StatusCode == HttpStatusCode.OK);
+    var winner = Assert.Single(responses, response => response.StatusCode == HttpStatusCode.OK);
+    Assert.All(responses.Except([winner]), response =>
+    {
+      Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+      Assert.False(response.Headers.Contains("Set-Cookie"));
+    });
     Assert.Equal(2, await Database.ScalarAsync<long>(
       $"SELECT count(*) FROM auth_refresh_tokens WHERE user_id = '{session!.User.Id}'"));
   }

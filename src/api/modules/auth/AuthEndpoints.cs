@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Coordina.Api.Core.Http;
+using Coordina.Api.Core.Results;
 using Coordina.Api.Modules.Auth.Application;
 using Coordina.Api.Modules.Auth.Contracts;
 using Coordina.Api.Modules.Auth.Infrastructure;
@@ -30,8 +31,9 @@ public static class AuthEndpoints
     group.MapPost("/refresh", Refresh)
       .Produces<AuthResponse>(StatusCodes.Status200OK)
       .AllowAnonymous()
+      .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
       .WithSummary("Refresh the session")
-      .WithDescription("Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in. Requires the X-Requested-With header.");
+      .WithDescription("Exchanges the refresh cookie for a new access token and a new refresh cookie. A refresh token used twice revokes its whole sign-in, except just after its first use: that is a race, answered with 409 and the cookie left alone, so retry. Requires the X-Requested-With header.");
     group.MapPost("/logout", Logout)
       .Produces(StatusCodes.Status204NoContent)
       .AllowAnonymous()
@@ -93,7 +95,13 @@ public static class AuthEndpoints
 
     if (!result.IsSuccess)
     {
-      RefreshTokenCookie.Clear(context.Response);
+      // A conflict means another request just replaced the cookie: clearing it
+      // here would sign the user out.
+      if (result.Error.Kind != ErrorKind.Conflict)
+      {
+        RefreshTokenCookie.Clear(context.Response);
+      }
+
       return result.Error.ToHttpResult();
     }
 
