@@ -9,6 +9,9 @@ namespace Coordina.Api.Modules.Boards;
 
 public sealed class BoardsModule : IModule
 {
+  /// <summary>Whether the server records the forecasts of the day; on by default.</summary>
+  public const string SnapshotSetting = "Forecasts:RecordDaily";
+
   public void AddServices(
     IServiceCollection services,
     IConfiguration configuration)
@@ -24,9 +27,17 @@ public sealed class BoardsModule : IModule
     services.AddScoped<IBoardMilestoneService, BoardMilestoneService>();
     services.AddScoped<IBoardMilestoneScopeService, BoardMilestoneScopeService>();
     services.AddScoped<IBoardMilestoneStaffingService, BoardMilestoneStaffingService>();
+    services.AddScoped<IBoardHistoryStore, PostgresBoardHistoryStore>();
     services.AddScoped<BoardPlanReader>();
+    services.AddScoped<ForecastSnapshotRecorder>();
     services.AddScoped<IWorkspaceDepartureHandler, BoardAssigneeRemoval>();
     services.AddSingleton<IGraphEngine<Guid>, NativeGuidGraphEngine>();
+
+    // Tests record when they mean to, on databases that come and go.
+    if (configuration.GetValue(SnapshotSetting, true))
+    {
+      services.AddHostedService<ForecastSnapshotWorker>();
+    }
   }
 
   public void MapEndpoints(IEndpointRouteBuilder endpoints) =>

@@ -1,3 +1,5 @@
+#include "plan_board.h"
+
 #include "planning/board_index.h"
 #include "planning/card_size.h"
 #include "planning/duration_model.h"
@@ -12,6 +14,7 @@
 namespace
 {
 using namespace coordina::graph;
+using fixtures::PlanBoard;
 
 PlanningBoard history_of(std::uint32_t cards, double ratio, double age_days = 1.0)
 {
@@ -195,6 +198,50 @@ void draws_the_shared_effects_once_per_run()
   model.draw(4U, again);
   assert(draw.by_size != again.by_size);
 }
+
+void reports_the_calibration_through_the_abi()
+{
+  PlanBoard board;
+  board.people = 1U;
+
+  for (unsigned long long id = 1U; id <= 60U; ++id)
+  {
+    board.finished(
+      id,
+      COORDINA_GRAPH_SIZE_M,
+      id % 3U == 0U ? 12.0 : 9.0,
+      61.0 - static_cast<double>(id));
+    board.label(id, static_cast<std::uint32_t>(id % 2U));
+  }
+
+  std::array<coordina_graph_duration_ratio, 6U> sizes{};
+  std::array<coordina_graph_duration_ratio, 32U> labels{};
+  coordina_graph_calibration output{};
+  output.sizes = sizes.data();
+  output.size_capacity = sizes.size();
+  output.labels = labels.data();
+  output.label_capacity = labels.size();
+  const auto view = board.view();
+
+  assert(coordina_graph_calibrate(&view, &output) == COORDINA_GRAPH_OK);
+  assert(output.team.card_count == 60U && output.team.median > 1.2);
+  assert(output.team.low < output.team.median && output.team.median < output.team.high);
+  assert(output.size_count == 6U && sizes[2U].key == COORDINA_GRAPH_SIZE_M);
+  assert(sizes[2U].card_count == 60U && sizes[2U].median > 1.4);
+  assert(output.label_count == 2U && labels[0U].card_count == 30U);
+  assert(output.replayed_count == 55U);
+  assert(output.within_p50 > 0.0 && output.within_p85 >= output.within_p50);
+
+  // A card moved through the lists in seconds was not worked on.
+  board.finished(61U, COORDINA_GRAPH_SIZE_XL, 0.01);
+  const auto with_moved = board.view();
+  assert(coordina_graph_calibrate(&with_moved, &output) == COORDINA_GRAPH_OK);
+  assert(output.team.card_count == 60U && sizes[4U].card_count == 0U);
+
+  output.size_capacity = 2U;
+  assert(coordina_graph_calibrate(&view, &output) == COORDINA_GRAPH_INSUFFICIENT_CAPACITY);
+  assert(output.size_count == 6U);
+}
 }
 
 int main()
@@ -209,6 +256,7 @@ int main()
   learns_how_often_cards_run_away();
   gives_unsized_cards_the_sizes_of_the_board();
   draws_the_shared_effects_once_per_run();
+  reports_the_calibration_through_the_abi();
 
   return 0;
 }

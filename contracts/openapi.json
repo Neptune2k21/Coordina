@@ -2535,6 +2535,122 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning": {
+      "get": {
+        "tags": [
+          "Board insights"
+        ],
+        "summary": "Get what the board has learned",
+        "description": "Returns how long this team\u0027s cards take against what their size says, by size and label, and how often the board\u0027s past forecasts were met. Nothing in it compares people.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardLearningResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/events": {
+      "get": {
+        "tags": [
+          "Board insights"
+        ],
+        "summary": "List what happened to the board\u0027s cards",
+        "description": "Returns a page of the board\u0027s history, oldest first: cards created, moved between task statuses, sized, linked, assigned or deleted. Pass nextAfter as after to get the next page.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardEventPageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/work": {
       "get": {
         "tags": [
@@ -2598,6 +2714,28 @@
           },
           "user": {
             "$ref": "#/components/schemas/CurrentUserResponse"
+          }
+        }
+      },
+      "BoardCardAccuracyResponse": {
+        "required": [
+          "cardCount",
+          "withinHalf",
+          "withinCommit"
+        ],
+        "type": "object",
+        "properties": {
+          "cardCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "withinHalf": {
+            "type": "number",
+            "format": "double"
+          },
+          "withinCommit": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -2749,6 +2887,57 @@
           },
           "isCompleted": {
             "type": "boolean"
+          }
+        }
+      },
+      "BoardCardEventResponse": {
+        "required": [
+          "id",
+          "cardId",
+          "kind",
+          "from",
+          "to",
+          "occurredAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "CREATED",
+              "STATUS_CHANGED",
+              "SIZE_CHANGED",
+              "MILESTONE_CHANGED",
+              "ASSIGNEE_ADDED",
+              "ASSIGNEE_REMOVED",
+              "DEPENDENCY_ADDED",
+              "DEPENDENCY_REMOVED",
+              "DELETED"
+            ],
+            "type": "string"
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "to": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2988,6 +3177,62 @@
           }
         }
       },
+      "BoardDurationRatioResponse": {
+        "required": [
+          "name",
+          "low",
+          "median",
+          "high",
+          "cardCount"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "low": {
+            "type": "number",
+            "format": "double"
+          },
+          "median": {
+            "type": "number",
+            "format": "double"
+          },
+          "high": {
+            "type": "number",
+            "format": "double"
+          },
+          "cardCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "BoardEventPageResponse": {
+        "required": [
+          "events",
+          "nextAfter"
+        ],
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardCardEventResponse"
+            }
+          },
+          "nextAfter": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "BoardGraphCardResponse": {
         "required": [
           "id",
@@ -3191,6 +3436,58 @@
           }
         }
       },
+      "BoardLearningResponse": {
+        "required": [
+          "team",
+          "sizes",
+          "labels",
+          "newCardsPerCompletedCard",
+          "cards",
+          "milestones"
+        ],
+        "type": "object",
+        "properties": {
+          "team": {
+            "$ref": "#/components/schemas/BoardDurationRatioResponse"
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardDurationRatioResponse"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardDurationRatioResponse"
+            }
+          },
+          "newCardsPerCompletedCard": {
+            "type": "number",
+            "format": "double"
+          },
+          "cards": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BoardCardAccuracyResponse"
+              }
+            ]
+          },
+          "milestones": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BoardMilestoneAccuracyResponse"
+              }
+            ]
+          }
+        }
+      },
       "BoardListResponse": {
         "required": [
           "id",
@@ -3240,6 +3537,38 @@
             "items": {
               "$ref": "#/components/schemas/BoardCardResponse"
             }
+          }
+        }
+      },
+      "BoardMilestoneAccuracyResponse": {
+        "required": [
+          "milestoneCount",
+          "snapshotCount",
+          "forecastMet",
+          "commitMet",
+          "meanSlipDays"
+        ],
+        "type": "object",
+        "properties": {
+          "milestoneCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "snapshotCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "forecastMet": {
+            "type": "number",
+            "format": "double"
+          },
+          "commitMet": {
+            "type": "number",
+            "format": "double"
+          },
+          "meanSlipDays": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -4751,6 +5080,9 @@
     },
     {
       "name": "Boards"
+    },
+    {
+      "name": "Board insights"
     },
     {
       "name": "Work"

@@ -401,6 +401,47 @@ typedef struct coordina_graph_staffing
   double others_late_days_after;
 } coordina_graph_staffing;
 
+/*
+ * How long cards take against what their size says: 1.6 means 60% longer. A
+ * tenth of the chance is below low and a tenth above high.
+ */
+typedef struct coordina_graph_duration_ratio
+{
+  double low;
+  double median;
+  double high;
+  /* A size, or a label's number; 0 for the whole team. */
+  uint32_t key;
+  /* The completed cards it was learned from. */
+  uint32_t card_count;
+} coordina_graph_duration_ratio;
+
+/*
+ * Output of coordina_graph_calibrate. Six sizes and 32 labels are always
+ * enough.
+ */
+typedef struct coordina_graph_calibration
+{
+  /* From XS to XXL. */
+  coordina_graph_duration_ratio* sizes;
+  size_t size_capacity;
+  size_t size_count;
+  coordina_graph_duration_ratio* labels;
+  size_t label_capacity;
+  size_t label_count;
+  coordina_graph_duration_ratio team;
+  /*
+   * Each card predicted from the ones completed before it: the share that took
+   * no longer than its 50% and 85% durations.
+   */
+  double within_p50;
+  double within_p85;
+  /* New cards found per completed card. */
+  double growth;
+  uint32_t replayed_count;
+  uint32_t reserved;
+} coordina_graph_calibration;
+
 COORDINA_GRAPH_EXPORT const char* coordina_graph_version(void);
 
 /*
@@ -614,6 +655,11 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_staffing(
   size_t change_count,
   const coordina_graph_staffing_options* options,
   coordina_graph_staffing* output);
+
+/* What the board's history has taught, and how right the forecasts would have been. */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_calibrate(
+  const coordina_graph_board* board,
+  coordina_graph_calibration* output);
 
 #ifdef __cplusplus
 }

@@ -89,4 +89,7 @@ public interface IGraphEngine<TNode>
     GraphBoard<TNode> board,
     IReadOnlyCollection<GraphAssignee<TNode>> changes,
     GraphStaffingOptions<TNode> options);
+
+  /// <summary>What the board's history has taught the forecasts.</summary>
+  GraphCalibration Calibrate(GraphBoard<TNode> board);
 }

@@ -86,7 +86,8 @@ order of magnitude, and the bigger the card, the wider its range:
 
 A day is 6 hours of focus work. The ranges live in one place, the graph engine
 (`src/graph-engine/src/planning/card_size.cpp`); the API and the web app only
-handle the codes.
+handle the codes. They are where a board starts from: its forecasts then learn
+how long this team really takes ([What a board learns](#what-a-board-learns)).
 
 Set `size` on create or update; clear it with `clearSize: true`. Unknown codes
 return `400`.
@@ -139,16 +140,18 @@ busy on the first is late on the second.
 1. **Durations.** Each run draws how long every open card takes.
    - A size is a log-normal range: a card can take three times its likely time,
      never three times less than nothing.
-   - How far this team is off shifts that range. **Each run draws that shift
-     once for all its cards**: when a
+   - What the board has learned about its team, sizes, people and labels shifts
+     that range. **Each run draws those shifts once for all its cards**: when a
      team is slow, every card is. Without this, slips would cancel out and a
      85% date would be met about six times in ten.
    - A few cards run away from their size altogether. Past a threshold the
-     duration follows a power law, as measured on IT projects.
+     duration follows a power law, as measured on IT projects, with the share
+     and the length of the runaways learned from the board.
    - An unsized card draws its size first, from the sizes the board's other
      cards have. Not knowing a size makes a forecast wider, not equal to an `M`.
    - A card in progress is drawn given the time it already took. The longer it
      drags past its range, the likelier it has run away, and what is left grows.
+   - Completed cards uncover new ones at the rate this board has seen.
 2. **Order.** Cards in progress come first, then those that can start latest
    without making a milestone late, counting back from every target through the
    chains of cards that wait for each other and through the cards that wait for
@@ -182,6 +185,38 @@ result with any number of threads. On the benchmark board
 | `openCardCount`, `unsizedCardCount` | Open cards in the scope, and those without a size |
 | `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first. `criticality` is that share of runs; `sensitivity` is the correlation between the card's own uncertainty and the date, so squared it is the share of the date's spread that sizing or splitting the card can remove |
 
+### What a board learns
+
+The database records every change of a card's status, size, dates, assignees and
+dependencies (`board_card_events`, written by triggers so that no write can skip
+it). From it, Coordina reads how long each completed card was in progress, in
+focus hours: nights and weekends do not count, and someone with three cards in
+progress gives a third of their time to each.
+
+The engine fits a Bayesian model on those durations (`duration_fit.cpp`): the
+logarithm of a duration is its size's, plus an effect for the team, the size, the
+people and the labels, plus noise. Every effect starts at zero and moves as
+evidence builds up, so there is no threshold below which history is ignored and
+above which it takes over: one slow card hardly moves a forecast, forty do.
+
+- Cards count half as much every 90 days.
+- A card forgotten in progress for a month pulls no harder than one twice too long.
+- A card moved through the lists in seconds is not learned from.
+- Cards still in progress count as "at least this long". Looking only at
+  completed cards would learn from the quick ones.
+
+```http
+GET /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning
+GET /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/events?after=0&limit=100
+```
+
+`learning` says how long cards take against what their size says, for the team,
+by size and by label, and how right the forecasts have been: `cards` predicts
+each completed card from the ones before it, and `milestones` checks completed
+milestones against the forecasts recorded every day while they were open
+(`Forecasts:RecordDaily`, on by default). People's effects improve the forecasts
+but are never returned: nothing compares people.
+
 ### Limits
 
 The forecast is as good as what the board says, and it knows nothing else:
@@ -192,9 +227,9 @@ The forecast is as good as what the board says, and it knows nothing else:
   every scope until someone starts them. A team busy elsewhere makes the
   forecast optimistic.
 - A card started while it waits for another one is planned after that one.
-- The ranges are Coordina's own, the same for every team. They are wide on
-  purpose: teams that estimate 40% too low still meet an 85% date about 60% of
-  the time. Those figures come
+- Until a board has a history, its ranges are Coordina's own. They are wide on
+  purpose: teams that estimate 40% too low meet an 85% date about 60% of the time
+  before any history, and about 90% once ten cards are done. Those figures come
   from simulated teams (`make graph-engine-lab`), not from real ones yet.
 
 ### Cutting the scope
@@ -398,6 +433,8 @@ POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestone
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-proposal
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-evaluation
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing
+GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning
+GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/events
 ```
 
 ## Project shell and board system

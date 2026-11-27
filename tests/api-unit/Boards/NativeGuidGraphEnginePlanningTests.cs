@@ -62,9 +62,15 @@ public sealed class NativeGuidGraphEnginePlanningTests
 
     var before = Assert.Single(_graphEngine.Forecast(board, Simulation).Milestones);
     var after = Assert.Single(_graphEngine.Forecast(learned, Simulation).Milestones);
+    var calibration = _graphEngine.Calibrate(learned);
 
     // The team takes more than twice what an M says.
     Assert.True(after.P50Days > before.P50Days * 1.5);
+    Assert.Equal(40, calibration.Team.CardCount);
+    Assert.True(calibration.Team.Median > 1.4);
+    Assert.Equal(6, calibration.Sizes.Count);
+    Assert.Equal(40, calibration.Sizes.Single(ratio => ratio.Key == (int)GraphSize.M).CardCount);
+    Assert.Equal(35, calibration.ReplayedCount);
   }
 
   [Fact]

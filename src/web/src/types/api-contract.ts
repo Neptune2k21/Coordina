@@ -2064,6 +2064,95 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get what the board has learned
+     * @description Returns how long this team's cards take against what their size says, by size and label, and how often the board's past forecasts were met. Nothing in it compares people.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardLearningResponse"]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/events": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List what happened to the board's cards
+     * @description Returns a page of the board's history, oldest first: cards created, moved between task statuses, sized, linked, assigned or deleted. Pass nextAfter as after to get the next page.
+     */
+    get: {
+      parameters: {
+        query?: {
+          after?: number
+          limit?: number
+        }
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardEventPageResponse"]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/me/work": {
     parameters: {
       query?: never
@@ -2119,6 +2208,14 @@ export interface components {
       expiresAt: string
       user: components["schemas"]["CurrentUserResponse"]
     }
+    BoardCardAccuracyResponse: {
+      /** Format: int32 */
+      cardCount: number
+      /** Format: double */
+      withinHalf: number
+      /** Format: double */
+      withinCommit: number
+    }
     BoardCardAssigneeResponse: {
       /** Format: uuid */
       userId: string
@@ -2159,6 +2256,27 @@ export interface components {
       cardId: string
       title: string
       isCompleted: boolean
+    }
+    BoardCardEventResponse: {
+      /** Format: int64 */
+      id: number
+      /** Format: uuid */
+      cardId: string
+      /** @enum {string} */
+      kind:
+        | "CREATED"
+        | "STATUS_CHANGED"
+        | "SIZE_CHANGED"
+        | "MILESTONE_CHANGED"
+        | "ASSIGNEE_ADDED"
+        | "ASSIGNEE_REMOVED"
+        | "DEPENDENCY_ADDED"
+        | "DEPENDENCY_REMOVED"
+        | "DELETED"
+      from: null | string
+      to: null | string
+      /** Format: date-time */
+      occurredAt: string
     }
     BoardCardResponse: {
       /** Format: uuid */
@@ -2216,6 +2334,22 @@ export interface components {
       name: null | string
       email: null | string
     }
+    BoardDurationRatioResponse: {
+      name: null | string
+      /** Format: double */
+      low: number
+      /** Format: double */
+      median: number
+      /** Format: double */
+      high: number
+      /** Format: int32 */
+      cardCount: number
+    }
+    BoardEventPageResponse: {
+      events: components["schemas"]["BoardCardEventResponse"][]
+      /** Format: int64 */
+      nextAfter: null | number
+    }
     BoardGraphCardResponse: {
       /** Format: uuid */
       id: string
@@ -2265,6 +2399,15 @@ export interface components {
       nextCards: components["schemas"]["BoardGraphCardResponse"][]
       planItems: components["schemas"]["BoardGraphPlanItemResponse"][]
     }
+    BoardLearningResponse: {
+      team: components["schemas"]["BoardDurationRatioResponse"]
+      sizes: components["schemas"]["BoardDurationRatioResponse"][]
+      labels: components["schemas"]["BoardDurationRatioResponse"][]
+      /** Format: double */
+      newCardsPerCompletedCard: number
+      cards: null | components["schemas"]["BoardCardAccuracyResponse"]
+      milestones: null | components["schemas"]["BoardMilestoneAccuracyResponse"]
+    }
     BoardListResponse: {
       /** Format: uuid */
       id: string
@@ -2280,6 +2423,18 @@ export interface components {
       /** Format: date-time */
       updatedAt: string
       cards: components["schemas"]["BoardCardResponse"][]
+    }
+    BoardMilestoneAccuracyResponse: {
+      /** Format: int32 */
+      milestoneCount: number
+      /** Format: int32 */
+      snapshotCount: number
+      /** Format: double */
+      forecastMet: number
+      /** Format: double */
+      commitMet: number
+      /** Format: double */
+      meanSlipDays: number
     }
     BoardMilestoneCutCardResponse: {
       /** Format: uuid */

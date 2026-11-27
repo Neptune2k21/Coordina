@@ -37,6 +37,18 @@ internal static class BoardMilestoneForecasts
       .ToArray();
   }
 
+  public static ForecastSnapshot[] ToSnapshots(BoardPlan plan, GraphForecast<Guid> forecast) =>
+    forecast.Milestones
+      .Select(milestone => new ForecastSnapshot(
+        milestone.Node,
+        plan.Today,
+        plan.Cards[milestone.Node].MilestoneDate!.Value,
+        plan.Finish(milestone.P50Days),
+        plan.Finish(milestone.P85Days),
+        milestone.OnTime,
+        milestone.CardCount))
+      .ToArray();
+
   private static BoardMilestoneResponse Completed(ProjectBoardCard milestone) =>
     new(
       milestone.Id,
