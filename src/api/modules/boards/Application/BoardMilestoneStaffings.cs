@@ -1,5 +1,6 @@
 using Coordina.Api.Core.Results;
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Domain;
 
@@ -7,9 +8,8 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 /// <summary>
 /// Asks the graph engine who should take which card so a milestone ships
-/// soonest, or what chosen changes buy. Both run on the forecast's draws, and
-/// people are numbered in the forecast's order, so the dates before are those
-/// the milestone shows and the dates after those it shows once applied.
+/// soonest, or what chosen changes buy. The dates before are those the
+/// milestone shows, and the dates after those it shows once applied.
 /// </summary>
 internal static class BoardMilestoneStaffings
 {
@@ -29,13 +29,10 @@ internal static class BoardMilestoneStaffings
       target,
       receivers,
       allowReassignment,
-      (input, options) => graphEngine.ProposeStaffing(
-        input.Graph.Nodes,
-        input.Graph.Edges,
-        input.WorkItems,
-        input.Assignees,
-        receivers.Select(input.PersonOf).ToArray(),
-        input.Skilled,
+      (skilled, options) => graphEngine.ProposeStaffing(
+        target.Plan.Graph,
+        receivers.Select(target.Plan.PersonOf).ToArray(),
+        skilled,
         options));
 
   public static Result<StaffingPlan> Evaluate(
@@ -46,13 +43,10 @@ internal static class BoardMilestoneStaffings
       target,
       changes.Select(change => change.UserId).ToArray(),
       false,
-      (input, options) => graphEngine.EvaluateStaffing(
-        input.Graph.Nodes,
-        input.Graph.Edges,
-        input.WorkItems,
-        input.Assignees,
+      (_, options) => graphEngine.EvaluateStaffing(
+        target.Plan.Graph,
         changes
-          .Select(change => new GraphAssignee<Guid>(change.CardId, input.PersonOf(change.UserId)))
+          .Select(change => new GraphAssignee<Guid>(change.CardId, target.Plan.PersonOf(change.UserId)))
           .ToArray(),
         options));
 
@@ -70,12 +64,9 @@ internal static class BoardMilestoneStaffings
     StaffingBoard target,
     IReadOnlyCollection<Guid> receivers,
     bool allowReassignment,
-    Func<StaffingInput, GraphStaffingOptions<Guid>, GraphStaffing<Guid>> solve)
+    Func<GraphAssignee<Guid>[], GraphStaffingOptions<Guid>, GraphStaffing<Guid>> solve)
   {
-    var graph = BoardDependencyGraph.ToGraph(target.Board);
-    var milestone = graph.Cards.FirstOrDefault(card => card.Id == target.MilestoneId);
-
-    if (milestone?.MilestoneDate is not { } targetDate)
+    if (target.Plan.FindMilestone(target.MilestoneId) is not { MilestoneDate: { } targetDate } milestone)
     {
       return Error.NotFound();
     }
@@ -85,93 +76,49 @@ internal static class BoardMilestoneStaffings
       return Error.Validation("milestoneId", "This milestone is done; there is nothing left to plan.");
     }
 
-    // Numbered in one order, the forecast's team keeps its own order among
-    // everyone else.
-    var people = TeamOf(target.Board)
-      .Concat(receivers)
-      .Distinct()
-      .Order()
-      .ToArray();
-    var labelsDone = LabelsDone(graph.Cards);
-    var input = new StaffingInput(
-      graph,
-      BoardDependencyGraph.ToWorkItems(target.Board, graph.Cards, target.Today, BoardMilestoneForecasts.Nobody),
-      people.Select((userId, index) => (userId, index)).ToDictionary(),
-      labelsDone);
+    var labelsDone = LabelsDone(target.Plan.Cards.Values);
     var staffing = solve(
-      input,
+      Skilled(target.Plan, labelsDone),
       new GraphStaffingOptions<Guid>(
         milestone.Id,
-        people.Length,
+        BoardPlan.Simulation,
         allowReassignment,
-        BoardMilestoneForecasts.RunCount,
         ScreenRunCount,
-        BoardMilestoneForecasts.Seed,
         EvaluationLimit,
         TimeLimit));
 
-    return Result.Success(new StaffingPlan(
-      milestone,
-      targetDate,
-      target,
-      staffing,
-      people,
-      receivers,
-      graph.Cards.ToDictionary(card => card.Id),
-      labelsDone));
+    return Result.Success(new StaffingPlan(milestone, targetDate, target, staffing, receivers, labelsDone));
   }
+
+  // A person suits an open card when they have completed cards sharing one
+  // of its labels.
+  private static GraphAssignee<Guid>[] Skilled(
+    BoardPlan plan,
+    Dictionary<Guid, HashSet<string>> labelsDone) =>
+    plan.Cards.Values
+      .Where(card => !card.IsCompleted && card.Labels.Count > 0)
+      .SelectMany(card => plan.People
+        .Where(userId => labelsDone.TryGetValue(userId, out var labels) && card.Labels.Any(labels.Contains))
+        .Select(userId => new GraphAssignee<Guid>(card.Id, plan.PersonOf(userId))))
+      .ToArray();
 
   // The labels of the cards each person has completed: those they were
   // assigned to, or completed themselves when nobody was.
-  private static Dictionary<Guid, HashSet<string>> LabelsDone(IReadOnlyCollection<ProjectBoardCard> cards) =>
+  private static Dictionary<Guid, HashSet<string>> LabelsDone(IEnumerable<ProjectBoardCard> cards) =>
     cards
       .Where(card => card.IsCompleted && card.Labels.Count > 0)
-      .SelectMany(card => DoneBy(card).Select(userId => (userId, card.Labels)))
+      .SelectMany(card => BoardPlans.DoneBy(card).Select(userId => (userId, card.Labels)))
       .GroupBy(done => done.userId, done => done.Labels)
       .ToDictionary(
         group => group.Key,
         group => group.SelectMany(labels => labels).ToHashSet(StringComparer.Ordinal));
-
-  private static IEnumerable<Guid> DoneBy(ProjectBoardCard card) =>
-    card.Assignees.Count > 0
-      ? card.Assignees.Select(assignee => assignee.UserId)
-      : card.CompletedBy is { } completedBy ? [completedBy.UserId] : [];
-
-  private sealed class StaffingInput(
-    BoardGraphSnapshot graph,
-    IReadOnlyCollection<GraphWorkItem<Guid>> workItems,
-    Dictionary<Guid, int> personByUser,
-    Dictionary<Guid, HashSet<string>> labelsDone)
-  {
-    public BoardGraphSnapshot Graph { get; } = graph;
-
-    public IReadOnlyCollection<GraphWorkItem<Guid>> WorkItems { get; } = workItems;
-
-    public IReadOnlyCollection<GraphAssignee<Guid>> Assignees { get; } = graph.Cards
-      .Where(card => !card.IsCompleted)
-      .SelectMany(card => card.Assignees.Select(assignee =>
-        new GraphAssignee<Guid>(card.Id, personByUser[assignee.UserId])))
-      .ToArray();
-
-    // A person suits an open card when they have completed cards sharing
-    // one of its labels.
-    public IReadOnlyCollection<GraphAssignee<Guid>> Skilled { get; } = graph.Cards
-      .Where(card => !card.IsCompleted && card.Labels.Count > 0)
-      .SelectMany(card => personByUser
-        .Where(person => labelsDone.TryGetValue(person.Key, out var labels) && card.Labels.Any(labels.Contains))
-        .Select(person => new GraphAssignee<Guid>(card.Id, person.Value)))
-      .ToArray();
-
-    public int PersonOf(Guid userId) => personByUser[userId];
-  }
 }
 
-/// <summary>The board a staffing plan is about, and the day it is planned from.</summary>
+/// <summary>The milestone a staffing plan is about, and who the workspace's members are.</summary>
 internal sealed record StaffingBoard(
-  ProjectBoard Board,
+  BoardPlan Plan,
   Guid MilestoneId,
-  IReadOnlyDictionary<Guid, BoardCardAssigneeResponse> Members,
-  DateOnly Today);
+  IReadOnlyDictionary<Guid, BoardCardAssigneeResponse> Members);
 
 /// <summary>A plan the engine proposed or measured, and the board it was measured on.</summary>
 internal sealed record StaffingPlan(
@@ -179,30 +126,29 @@ internal sealed record StaffingPlan(
   DateOnly TargetDate,
   StaffingBoard Target,
   GraphStaffing<Guid> Engine,
-  IReadOnlyList<Guid> People,
   IReadOnlyCollection<Guid> Receivers,
-  Dictionary<Guid, ProjectBoardCard> CardsById,
   Dictionary<Guid, HashSet<string>> LabelsDone)
 {
   public BoardMilestoneStaffingResponse ToResponse()
   {
-    var today = Target.Today;
+    var plan = Target.Plan;
 
     return new BoardMilestoneStaffingResponse(
       Milestone.Id,
       TargetDate,
-      WorkingDays.Finish(today, Engine.P50DaysBefore),
-      WorkingDays.Finish(today, Engine.P85DaysBefore),
-      WorkingDays.Finish(today, Engine.P50DaysAfter),
-      WorkingDays.Finish(today, Engine.P85DaysAfter),
+      plan.Finish(Engine.P50DaysBefore),
+      plan.Finish(Engine.P85DaysBefore),
+      plan.Finish(Engine.P50DaysAfter),
+      plan.Finish(Engine.P85DaysAfter),
+      Math.Max(0, Engine.OthersLateDaysAfter - Engine.OthersLateDaysBefore),
       Receivers.Select(PersonResponse).ToArray(),
       Engine.Changes.Select(ToResponse).ToArray());
   }
 
   private BoardMilestoneStaffChangeResponse ToResponse(GraphStaffChange<Guid> change)
   {
-    var card = CardsById[change.Node];
-    var userId = People[change.Person];
+    var card = Target.Plan.Cards[change.Node];
+    var userId = Target.Plan.People[change.Person];
     var done = LabelsDone.GetValueOrDefault(userId);
 
     return new BoardMilestoneStaffChangeResponse(
@@ -212,8 +158,8 @@ internal sealed record StaffingPlan(
         .Select(assignee => new BoardCardAssigneeResponse(assignee.UserId, assignee.Name, assignee.Email))
         .ToArray(),
       PersonResponse(userId),
-      WorkingDays.Start(Target.Today, change.StartDaysBefore),
-      WorkingDays.Start(Target.Today, change.StartDaysAfter),
+      Target.Plan.Start(change.StartDaysBefore),
+      Target.Plan.Start(change.StartDaysAfter),
       done is null ? [] : card.Labels.Where(done.Contains).ToArray());
   }
 

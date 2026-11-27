@@ -3334,6 +3334,10 @@
           "status",
           "forecastDate",
           "commitDate",
+          "bestCaseDate",
+          "worstCaseDate",
+          "unlimitedTeamDate",
+          "onTime",
           "slipDays",
           "openCardCount",
           "unsizedCardCount",
@@ -3375,6 +3379,34 @@
               "string"
             ],
             "format": "date"
+          },
+          "bestCaseDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "worstCaseDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "unlimitedTeamDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "onTime": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
           },
           "slipDays": {
             "type": [
@@ -3569,6 +3601,7 @@
           "commitDateBefore",
           "forecastDateAfter",
           "commitDateAfter",
+          "othersDelayDays",
           "people",
           "changes"
         ],
@@ -3597,6 +3630,10 @@
           "commitDateAfter": {
             "type": "string",
             "format": "date"
+          },
+          "othersDelayDays": {
+            "type": "number",
+            "format": "double"
           },
           "people": {
             "type": "array",

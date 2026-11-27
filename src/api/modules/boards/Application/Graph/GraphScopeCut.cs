@@ -1,28 +1,23 @@
 namespace Coordina.Api.Modules.Boards.Application.Graph;
 
 /// <summary>
-/// How to look for a cut: the target in focus hours from now (6 a working
-/// day), the chance of shipping by then to aim for, and the search's budget.
-/// The same seed gives the same cut, whatever the thread count, unless the
-/// <paramref name="TimeLimit"/> stops the search first.
+/// How to look for a cut of one of the board's milestones: the chance of
+/// shipping by its target to aim for, and the search's budget. Only the
+/// <paramref name="TimeLimit"/> makes the result depend on the machine.
 /// </summary>
 public sealed record GraphScopeOptions<TNode>(
   TNode Milestone,
-  int PersonCount,
-  double TargetHours,
+  GraphSimulation Simulation,
   double Goal,
-  int RunCount,
   int ScreenRunCount,
-  ulong Seed,
   int EvaluationLimit,
-  TimeSpan TimeLimit,
-  int ThreadCount = 0)
+  TimeSpan TimeLimit)
   where TNode : notnull;
 
 /// <summary>
 /// Cards to take out of a milestone, in the order the search took them, every
-/// card that leaves its scope with them, and the share of simulated runs done
-/// by the target before and after.
+/// card that leaves its scope with them, and the milestone's forecast now and
+/// once the cut is applied.
 /// </summary>
 public sealed record GraphScopeCut<TNode>(
   IReadOnlyList<TNode> Cuts,

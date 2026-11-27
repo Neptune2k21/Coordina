@@ -1,4 +1,5 @@
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Shared.Enums;
@@ -7,102 +8,81 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 /// <summary>
 /// Forecasts every milestone of a board with the graph engine. The engine
-/// simulates the work in working days; this turns them into dates (see
-/// <see cref="WorkingDays"/>) and says where each milestone stands against
-/// its target.
+/// simulates the work in working days, all milestones sharing the team; this
+/// turns them into dates (see <see cref="WorkingDays"/>) and says where each
+/// milestone stands against its target.
 /// </summary>
 internal static class BoardMilestoneForecasts
 {
-  // A few thousand runs keep the 85% date steady, and a fixed seed keeps the
-  // forecast the same from one load to the next while nothing changes.
-  internal const int RunCount = 2000;
-  internal const ulong Seed = 129;
   private const int DriverLimit = 3;
 
   // A card has to set the date in at least one run in ten to count as a driver.
   private const double MinDriverCriticality = 0.1;
 
-  // The engine ranks the cards the same way for everyone, so the forecast does
-  // not depend on who asks; these preferences belong to nobody.
-  internal static readonly BoardPlanningPreferences Nobody = new(Guid.Empty, null, null, false, true);
+  public static GraphForecast<Guid> Forecast(IGraphEngine<Guid> graphEngine, BoardPlan plan) =>
+    graphEngine.Forecast(plan.Graph, BoardPlan.Simulation);
 
-  public static BoardMilestoneResponse[] Forecast(
-    IGraphEngine<Guid> graphEngine,
-    ProjectBoard board,
-    DateOnly today)
+  /// <summary>Every milestone, done ones included, soonest target first.</summary>
+  public static BoardMilestoneResponse[] ToResponses(BoardPlan plan, GraphForecast<Guid> forecast)
   {
-    ArgumentNullException.ThrowIfNull(graphEngine);
-    ArgumentNullException.ThrowIfNull(board);
+    var forecasts = forecast.Milestones.ToDictionary(milestone => milestone.Node);
 
-    var graph = BoardDependencyGraph.ToGraph(board);
-    var milestones = graph.Cards
+    return plan.Cards.Values
       .Where(card => card.MilestoneDate is not null)
       .OrderBy(card => card.MilestoneDate)
       .ThenBy(card => card.Title, StringComparer.Ordinal)
-      .ToArray();
-
-    if (milestones.Length == 0)
-    {
-      return [];
-    }
-
-    var input = new ForecastInput(
-      graphEngine,
-      graph,
-      BoardDependencyGraph.ToWorkItems(board, graph.Cards, today, Nobody),
-      TeamOf(graph.Cards),
-      graph.Cards.ToDictionary(card => card.Id),
-      today);
-
-    return milestones
-      .Select(milestone => ToResponse(milestone, input))
+      .Select(card => forecasts.TryGetValue(card.Id, out var milestone)
+        ? ToResponse(plan, card, milestone)
+        : Completed(card))
       .ToArray();
   }
 
-  private static BoardMilestoneResponse ToResponse(ProjectBoardCard milestone, ForecastInput input)
+  private static BoardMilestoneResponse Completed(ProjectBoardCard milestone) =>
+    new(
+      milestone.Id,
+      milestone.Title,
+      milestone.MilestoneDate!.Value,
+      EnumCode.Format(MilestoneStatus.Completed),
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      0,
+      0,
+      []);
+
+  private static BoardMilestoneResponse ToResponse(
+    BoardPlan plan,
+    ProjectBoardCard milestone,
+    GraphMilestoneForecast<Guid> forecast)
   {
     var target = milestone.MilestoneDate!.Value;
-
-    if (milestone.IsCompleted)
-    {
-      return new BoardMilestoneResponse(
-        milestone.Id,
-        milestone.Title,
-        target,
-        EnumCode.Format(MilestoneStatus.Completed),
-        null,
-        null,
-        null,
-        0,
-        0,
-        []);
-    }
-
-    var forecast = input.GraphEngine.Forecast(
-      input.Graph.Nodes,
-      input.Graph.Edges,
-      input.WorkItems,
-      input.Team.Assignees,
-      new GraphForecastOptions<Guid>(milestone.Id, input.Team.Size, RunCount, Seed));
-    var forecastDate = WorkingDays.Finish(input.Today, forecast.P50Days);
-    var commitDate = WorkingDays.Finish(input.Today, forecast.P85Days);
+    var forecastDate = plan.Finish(forecast.P50Days);
+    var commitDate = plan.Finish(forecast.P85Days);
 
     return new BoardMilestoneResponse(
       milestone.Id,
       milestone.Title,
       target,
-      EnumCode.Format(StatusOf(target, forecastDate, commitDate, input.Today)),
+      EnumCode.Format(StatusOf(target, forecastDate, commitDate, plan.Today)),
       forecastDate,
       commitDate,
+      plan.Finish(forecast.P10Days),
+      plan.Finish(forecast.P95Days),
+      plan.Finish(forecast.ChainDays),
+      forecast.OnTime,
       forecastDate.DayNumber - target.DayNumber,
-      forecast.Cards.Count,
+      forecast.CardCount,
       forecast.UnsizedCount,
       forecast.Cards
         .Where(card => card.Node != milestone.Id && card.Criticality >= MinDriverCriticality)
         .Take(DriverLimit)
         .Select(card => new BoardMilestoneDriverResponse(
           card.Node,
-          input.CardsById[card.Node].Title,
+          plan.Cards[card.Node].Title,
           card.Criticality,
           card.Sensitivity))
         .ToArray());
@@ -126,34 +106,4 @@ internal static class BoardMilestoneForecasts
 
     return commitDate > target ? MilestoneStatus.AtRisk : MilestoneStatus.OnTrack;
   }
-
-  // The team is everyone assigned to an open card of the board, numbered in a
-  // stable order; a board where nobody is assigned plans for one person.
-  internal static ForecastTeam TeamOf(IReadOnlyCollection<ProjectBoardCard> cards)
-  {
-    var openCards = cards.Where(card => !card.IsCompleted).ToArray();
-    var people = openCards
-      .SelectMany(card => card.Assignees)
-      .Select(assignee => assignee.UserId)
-      .Distinct()
-      .Order()
-      .Select((userId, index) => (userId, index))
-      .ToDictionary(person => person.userId, person => person.index);
-    var assignees = openCards
-      .SelectMany(card => card.Assignees.Select(assignee =>
-        new GraphAssignee<Guid>(card.Id, people[assignee.UserId])))
-      .ToArray();
-
-    return new ForecastTeam(Math.Max(1, people.Count), assignees);
-  }
-
-  internal sealed record ForecastTeam(int Size, IReadOnlyCollection<GraphAssignee<Guid>> Assignees);
-
-  private sealed record ForecastInput(
-    IGraphEngine<Guid> GraphEngine,
-    BoardGraphSnapshot Graph,
-    IReadOnlyCollection<GraphWorkItem<Guid>> WorkItems,
-    ForecastTeam Team,
-    Dictionary<Guid, ProjectBoardCard> CardsById,
-    DateOnly Today);
 }

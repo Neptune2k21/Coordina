@@ -2316,6 +2316,14 @@ export interface components {
       forecastDate: null | string
       /** Format: date */
       commitDate: null | string
+      /** Format: date */
+      bestCaseDate: null | string
+      /** Format: date */
+      worstCaseDate: null | string
+      /** Format: date */
+      unlimitedTeamDate: null | string
+      /** Format: double */
+      onTime: null | number
       /** Format: int32 */
       slipDays: null | number
       /** Format: int32 */
@@ -2381,6 +2389,8 @@ export interface components {
       forecastDateAfter: string
       /** Format: date */
       commitDateAfter: string
+      /** Format: double */
+      othersDelayDays: number
       people: components["schemas"]["BoardCardAssigneeResponse"][]
       changes: components["schemas"]["BoardMilestoneStaffChangeResponse"][]
     }

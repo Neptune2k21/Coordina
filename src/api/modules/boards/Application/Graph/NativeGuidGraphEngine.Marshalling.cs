@@ -23,9 +23,34 @@ public sealed partial class NativeGuidGraphEngine
   private static T[] Read<TNative, T>(int capacity, NativeRead<TNative> read, Func<TNative, T> convert)
   {
     var output = new TNative[capacity];
+    var count = read(output, ToNativeCount(capacity));
+    ThrowIfFailed("read");
 
-    return Written(output, read(output, ToNativeCount(capacity)), convert);
+    return Written(output, count, convert);
   }
+
+  // The functions that return a count report a failure through the last error.
+  private static void ThrowIfFailed(string operation)
+  {
+    var reason = LastError();
+
+    if (reason.Length > 0)
+    {
+      throw new GraphEngineException(operation, (int)NativeGraphStatus.InternalError, reason);
+    }
+  }
+
+  private static void ThrowIfFailed(string operation, NativeGraphStatus status)
+  {
+    if (status != NativeGraphStatus.Ok)
+    {
+      throw new GraphEngineException(operation, (int)status, LastError());
+    }
+  }
+
+  // Kept per thread by the engine, so it is read on the thread that made the call.
+  private static string LastError() =>
+    Marshal.PtrToStringUTF8(NativeMethods.LastError()) ?? string.Empty;
 
   private static T[] Written<TNative, T>(TNative[] buffer, UIntPtr count, Func<TNative, T> convert)
   {
@@ -148,13 +173,8 @@ public sealed partial class NativeGuidGraphEngine
         (uint)item.Size,
         (uint)item.Assignment,
         item.IsInProgress ? 1U : 0U,
-        item.IsContextMatch ? 1U : 0U))
-      .ToArray();
-
-  private static NativeGraphAssignee[] ToNativeAssignees(
-    IReadOnlyCollection<GraphAssignee<Guid>> assignees) =>
-    assignees
-      .Select(assignee => new NativeGraphAssignee(ToNative(assignee.Node), checked((uint)assignee.Person), 0U))
+        item.IsContextMatch ? 1U : 0U,
+        item.ElapsedHours))
       .ToArray();
 
   private static NativeGraphPlanningOptions ToNativeOptions(
@@ -216,7 +236,8 @@ public sealed partial class NativeGuidGraphEngine
     uint Size,
     uint Assignment,
     uint IsInProgress,
-    uint IsContextMatch);
+    uint IsContextMatch,
+    double ElapsedHours);
 
   [StructLayout(LayoutKind.Sequential)]
   private record struct NativeGraphPlanningOptions(
@@ -243,112 +264,14 @@ public sealed partial class NativeGuidGraphEngine
     uint IsContextMatch,
     uint IsInProgress);
 
-  [StructLayout(LayoutKind.Sequential)]
-  private readonly record struct NativeGraphAssignee(
-    NativeGraphNodeId Node,
-    uint Person,
-    uint Reserved);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private record struct NativeGraphForecastOptions(
-    NativeGraphNodeId Milestone,
-    ulong Seed,
-    uint PersonCount,
-    uint RunCount,
-    uint ThreadCount,
-    uint Reserved);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private readonly record struct NativeGraphCardForecast(
-    NativeGraphNodeId Node,
-    double Criticality,
-    double Sensitivity);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private record struct NativeGraphScopeOptions(
-    NativeGraphNodeId Milestone,
-    ulong Seed,
-    double TargetHours,
-    double Goal,
-    uint PersonCount,
-    uint RunCount,
-    uint ScreenRunCount,
-    uint ThreadCount,
-    uint EvaluationLimit,
-    uint TimeLimitMs);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private readonly record struct NativeGraphDroppedCard(
-    NativeGraphNodeId Node,
-    uint Cut,
-    uint Reserved);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private struct NativeGraphScopeCut
-  {
-    public IntPtr Cuts;
-    public UIntPtr CutCapacity;
-    public UIntPtr CutCount;
-    public IntPtr Dropped;
-    public UIntPtr DroppedCapacity;
-    public UIntPtr DroppedCount;
-    public double OnTimeBefore;
-    public double OnTimeAfter;
-    public double P50Days;
-    public double P85Days;
-  }
-
-  [StructLayout(LayoutKind.Sequential)]
-  private record struct NativeGraphStaffingOptions(
-    NativeGraphNodeId Milestone,
-    ulong Seed,
-    uint PersonCount,
-    uint RunCount,
-    uint ScreenRunCount,
-    uint ThreadCount,
-    uint AllowReassignment,
-    uint EvaluationLimit,
-    uint TimeLimitMs,
-    uint Reserved);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private readonly record struct NativeGraphStaffChange(
-    NativeGraphNodeId Node,
-    uint Person,
-    uint Reserved,
-    double StartDaysBefore,
-    double StartDaysAfter);
-
-  [StructLayout(LayoutKind.Sequential)]
-  private struct NativeGraphStaffing
-  {
-    public IntPtr Changes;
-    public UIntPtr ChangeCapacity;
-    public UIntPtr ChangeCount;
-    public double P50DaysBefore;
-    public double P85DaysBefore;
-    public double P50DaysAfter;
-    public double P85DaysAfter;
-  }
-
-  [StructLayout(LayoutKind.Sequential)]
-  private struct NativeGraphMilestoneForecast
-  {
-    public IntPtr Cards;
-    public UIntPtr CardCapacity;
-    public UIntPtr CardCount;
-    public double P50Days;
-    public double P85Days;
-    public uint UnsizedCount;
-    public uint Reserved;
-  }
-
   private enum NativeGraphStatus
   {
     Ok = 0,
     InvalidArgument = 1,
     InsufficientCapacity = 2,
-    Cycle = 3
+    Cycle = 3,
+    OutOfMemory = 4,
+    InternalError = 5
   }
 
   [StructLayout(LayoutKind.Sequential)]

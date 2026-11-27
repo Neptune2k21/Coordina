@@ -48,8 +48,8 @@ test("cutting what a proposal suggests brings a late milestone on track", async 
   const listId = seeded.board.lists[0].id
   const ids = new Map<string, string>()
 
-  // One person, five working days (30 focus hours): without the PDF export
-  // the rest fits, with it the launch is late.
+  // One person, six working days (36 focus hours): all of it takes about 39
+  // hours, so the launch is late, and about 19 without the PDF export.
   for (const card of [
     { title: "PDF templates", size: "S" },
     { title: "Export PDF", size: "L", priority: "LOW" },
@@ -80,7 +80,7 @@ test("cutting what a proposal suggests brings a late milestone on track", async 
     })
   }
   await send(page, seeded, "patch", `/cards/${id("Launch")}`, {
-    milestoneDate: workingDaysAway(5),
+    milestoneDate: workingDaysAway(6),
   })
 
   await openSeededProject(page, seeded)

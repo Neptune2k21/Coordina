@@ -73,10 +73,15 @@ public sealed class BoardMilestoneEndpointsTests(ApiTestApplicationFactory facto
       milestone.Drivers.Select(driver => driver.Title).Order(StringComparer.Ordinal));
     Assert.All(milestone.Drivers, driver => Assert.Equal(1.0, driver.Criticality));
     Assert.All(milestone.Drivers, driver => Assert.InRange(driver.Sensitivity, 0.0, 1.0));
-    // The L card's wider range moves the sum more than the unsized one (an M).
+    // Nobody has said how big Onboarding is, so it moves the date more than
+    // the L card does.
     Assert.True(
-      milestone.Drivers.Single(driver => driver.Title == "Payment API").Sensitivity
-        > milestone.Drivers.Single(driver => driver.Title == "Onboarding").Sensitivity);
+      milestone.Drivers.Single(driver => driver.Title == "Onboarding").Sensitivity
+        > milestone.Drivers.Single(driver => driver.Title == "Payment API").Sensitivity);
+    Assert.True(milestone.BestCaseDate <= milestone.ForecastDate);
+    Assert.True(milestone.WorstCaseDate >= milestone.CommitDate);
+    Assert.True(milestone.UnlimitedTeamDate <= milestone.ForecastDate);
+    Assert.InRange(milestone.OnTime!.Value, 0.85, 1);
   }
 
   [Fact]
@@ -112,6 +117,25 @@ public sealed class BoardMilestoneEndpointsTests(ApiTestApplicationFactory facto
     Assert.Equal("LATE", milestone.Status);
     Assert.True(milestone.SlipDays > 0);
     Assert.Equal("Store review", Assert.Single(milestone.Drivers).Title);
+  }
+
+  [Fact]
+  public async Task Milestones_ShareTheirTeam()
+  {
+    var scope = await BoardScope.CreateAsync(Api);
+    var owner = new[] { scope.Owner.User.Id };
+    var first = await MilestoneAsync(scope, "First", owner, Today.AddDays(40));
+    var alone = Assert.Single(await GetMilestonesAsync(scope));
+    var second = await MilestoneAsync(scope, "Second", owner, Today.AddDays(80));
+
+    var both = (await GetMilestonesAsync(scope)).ToDictionary(milestone => milestone.CardId);
+
+    // The one due first keeps its dates; the other waits for the same person.
+    Assert.True(both[second].ForecastDate > both[first].ForecastDate!.Value.AddDays(3));
+    Assert.InRange(
+      both[first].ForecastDate!.Value.DayNumber - alone.ForecastDate!.Value.DayNumber,
+      -3,
+      3);
   }
 
   [Fact]
@@ -158,4 +182,20 @@ public sealed class BoardMilestoneEndpointsTests(ApiTestApplicationFactory facto
 
   private static Task<BoardMilestoneResponse[]> GetMilestonesAsync(BoardScope scope) =>
     scope.SendForAsync<BoardMilestoneResponse[]>(HttpMethod.Get, "/milestones");
+
+  private static async Task<string> MilestoneAsync(
+    BoardScope scope,
+    string title,
+    string[] owner,
+    DateOnly target)
+  {
+    var work = await scope.AddCardAsync(
+      scope.FirstList.Id,
+      new { title = $"{title} work", size = "XL", assigneeIds = owner });
+    var milestone = await scope.AddCardAsync(scope.FirstList.Id, new { title, size = "XS", assigneeIds = owner });
+    await scope.AddDependencyAsync(milestone.Id, work.Id);
+    await scope.UpdateCardAsync(milestone.Id, new { milestoneDate = target });
+
+    return milestone.Id;
+  }
 }
