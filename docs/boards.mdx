@@ -75,18 +75,18 @@ A card is sized rather than estimated: nobody knows whether a task takes 90 or
 120 minutes, but everyone can tell a few hours from a few days. A size is an
 order of magnitude, and the bigger the card, the wider its range:
 
-| Size | Means | Focus time the graph engine uses |
-| --- | --- | --- |
-| `XS` | Under an hour | 15 min – 1 h |
-| `S` | A few hours | 1 h – ½ day |
-| `M` | About a day | ½ day – 2 days |
-| `L` | A few days | 2 – 4 days |
-| `XL` | About a week | 4 – 8 days |
-| `XXL` | More than a week | 1 – 3 weeks, and the card should be split |
+| Size | Means | Half the cards take less than | Eight in ten take between |
+| --- | --- | --- | --- |
+| `XS` | Under an hour | 30 min | 15 min – 1 h |
+| `S` | A few hours | 2 h | 1 h – 4 h |
+| `M` | About a day | 1 day | ½ day – 2 days |
+| `L` | A few days | 3 days | 2 – 4½ days |
+| `XL` | About a week | 5 days | 3 – 7½ days |
+| `XXL` | More than a week | 8 days | 4 – 16 days, and the card should be split |
 
 A day is 6 hours of focus work. The ranges live in one place, the graph engine
 (`src/graph-engine/src/planning/card_size.cpp`); the API and the web app only
-handle the codes. Milestone forecasts draw durations within these ranges.
+handle the codes.
 
 Set `size` on create or update; clear it with `clearSize: true`. Unknown codes
 return `400`.
@@ -113,9 +113,10 @@ slot, the smallest sized ready card is flagged `isShortestAlternative`.
 ## Milestones
 
 A milestone is a card with a target date, such as "Launch v1" or "Demo day".
-Its scope is the card and everything it depends on, directly or not: the
-dependency graph defines it, so there is nothing to tag. A milestone without
-dependencies covers only itself.
+Its scope is the card and every open card it depends on, through open cards:
+the dependency graph defines it, so there is nothing to tag. Work behind a
+completed card is not needed any more. A milestone without dependencies covers
+only itself.
 
 ```http
 PATCH /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/cards/{cardId}
@@ -131,44 +132,55 @@ project can read the forecasts.
 
 ### How the forecast works
 
-The graph engine (`coordina_graph_forecast`) simulates the work 2,000 times:
+The graph engine (`coordina_graph_forecast`) simulates the work of all the
+board's open milestones together, 2,000 times: they share one team, so a person
+busy on the first is late on the second.
 
-1. **Schedule.** Each open card of the scope takes a duration within its size's
-   range. Each person works 6 focus hours a day on one card at a time, and a
-   card starts once its open dependencies are done. People pick cards up in
-   the planning order, computed for nobody in particular so that everyone sees
-   the same forecast. A card goes to the first of its assignees who is free;
-   an unassigned card goes to the first free person. The team is everyone
-   assigned to an open card of the board, or one person when nobody is.
-2. **Uncertainty.** Each run draws every duration from a triangular
-   distribution over its size's range. The ranges lean towards the high end,
-   so cards slip more than they come in early. Each card has a random stream
-   of its own, keyed by its id and a fixed seed: the forecast only moves when
-   something in the milestone's scope changes, not when an unrelated card is
-   added or reordered.
-3. **Results.** The forecast date is the median run (P50) and the commit date
-   is the 85th percentile (P85), counted in working days from today and
-   skipping weekends. A card's criticality is the share of runs where it is on
-   the chain that sets the date, whether it waited for a dependency or for its
-   person. Its sensitivity is the correlation between its duration and the
-   date across runs; squared, it is the share of the date's spread the card's
-   own uncertainty explains, so a high value points at a card worth splitting
-   or sizing again.
+1. **Durations.** Each run draws how long every open card takes.
+   - A size is a log-normal range: a card can take three times its likely time,
+     never three times less than nothing.
+   - How far this team is off shifts that range. **Each run draws that shift
+     once for all its cards**: when a
+     team is slow, every card is. Without this, slips would cancel out and a
+     85% date would be met about six times in ten.
+   - A few cards run away from their size altogether. Past a threshold the
+     duration follows a power law, as measured on IT projects.
+   - An unsized card draws its size first, from the sizes the board's other
+     cards have. Not knowing a size makes a forecast wider, not equal to an `M`.
+   - A card in progress is drawn given the time it already took. The longer it
+     drags past its range, the likelier it has run away, and what is left grows.
+2. **Order.** Cards in progress come first, then those that can start latest
+   without making a milestone late, counting back from every target through the
+   chains of cards that wait for each other and through the cards that wait for
+   the same person. Priority only breaks ties: everything in a scope has to
+   ship. The order is computed, not searched, so it is stable, and it comes
+   within a few percent of a bound no plan beats (`make graph-engine-lab`).
+3. **People.** A person works 6 focus hours a day on one card at a time, and a
+   card starts once its open dependencies are done. It goes to one of its
+   assignees who is free, or to anyone of the team when it has none: to whoever
+   has least work of their own left, so a bottleneck keeps to its own cards. The
+   team is everyone assigned to an open card of the board, or one person when
+   nobody is. Cards in progress outside the scopes keep their people busy first.
+4. **Results.** Dates count working days from today, skipping weekends. Each
+   card has a random stream of its own, keyed by its id and a fixed seed: the
+   forecast only moves when something it depends on changes.
 
-The runs spread over every core and give the same result with any number of
-threads. On the benchmark board (`make graph-engine-benchmark`), 2,000 runs
-over 1,000 cards take about 18 ms on 20 cores and 180 ms on one.
-
-Unsized cards count as `M`, and the forecast says how many there are.
+The runs spread over the cores other requests leave free and give the same
+result with any number of threads. On the benchmark board
+(`make graph-engine-benchmark`), 2,000 runs over 1,000 cards take about 26 ms on
+20 cores and 260 ms on one.
 
 | Field | Meaning |
 | --- | --- |
 | `targetDate` | The milestone's date |
 | `status` | `ON_TRACK` (P85 on or before the target), `AT_RISK` (P50 on time, P85 late), `LATE` (P50 late), `OVERDUE` (target passed), `COMPLETED` |
 | `forecastDate`, `commitDate` | P50 and P85 dates; `null` once completed |
+| `bestCaseDate`, `worstCaseDate` | P10 and P95 dates |
+| `unlimitedTeamDate` | The P50 date with as many people as it takes: no staffing beats it |
+| `onTime` | The chance of being done by the target, from 0 to 1 |
 | `slipDays` | `forecastDate` minus `targetDate`, in calendar days; positive is late |
 | `openCardCount`, `unsizedCardCount` | Open cards in the scope, and those without a size |
-| `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first, each with its `criticality` and `sensitivity` |
+| `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first. `criticality` is that share of runs; `sensitivity` is the correlation between the card's own uncertainty and the date, so squared it is the share of the date's spread that sizing or splitting the card can remove |
 
 ### Limits
 
@@ -176,19 +188,14 @@ The forecast is as good as what the board says, and it knows nothing else:
 
 - Every person gives 6 focus hours a day, every weekday. Holidays, time off
   and part-time work are not counted.
-- A card in progress counts at its full duration: the time already spent on
-  it is not tracked yet.
-- Work outside the board, and cards outside the milestone's scope, take
-  nobody's time, so a team busy elsewhere makes the forecast optimistic.
-- Unassigned cards go to whoever is free. The forecast does not decide who
-  should do what ([Who does what](#who-does-what) proposes that) or reorder
-  work to ship sooner.
-- Sizes are ranges, not measurements: until forecasts are calibrated on how
-  long cards really take, a team that is systematically slow or fast shifts
-  every date the same way.
-
-The board shows a banner per milestone with these dates, the slip, the
-drivers (clicking one opens its card) and a warning when sizes are missing.
+- Work outside the board takes nobody's time, and neither do cards outside
+  every scope until someone starts them. A team busy elsewhere makes the
+  forecast optimistic.
+- A card started while it waits for another one is planned after that one.
+- The ranges are Coordina's own, the same for every team. They are wide on
+  purpose: teams that estimate 40% too low still meet an 85% date about 60% of
+  the time. Those figures come
+  from simulated teams (`make graph-engine-lab`), not from real ones yet.
 
 ### Cutting the scope
 
@@ -215,8 +222,8 @@ has passed, cannot be cut (`400`).
 
 **What a proposal aims for.** The best chance of shipping by the target date,
 reaching 85% if it can, while giving up as little value as possible. A card
-is worth its likely hours, weighted by priority: high 4, medium 2, low or none
-1. The milestone, cards in progress, the `keep` cards, and any card whose cut
+is worth its priority, whatever its size: high 4, medium 2, low or none 1. Its
+size says what it costs, not what it is worth. The milestone, cards in progress, the `keep` cards, and any card whose cut
 would take one of them out are never proposed. When a card is needed by only
 one other card of the scope, the proposal names that other card: cutting
 either takes both out.
@@ -230,17 +237,20 @@ NP-hard, so the engine uses a heuristic:
    again, since cards that waited behind them may now set the date. The hours
    a card saves are its share of the chain that sets the date in each run:
    that chain spans the whole run, so the shares add up to the mean finish.
-2. **Local search.** Give back each cut the goal no longer needs, the most
-   valuable first, then try to trade each cut for a cheaper one.
+2. **Local search.** Give back each cut the goal no longer needs, those that
+   give up most value per hour first, then try to trade each cut for a cheaper
+   one.
 3. **Confirmation.** Candidates are compared on 256 runs, on the cards' own
-   random streams, so two candidates differ only by what they cut. The result
-   is then measured on the forecast's 2,000 runs. When that falls short of
-   85%, up to three more batches measured on every run repair it, each kept
-   only if it raises the chance.
+   random streams, so two candidates differ only by what they cut. When the
+   result falls short of 85% on the forecast's 2,000 runs, up to three more
+   batches repair it, each kept only if it raises the chance.
+4. **Forecast.** The board is forecast again without the cards that leave. What
+   the proposal announces is what the milestone shows once it is applied, and a
+   cut that does not help there is not proposed.
 
-The search stops early enough for the whole proposal to take at most 450 ms.
-On the benchmark board, 1,000 cards take about 290 ms on 20 cores and stay
-under 450 ms on two (`make graph-engine-benchmark`). The same board gives the
+The search stops after 450 ms; forecasting the scope before and after comes on
+top on a slow machine. On the benchmark board, 1,000 cards take about 450 ms on
+20 cores (`make graph-engine-benchmark`). The same board gives the
 same proposal with any number of threads, unless the time limit stops the
 search first.
 
@@ -255,8 +265,8 @@ a card measures the others again; **Take out** applies the cut.
 
 **Limits.** The proposal shares the forecast's limits, and:
 
-- A card's value is its size and priority; the engine does not know what
-  matters to customers beyond that. Unchecking a card, or keeping it, is how
+- A card's value is its priority; the engine does not know what matters to
+  customers beyond that. Unchecking a card, or keeping it, is how
   someone says so.
 - When 85% cannot be reached, the proposal is the best chance it found. It
   proposes nothing when no cut raises the chance at all.
@@ -286,7 +296,8 @@ can be given (`400`). Everyone named must belong to the workspace (`400`). A
 done milestone cannot be planned (`400`).
 
 **What a proposal looks for.** The plan that ships the milestone soonest: its
-85% date first, then its 50% one. The constraints:
+85% date first, then its 50% one, without making the board's other milestones
+late for it (`othersDelayDays`). The constraints:
 
 - A card only goes to one of `people`. Without them, the proposal plans with
   the people assigned to open cards of the board, or with the whole
@@ -297,11 +308,13 @@ done milestone cannot be planned (`400`).
   labels (an assignee of a done card, or whoever completed it when it had
   none). Giving it to someone else costs the plan two focus hours: it only
   happens when that ships the milestone sooner than that.
+- Taking a card off someone costs the plan half a day, for the handover, and
+  giving one nobody has a quarter of an hour: a plan of forty changes is not one
+  anybody applies.
 
-**The dates are the forecast's.** Plans are measured exactly as the forecast
-measures the board, on the same random streams, with one rule made explicit:
-the team is whoever is assigned to an open card, and only they pick up
-unassigned cards. Giving a card to someone outside the team brings them in;
+**The dates are the forecast's.** The plan found is measured by forecasting the
+board with it. The team is whoever is assigned to an open card, and only they
+pick up unassigned cards. Giving a card to someone outside the team brings them in;
 taking someone's last card off them takes them out. So the dates after a
 proposal are the ones the milestone shows once it is applied, to the day.
 
@@ -316,17 +329,17 @@ scheduling, which is NP-hard, so the engine uses a heuristic:
    up unassigned cards, which finds idle people quickly.
 2. **Screening.** Plans are compared on 8 runs drawn once from the cards' own
    streams, so a plan that leaves room to absorb a slip beats one that only
-   fits the likely durations.
-3. **Pruning and confirmation.** The best plan gives back every change it does
-   not need, then is measured on the forecast's 2,000 runs. When it would not
-   bring a date in, the proposal has no change.
+   fits the median durations.
+3. **Pruning and forecast.** The best plan gives back every change it does not
+   need, then the board is forecast with it. When it would not bring a date in by
+   more than it delays the other milestones, the proposal has no change.
 
 The chains always split the same way, so the same board gives the same
 proposal with any number of threads, unless the time limit stops the search
 first: the whole proposal takes at most 800 ms. On the benchmark board with
 eight people and reassignment allowed (`make graph-engine-benchmark`), 500
-cards take about 720 ms on 20 cores and bring the 85% date from 312 to about
-200 working days; 1,000 cards stay under 800 ms.
+cards take about 670 ms on 20 cores and bring the 85% date from 444 to about
+320 working days with 94 changes; 1,000 cards stay under 800 ms.
 
 | Field | Meaning |
 | --- | --- |
@@ -343,9 +356,9 @@ unchecking a change measures the others; **Apply** gives the cards.
 
 **Limits.** The proposal shares the forecast's limits, and:
 
-- It moves cards between people but never changes the order cards are picked
-  up in. That order is the planning order, which list positions barely move,
-  so an order the engine found would not show in the forecast once applied.
+- It never uses that one person is faster than another: the search plans every
+  card at its median time. Only the final forecast counts what the board has
+  learned about who does it.
 - Skills are labels: a person who has done `backend` cards is preferred for
   the next one, but the engine does not know who is learning, who is senior,
   or who is on holiday.
