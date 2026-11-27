@@ -30,7 +30,7 @@
     },
     {
       "name": "coordina_graph_work_item",
-      "size": 64,
+      "size": 72,
       "fields": [
         { "name": "node", "offset": 0, "size": 16 },
         { "name": "is_completed", "offset": 16, "size": 4 },
@@ -43,7 +43,9 @@
         { "name": "assignment", "offset": 44, "size": 4 },
         { "name": "is_in_progress", "offset": 48, "size": 4 },
         { "name": "is_context_match", "offset": 52, "size": 4 },
-        { "name": "elapsed_hours", "offset": 56, "size": 8 }
+        { "name": "elapsed_hours", "offset": 56, "size": 8 },
+        { "name": "created_order", "offset": 64, "size": 4 },
+        { "name": "reserved", "offset": 68, "size": 4 }
       ]
     },
     {
@@ -338,6 +340,67 @@
       ]
     },
     {
+      "name": "coordina_graph_card_token",
+      "size": 32,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "weight", "offset": 16, "size": 8 },
+        { "name": "token", "offset": 24, "size": 4 },
+        { "name": "reserved", "offset": 28, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_dependency_hint",
+      "size": 40,
+      "fields": [
+        { "name": "card", "offset": 0, "size": 16 },
+        { "name": "dependency", "offset": 16, "size": 16 },
+        { "name": "probability", "offset": 32, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_hint_output",
+      "size": 24,
+      "fields": [
+        { "name": "hints", "offset": 0, "size": 8 },
+        { "name": "hint_capacity", "offset": 8, "size": 8 },
+        { "name": "hint_count", "offset": 16, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_question_options",
+      "size": 40,
+      "fields": [
+        { "name": "milestone", "offset": 0, "size": 16 },
+        { "name": "simulation", "offset": 16, "size": 16 },
+        { "name": "limit", "offset": 32, "size": 4 },
+        { "name": "reserved", "offset": 36, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_question",
+      "size": 64,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "other", "offset": 16, "size": 16 },
+        { "name": "kind", "offset": 32, "size": 4 },
+        { "name": "reserved", "offset": 36, "size": 4 },
+        { "name": "probability", "offset": 40, "size": 8 },
+        { "name": "margin_days", "offset": 48, "size": 8 },
+        { "name": "shift_days", "offset": 56, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_question_output",
+      "size": 32,
+      "fields": [
+        { "name": "questions", "offset": 0, "size": 8 },
+        { "name": "question_capacity", "offset": 8, "size": 8 },
+        { "name": "question_count", "offset": 16, "size": 8 },
+        { "name": "margin_days", "offset": 24, "size": 8 }
+      ]
+    },
+    {
       "name": "coordina_graph_duration_ratio",
       "size": 32,
       "fields": [
@@ -417,6 +480,15 @@
         { "name": "COORDINA_GRAPH_ACTION_CUT_CARD", "value": 1 },
         { "name": "COORDINA_GRAPH_ACTION_ASSIGN_CARD", "value": 2 },
         { "name": "COORDINA_GRAPH_ACTION_ADD_PERSON", "value": 3 }
+      ]
+    },
+    {
+      "name": "coordina_graph_question_kind",
+      "values": [
+        { "name": "COORDINA_GRAPH_QUESTION_SIZE", "value": 1 },
+        { "name": "COORDINA_GRAPH_QUESTION_SPLIT", "value": 2 },
+        { "name": "COORDINA_GRAPH_QUESTION_PROGRESS", "value": 3 },
+        { "name": "COORDINA_GRAPH_QUESTION_DEPENDENCY", "value": 4 }
       ]
     }
   ]

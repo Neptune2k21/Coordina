@@ -102,6 +102,13 @@ Forecast PlannedBoard::forecast_with_people(std::uint32_t extra) const
   return forecast_changed(changed);
 }
 
+Forecast PlannedBoard::forecast_with(const Edge& dependency) const
+{
+  auto changed = *board_;
+  changed.edges.push_back(dependency);
+  return forecast_changed(changed);
+}
+
 Forecast PlannedBoard::forecast_changed(const PlanningBoard& changed) const
 {
   return forecast(changed, options_);

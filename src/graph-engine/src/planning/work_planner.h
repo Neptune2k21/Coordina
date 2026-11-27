@@ -32,6 +32,8 @@ struct WorkItem
   bool is_context_match = false;
   // Focus hours already spent on a card in progress.
   double elapsed_hours = 0.0;
+  // Where the card comes among the board's, oldest first.
+  std::uint32_t created_order = 0U;
 };
 
 struct PlanningOptions

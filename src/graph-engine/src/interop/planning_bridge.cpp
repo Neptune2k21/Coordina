@@ -184,4 +184,19 @@ std::vector<NodeId> build_node_ids(const coordina_graph_node_id* nodes, std::siz
 {
   return build<NodeId>(nodes, count, to_node_id);
 }
+
+std::vector<CardToken> build_tokens(const coordina_graph_card_token* tokens, std::size_t count)
+{
+  return build<CardToken>(
+    tokens,
+    count,
+    [](const coordina_graph_card_token& token)
+    {
+      return CardToken{
+        .node = to_node_id(token.node),
+        .token = token.token,
+        .weight = token.weight
+      };
+    });
+}
 }

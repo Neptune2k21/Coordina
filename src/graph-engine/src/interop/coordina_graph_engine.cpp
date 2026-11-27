@@ -4,7 +4,6 @@
 #include "algorithms/dependency_validator.h"
 #include "algorithms/graph_traversal.h"
 #include "algorithms/node_analysis.h"
-#include "algorithms/suggestion_engine.h"
 #include "algorithms/topological_order.h"
 #include "interop/abi_queries.h"
 #include "interop/native_bridge.h"
@@ -104,31 +103,6 @@ extern "C" int coordina_graph_has_path(
                coordina::graph::to_node_id(target))
         ? 1
         : 0;
-    });
-}
-
-extern "C" std::size_t coordina_graph_suggest_targets(
-  const coordina_graph_node_id* nodes,
-  std::size_t node_count,
-  const coordina_graph_edge* edges,
-  std::size_t edge_count,
-  coordina_graph_node_id source,
-  coordina_graph_node_id* output,
-  std::size_t output_capacity)
-{
-  return write_node_query(
-    nodes,
-    node_count,
-    edges,
-    edge_count,
-    output,
-    output_capacity,
-    [&](const GraphSnapshot& graph)
-    {
-      return coordina::graph::suggest_targets(
-        graph,
-        coordina::graph::to_node_id(source),
-        output_capacity);
     });
 }
 
