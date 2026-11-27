@@ -11,16 +11,19 @@ internal static class BoardPlans
   private static readonly BoardPlanningPreferences Nobody = new(Guid.Empty, null, null, false, true);
 
   /// <param name="board">The board to plan.</param>
+  /// <param name="statusEvents">The status changes of its cards, oldest first.</param>
   /// <param name="newcomers">People who may be given cards besides those already on the board.</param>
   /// <param name="now">When the plan starts from.</param>
   public static BoardPlan Build(
     ProjectBoard board,
+    IReadOnlyCollection<BoardCardEvent> statusEvents,
     IReadOnlyCollection<Guid> newcomers,
     DateTimeOffset now)
   {
     var today = DateOnly.FromDateTime(now.UtcDateTime);
     var graph = BoardDependencyGraph.ToGraph(board);
     var cards = graph.Cards.ToDictionary(card => card.Id);
+    var times = new BoardFocusTimes(graph.Cards, statusEvents, now);
     // Numbered in one order, so naming a newcomer moves nobody else.
     var people = graph.Cards
       .SelectMany(DoneBy)
@@ -42,7 +45,7 @@ internal static class BoardPlans
       new GraphBoard<Guid>(
         graph.Nodes,
         graph.Edges,
-        BoardDependencyGraph.ToWorkItems(board, graph.Cards, today, Nobody),
+        WorkItems(board, graph.Cards, times, today),
         graph.Cards
           .SelectMany(card => DoneBy(card).Select(userId => new GraphAssignee<Guid>(card.Id, personByUser[userId])))
           .ToArray(),
@@ -50,8 +53,8 @@ internal static class BoardPlans
           .SelectMany(card => card.Labels.Select(label => new GraphCardLabel<Guid>(card.Id, labelNumbers[label])))
           .ToArray(),
         milestones.Select(card => ToMilestone(card, today)).ToArray(),
-        [],
-        GraphScopeGrowth.None,
+        History(graph.Cards, times, now),
+        Growth(graph.Cards, cards, times),
         people.Length),
       cards,
       people,
@@ -94,6 +97,86 @@ internal static class BoardPlans
       BoardCardPriority.Medium => 2,
       _ => 1
     };
+
+  private static GraphWorkItem<Guid>[] WorkItems(
+    ProjectBoard board,
+    IReadOnlyCollection<ProjectBoardCard> cards,
+    BoardFocusTimes times,
+    DateOnly today)
+  {
+    var items = BoardDependencyGraph.ToWorkItems(board, cards, today, Nobody);
+
+    return items
+      .Zip(cards, (item, card) => item with
+      {
+        ElapsedHours = item.IsInProgress ? times.HoursOf(card) : 0
+      })
+      .ToArray();
+  }
+
+  private static GraphFinishedCard<Guid>[] History(
+    IReadOnlyCollection<ProjectBoardCard> cards,
+    BoardFocusTimes times,
+    DateTimeOffset now) =>
+    cards
+      .Where(card => card is { IsCompleted: true, CompletedAt: not null, Size: not null })
+      .Select(card => new GraphFinishedCard<Guid>(
+        card.Id,
+        times.HoursOf(card),
+        Math.Max(0, (now - card.CompletedAt!.Value).TotalDays)))
+      .Where(card => card.Hours > 0)
+      .ToArray();
+
+  // Work that came up once a milestone was under way: the cards of its scope
+  // created after someone first started one of them.
+  private static GraphScopeGrowth Growth(
+    IReadOnlyCollection<ProjectBoardCard> cards,
+    Dictionary<Guid, ProjectBoardCard> cardsById,
+    BoardFocusTimes times)
+  {
+    var discovered = new HashSet<Guid>();
+    var finished = new HashSet<Guid>();
+
+    foreach (var milestone in cards.Where(card => card.MilestoneDate is not null))
+    {
+      var scope = ScopeOf(milestone, cardsById);
+      var started = scope.Select(card => times.StartOf(card.Id)).Min();
+
+      if (started is null)
+      {
+        continue;
+      }
+
+      discovered.UnionWith(scope.Where(card => card.CreatedAt > started).Select(card => card.Id));
+      finished.UnionWith(scope.Where(card => card.IsCompleted).Select(card => card.Id));
+    }
+
+    return new GraphScopeGrowth(discovered.Count, finished.Count);
+  }
+
+  // What the milestone depends on, done or not, itself left out.
+  private static List<ProjectBoardCard> ScopeOf(
+    ProjectBoardCard milestone,
+    Dictionary<Guid, ProjectBoardCard> cardsById)
+  {
+    var scope = new List<ProjectBoardCard>();
+    var seen = new HashSet<Guid> { milestone.Id };
+    var pending = new Stack<ProjectBoardCard>([milestone]);
+
+    while (pending.TryPop(out var card))
+    {
+      foreach (var dependency in card.Dependencies)
+      {
+        if (seen.Add(dependency.CardId) && cardsById.TryGetValue(dependency.CardId, out var next))
+        {
+          scope.Add(next);
+          pending.Push(next);
+        }
+      }
+    }
+
+    return scope;
+  }
 
   private static Dictionary<T, int> Numbered<T>(IReadOnlyCollection<T> values)
     where T : notnull =>

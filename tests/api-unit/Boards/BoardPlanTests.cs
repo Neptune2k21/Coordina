@@ -61,6 +61,56 @@ public sealed class BoardPlanTests
       assignee => assignee.Node == card.Id && assignee.Person == plan.PersonOf(_grace));
   }
 
+  [Fact]
+  public void Build_LearnsFromCompletedCardsThatWereInProgress()
+  {
+    var worked = PlanningBoards.Card("Worked", _ada) with { IsCompleted = true, CompletedAt = Now.AddDays(-1) };
+    var moved = PlanningBoards.Card("Moved", _ada) with { IsCompleted = true, CompletedAt = Now.AddDays(-1) };
+    var board = PlanningBoards.Board(worked, moved);
+
+    var plan = BoardPlans.Build(
+      board,
+      [
+        Event(1, worked.Id, BoardTaskStatus.InProgress, Now.AddDays(-1).AddHours(-4)),
+        Event(2, worked.Id, BoardTaskStatus.Done, Now.AddDays(-1))
+      ],
+      [],
+      Now);
+
+    var learned = Assert.Single(plan.Graph.History);
+    Assert.Equal(worked.Id, learned.Node);
+    Assert.Equal(4, learned.Hours, 6);
+    Assert.Equal(1, learned.AgeDays, 6);
+  }
+
+  [Fact]
+  public void Build_CountsTheWorkFoundOnceAMilestoneStarted()
+  {
+    var first = PlanningBoards.Card("First") with { IsCompleted = true, CompletedAt = Now };
+    var found = PlanningBoards.Card("Found") with { CreatedAt = Now.AddDays(-1) };
+    var unrelated = PlanningBoards.Card("Unrelated") with { CreatedAt = Now.AddDays(-1) };
+    var launch = (PlanningBoards.Card("Launch") with { MilestoneDate = Today.AddDays(9) })
+      .DependingOn(first, found);
+
+    var plan = BoardPlans.Build(
+      PlanningBoards.Board(first, found, unrelated, launch),
+      [Event(1, first.Id, BoardTaskStatus.InProgress, Now.AddDays(-3))],
+      [],
+      Now);
+
+    Assert.Equal(1, plan.Graph.Growth.Discovered);
+    Assert.Equal(1, plan.Graph.Growth.Finished);
+  }
+
   private static BoardPlan Build(ProjectBoard board, params Guid[] newcomers) =>
-    BoardPlans.Build(board, newcomers, Now);
+    BoardPlans.Build(board, [], newcomers, Now);
+
+  private static BoardCardEvent Event(long id, Guid cardId, BoardTaskStatus status, DateTimeOffset at) =>
+    new(
+      id,
+      cardId,
+      BoardCardEventKind.StatusChanged,
+      null,
+      status is BoardTaskStatus.InProgress ? "IN_PROGRESS" : "DONE",
+      at);
 }
