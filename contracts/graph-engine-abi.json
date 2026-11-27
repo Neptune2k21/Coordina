@@ -302,6 +302,42 @@
       ]
     },
     {
+      "name": "coordina_graph_action_options",
+      "size": 40,
+      "fields": [
+        { "name": "milestone", "offset": 0, "size": 16 },
+        { "name": "simulation", "offset": 16, "size": 16 },
+        { "name": "screen_run_count", "offset": 32, "size": 4 },
+        { "name": "limit", "offset": 36, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_action",
+      "size": 80,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "kind", "offset": 16, "size": 4 },
+        { "name": "person", "offset": 20, "size": 4 },
+        { "name": "on_time_before", "offset": 24, "size": 8 },
+        { "name": "on_time_after", "offset": 32, "size": 8 },
+        { "name": "p85_days_before", "offset": 40, "size": 8 },
+        { "name": "p85_days_after", "offset": 48, "size": 8 },
+        { "name": "others_delay_days", "offset": 56, "size": 8 },
+        { "name": "dropped_count", "offset": 64, "size": 4 },
+        { "name": "reserved", "offset": 68, "size": 4 },
+        { "name": "value_lost", "offset": 72, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_action_output",
+      "size": 24,
+      "fields": [
+        { "name": "actions", "offset": 0, "size": 8 },
+        { "name": "action_capacity", "offset": 8, "size": 8 },
+        { "name": "action_count", "offset": 16, "size": 8 }
+      ]
+    },
+    {
       "name": "coordina_graph_duration_ratio",
       "size": 32,
       "fields": [
@@ -373,6 +409,14 @@
         { "name": "COORDINA_GRAPH_CYCLE", "value": 3 },
         { "name": "COORDINA_GRAPH_OUT_OF_MEMORY", "value": 4 },
         { "name": "COORDINA_GRAPH_INTERNAL_ERROR", "value": 5 }
+      ]
+    },
+    {
+      "name": "coordina_graph_action_kind",
+      "values": [
+        { "name": "COORDINA_GRAPH_ACTION_CUT_CARD", "value": 1 },
+        { "name": "COORDINA_GRAPH_ACTION_ASSIGN_CARD", "value": 2 },
+        { "name": "COORDINA_GRAPH_ACTION_ADD_PERSON", "value": 3 }
       ]
     }
   ]

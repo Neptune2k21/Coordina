@@ -168,6 +168,11 @@ void print_enum(const char* name, const std::vector<EnumValue>& values)
   X(COORDINA_GRAPH_OUT_OF_MEMORY)         \
   X(COORDINA_GRAPH_INTERNAL_ERROR)
 
+#define COORDINA_ACTION_KIND_VALUES(X) \
+  X(COORDINA_GRAPH_ACTION_CUT_CARD)    \
+  X(COORDINA_GRAPH_ACTION_ASSIGN_CARD) \
+  X(COORDINA_GRAPH_ACTION_ADD_PERSON)
+
 int main()
 {
   std::printf("{\n  \"structs\": [");
@@ -402,6 +407,33 @@ int main()
     COORDINA_FIELD(coordina_graph_staffing, others_late_days_after));
 
   COORDINA_STRUCT(
+    coordina_graph_action_options,
+    COORDINA_FIELD(coordina_graph_action_options, milestone),
+    COORDINA_FIELD(coordina_graph_action_options, simulation),
+    COORDINA_FIELD(coordina_graph_action_options, screen_run_count),
+    COORDINA_FIELD(coordina_graph_action_options, limit));
+
+  COORDINA_STRUCT(
+    coordina_graph_action,
+    COORDINA_FIELD(coordina_graph_action, node),
+    COORDINA_FIELD(coordina_graph_action, kind),
+    COORDINA_FIELD(coordina_graph_action, person),
+    COORDINA_FIELD(coordina_graph_action, on_time_before),
+    COORDINA_FIELD(coordina_graph_action, on_time_after),
+    COORDINA_FIELD(coordina_graph_action, p85_days_before),
+    COORDINA_FIELD(coordina_graph_action, p85_days_after),
+    COORDINA_FIELD(coordina_graph_action, others_delay_days),
+    COORDINA_FIELD(coordina_graph_action, dropped_count),
+    COORDINA_FIELD(coordina_graph_action, reserved),
+    COORDINA_FIELD(coordina_graph_action, value_lost));
+
+  COORDINA_STRUCT(
+    coordina_graph_action_output,
+    COORDINA_FIELD(coordina_graph_action_output, actions),
+    COORDINA_FIELD(coordina_graph_action_output, action_capacity),
+    COORDINA_FIELD(coordina_graph_action_output, action_count));
+
+  COORDINA_STRUCT(
     coordina_graph_duration_ratio,
     COORDINA_FIELD(coordina_graph_duration_ratio, low),
     COORDINA_FIELD(coordina_graph_duration_ratio, median),
@@ -431,6 +463,7 @@ int main()
   COORDINA_ENUM(coordina_graph_size, COORDINA_SIZE_VALUES);
   COORDINA_ENUM(coordina_graph_edge_status, COORDINA_EDGE_STATUS_VALUES);
   COORDINA_ENUM(coordina_graph_status, COORDINA_STATUS_VALUES);
+  COORDINA_ENUM(coordina_graph_action_kind, COORDINA_ACTION_KIND_VALUES);
 
   std::printf("\n  ]\n}\n");
   return 0;

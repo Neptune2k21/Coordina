@@ -37,6 +37,8 @@ public:
   Forecast forecast_without(NodeId milestone, const std::vector<NodeId>& dropped) const;
   // The forecast once each card has one person as its only assignee.
   Forecast forecast_with(const std::vector<Assignee>& changes) const;
+  // The forecast with more people for the cards nobody is assigned to.
+  Forecast forecast_with_people(std::uint32_t extra) const;
 
 private:
   Forecast forecast_changed(const PlanningBoard& changed) const;

@@ -401,6 +401,55 @@ typedef struct coordina_graph_staffing
   double others_late_days_after;
 } coordina_graph_staffing;
 
+typedef enum coordina_graph_action_kind
+{
+  COORDINA_GRAPH_ACTION_CUT_CARD = 1,
+  COORDINA_GRAPH_ACTION_ASSIGN_CARD = 2,
+  COORDINA_GRAPH_ACTION_ADD_PERSON = 3
+} coordina_graph_action_kind;
+
+typedef struct coordina_graph_action_options
+{
+  /* One of the board's milestones. */
+  coordina_graph_node_id milestone;
+  coordina_graph_simulation simulation;
+  /* Runs that compare the candidates before the best ones are forecast. */
+  uint32_t screen_run_count;
+  /* The most actions to return. */
+  uint32_t limit;
+} coordina_graph_action_options;
+
+/* One thing to do, and the milestone's forecast once it is done. */
+typedef struct coordina_graph_action
+{
+  /* The card to cut or assign; zero for ADD_PERSON. */
+  coordina_graph_node_id node;
+  /* A coordina_graph_action_kind. */
+  uint32_t kind;
+  /* Who to assign the card to. */
+  uint32_t person;
+  double on_time_before;
+  double on_time_after;
+  double p85_days_before;
+  double p85_days_after;
+  /* How much later the other milestones end up on average, by their weights. */
+  double others_delay_days;
+  /* The cards that leave the scope with a cut, the card itself included. */
+  uint32_t dropped_count;
+  uint32_t reserved;
+  /* What giving them up costs, by their priorities: high 4, medium 2, otherwise 1. */
+  double value_lost;
+} coordina_graph_action;
+
+/* Output of coordina_graph_propose_actions; limit actions are always enough. */
+typedef struct coordina_graph_action_output
+{
+  /* The best first. */
+  coordina_graph_action* actions;
+  size_t action_capacity;
+  size_t action_count;
+} coordina_graph_action_output;
+
 /*
  * How long cards take against what their size says: 1.6 means 60% longer. A
  * tenth of the chance is below low and a tenth above high.
@@ -655,6 +704,19 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_staffing(
   size_t change_count,
   const coordina_graph_staffing_options* options,
   coordina_graph_staffing* output);
+
+/*
+ * Ranks the single steps that help a milestone most: taking a card out, giving
+ * a card to one of the receivers, adding a person. Every kind is measured by
+ * forecasting the board with it, so they compare. An action that does not help
+ * is not returned.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_actions(
+  const coordina_graph_board* board,
+  const uint32_t* receivers,
+  size_t receiver_count,
+  const coordina_graph_action_options* options,
+  coordina_graph_action_output* output);
 
 /* What the board's history has taught, and how right the forecasts would have been. */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_calibrate(
