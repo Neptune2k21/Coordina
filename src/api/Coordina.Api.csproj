@@ -22,6 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Coordina.Api.Unit.Tests" />
+    <InternalsVisibleTo Include="Coordina.Api.Integration.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Architecture rules (CQ6xxx): reported in the IDE and fail the build. -->
     <ProjectReference Include="..\..\tools\analyzers\Coordina.Analyzers\Coordina.Analyzers.csproj"
                       OutputItemType="Analyzer"

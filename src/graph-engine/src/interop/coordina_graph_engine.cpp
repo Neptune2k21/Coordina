@@ -56,7 +56,7 @@ void write_nodes(
 
 extern "C" const char* coordina_graph_version(void)
 {
-  return "coordina-graph-engine/0.7.0";
+  return "coordina-graph-engine/1.0.0";
 }
 
 extern "C" coordina_graph_edge_status coordina_graph_evaluate_edge(

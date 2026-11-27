@@ -1,5 +1,6 @@
 #include "planning/ready_set.h"
 
+#include <algorithm>
 #include <bit>
 
 namespace coordina::graph
@@ -50,6 +51,16 @@ void ReadySet::erase(std::size_t index) noexcept
   if (leaf == 0U)
   {
     summaries_[leaf_index / word_bits] &= ~bit(leaf_index);
+  }
+}
+
+void ReadySet::clear() noexcept
+{
+  if (count_ > 0U)
+  {
+    std::ranges::fill(leaves_, 0U);
+    std::ranges::fill(summaries_, 0U);
+    count_ = 0U;
   }
 }
 

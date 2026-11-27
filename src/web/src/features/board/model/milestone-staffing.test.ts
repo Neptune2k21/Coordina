@@ -32,6 +32,7 @@ const staffing: BoardMilestoneStaffing = {
   commitDateBefore: "2027-03-14",
   forecastDateAfter: "2027-03-08",
   commitDateAfter: "2027-03-10",
+  othersDelayDays: 0,
   people: [ada, grace],
   changes: [
     payment,

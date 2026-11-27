@@ -20,6 +20,7 @@ public:
 
   void insert(std::size_t index) noexcept;
   void erase(std::size_t index) noexcept;
+  void clear() noexcept;
   std::size_t min() const noexcept;
   bool empty() const noexcept;
 

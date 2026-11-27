@@ -3,6 +3,7 @@
 
 #include "coordina_graph_engine.h"
 #include "core/graph_snapshot.h"
+#include "interop/abi_errors.h"
 #include "interop/native_bridge.h"
 #include "planning/work_planner.h"
 
@@ -22,12 +23,18 @@ Result query_graph(
   Result invalid,
   Query query)
 {
-  if (is_missing(nodes, node_count) || is_missing(edges, edge_count))
-  {
-    return invalid;
-  }
+  return guarded_value(
+    invalid,
+    [&]
+    {
+      if (is_missing(nodes, node_count) || is_missing(edges, edge_count))
+      {
+        set_error("An array is null but its count is not 0.");
+        return invalid;
+      }
 
-  return query(build_snapshot(nodes, node_count, edges, edge_count));
+      return static_cast<Result>(query(build_snapshot(nodes, node_count, edges, edge_count)));
+    });
 }
 
 template <typename Result, typename Query>
@@ -43,6 +50,7 @@ Result query_work(
 {
   if (is_missing(work_items, work_item_count))
   {
+    set_error("An array is null but its count is not 0.");
     return invalid;
   }
 

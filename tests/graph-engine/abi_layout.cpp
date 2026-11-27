@@ -164,7 +164,9 @@ void print_enum(const char* name, const std::vector<EnumValue>& values)
   X(COORDINA_GRAPH_OK)                    \
   X(COORDINA_GRAPH_INVALID_ARGUMENT)      \
   X(COORDINA_GRAPH_INSUFFICIENT_CAPACITY) \
-  X(COORDINA_GRAPH_CYCLE)
+  X(COORDINA_GRAPH_CYCLE)                 \
+  X(COORDINA_GRAPH_OUT_OF_MEMORY)         \
+  X(COORDINA_GRAPH_INTERNAL_ERROR)
 
 int main()
 {
@@ -201,7 +203,8 @@ int main()
     COORDINA_FIELD(coordina_graph_work_item, size),
     COORDINA_FIELD(coordina_graph_work_item, assignment),
     COORDINA_FIELD(coordina_graph_work_item, is_in_progress),
-    COORDINA_FIELD(coordina_graph_work_item, is_context_match));
+    COORDINA_FIELD(coordina_graph_work_item, is_context_match),
+    COORDINA_FIELD(coordina_graph_work_item, elapsed_hours));
 
   COORDINA_STRUCT(
     coordina_graph_planning_options,
@@ -255,42 +258,100 @@ int main()
     COORDINA_FIELD(coordina_graph_assignee, reserved));
 
   COORDINA_STRUCT(
-    coordina_graph_forecast_options,
-    COORDINA_FIELD(coordina_graph_forecast_options, milestone),
-    COORDINA_FIELD(coordina_graph_forecast_options, seed),
-    COORDINA_FIELD(coordina_graph_forecast_options, person_count),
-    COORDINA_FIELD(coordina_graph_forecast_options, run_count),
-    COORDINA_FIELD(coordina_graph_forecast_options, thread_count),
-    COORDINA_FIELD(coordina_graph_forecast_options, reserved));
+    coordina_graph_card_label,
+    COORDINA_FIELD(coordina_graph_card_label, node),
+    COORDINA_FIELD(coordina_graph_card_label, label),
+    COORDINA_FIELD(coordina_graph_card_label, reserved));
+
+  COORDINA_STRUCT(
+    coordina_graph_milestone,
+    COORDINA_FIELD(coordina_graph_milestone, node),
+    COORDINA_FIELD(coordina_graph_milestone, target_hours),
+    COORDINA_FIELD(coordina_graph_milestone, weight));
+
+  COORDINA_STRUCT(
+    coordina_graph_finished_card,
+    COORDINA_FIELD(coordina_graph_finished_card, node),
+    COORDINA_FIELD(coordina_graph_finished_card, hours),
+    COORDINA_FIELD(coordina_graph_finished_card, age_days));
+
+  COORDINA_STRUCT(
+    coordina_graph_board,
+    COORDINA_FIELD(coordina_graph_board, nodes),
+    COORDINA_FIELD(coordina_graph_board, node_count),
+    COORDINA_FIELD(coordina_graph_board, edges),
+    COORDINA_FIELD(coordina_graph_board, edge_count),
+    COORDINA_FIELD(coordina_graph_board, work_items),
+    COORDINA_FIELD(coordina_graph_board, work_item_count),
+    COORDINA_FIELD(coordina_graph_board, assignees),
+    COORDINA_FIELD(coordina_graph_board, assignee_count),
+    COORDINA_FIELD(coordina_graph_board, labels),
+    COORDINA_FIELD(coordina_graph_board, label_count),
+    COORDINA_FIELD(coordina_graph_board, milestones),
+    COORDINA_FIELD(coordina_graph_board, milestone_count),
+    COORDINA_FIELD(coordina_graph_board, history),
+    COORDINA_FIELD(coordina_graph_board, history_count),
+    COORDINA_FIELD(coordina_graph_board, person_count),
+    COORDINA_FIELD(coordina_graph_board, discovered_count),
+    COORDINA_FIELD(coordina_graph_board, finished_count),
+    COORDINA_FIELD(coordina_graph_board, extra_people));
+
+  COORDINA_STRUCT(
+    coordina_graph_simulation,
+    COORDINA_FIELD(coordina_graph_simulation, seed),
+    COORDINA_FIELD(coordina_graph_simulation, run_count),
+    COORDINA_FIELD(coordina_graph_simulation, thread_count));
+
+  COORDINA_STRUCT(
+    coordina_graph_milestone_forecast,
+    COORDINA_FIELD(coordina_graph_milestone_forecast, node),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, p10_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, p50_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, p85_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, p95_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, on_time),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, late_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, chain_days),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, card_count),
+    COORDINA_FIELD(coordina_graph_milestone_forecast, unsized_count));
 
   COORDINA_STRUCT(
     coordina_graph_card_forecast,
     COORDINA_FIELD(coordina_graph_card_forecast, node),
+    COORDINA_FIELD(coordina_graph_card_forecast, milestone),
+    COORDINA_FIELD(coordina_graph_card_forecast, reserved),
     COORDINA_FIELD(coordina_graph_card_forecast, criticality),
     COORDINA_FIELD(coordina_graph_card_forecast, sensitivity));
 
   COORDINA_STRUCT(
-    coordina_graph_milestone_forecast,
-    COORDINA_FIELD(coordina_graph_milestone_forecast, cards),
-    COORDINA_FIELD(coordina_graph_milestone_forecast, card_capacity),
-    COORDINA_FIELD(coordina_graph_milestone_forecast, card_count),
-    COORDINA_FIELD(coordina_graph_milestone_forecast, p50_days),
-    COORDINA_FIELD(coordina_graph_milestone_forecast, p85_days),
-    COORDINA_FIELD(coordina_graph_milestone_forecast, unsized_count),
-    COORDINA_FIELD(coordina_graph_milestone_forecast, reserved));
+    coordina_graph_planned_card,
+    COORDINA_FIELD(coordina_graph_planned_card, node),
+    COORDINA_FIELD(coordina_graph_planned_card, person),
+    COORDINA_FIELD(coordina_graph_planned_card, reserved),
+    COORDINA_FIELD(coordina_graph_planned_card, start_days),
+    COORDINA_FIELD(coordina_graph_planned_card, finish_days));
+
+  COORDINA_STRUCT(
+    coordina_graph_forecast_output,
+    COORDINA_FIELD(coordina_graph_forecast_output, milestones),
+    COORDINA_FIELD(coordina_graph_forecast_output, milestone_capacity),
+    COORDINA_FIELD(coordina_graph_forecast_output, milestone_count),
+    COORDINA_FIELD(coordina_graph_forecast_output, cards),
+    COORDINA_FIELD(coordina_graph_forecast_output, card_capacity),
+    COORDINA_FIELD(coordina_graph_forecast_output, card_count),
+    COORDINA_FIELD(coordina_graph_forecast_output, plan),
+    COORDINA_FIELD(coordina_graph_forecast_output, plan_capacity),
+    COORDINA_FIELD(coordina_graph_forecast_output, plan_count));
 
   COORDINA_STRUCT(
     coordina_graph_scope_options,
     COORDINA_FIELD(coordina_graph_scope_options, milestone),
-    COORDINA_FIELD(coordina_graph_scope_options, seed),
-    COORDINA_FIELD(coordina_graph_scope_options, target_hours),
+    COORDINA_FIELD(coordina_graph_scope_options, simulation),
     COORDINA_FIELD(coordina_graph_scope_options, goal),
-    COORDINA_FIELD(coordina_graph_scope_options, person_count),
-    COORDINA_FIELD(coordina_graph_scope_options, run_count),
     COORDINA_FIELD(coordina_graph_scope_options, screen_run_count),
-    COORDINA_FIELD(coordina_graph_scope_options, thread_count),
     COORDINA_FIELD(coordina_graph_scope_options, evaluation_limit),
-    COORDINA_FIELD(coordina_graph_scope_options, time_limit_ms));
+    COORDINA_FIELD(coordina_graph_scope_options, time_limit_ms),
+    COORDINA_FIELD(coordina_graph_scope_options, reserved));
 
   COORDINA_STRUCT(
     coordina_graph_dropped_card,
@@ -314,15 +375,11 @@ int main()
   COORDINA_STRUCT(
     coordina_graph_staffing_options,
     COORDINA_FIELD(coordina_graph_staffing_options, milestone),
-    COORDINA_FIELD(coordina_graph_staffing_options, seed),
-    COORDINA_FIELD(coordina_graph_staffing_options, person_count),
-    COORDINA_FIELD(coordina_graph_staffing_options, run_count),
+    COORDINA_FIELD(coordina_graph_staffing_options, simulation),
     COORDINA_FIELD(coordina_graph_staffing_options, screen_run_count),
-    COORDINA_FIELD(coordina_graph_staffing_options, thread_count),
     COORDINA_FIELD(coordina_graph_staffing_options, allow_reassignment),
     COORDINA_FIELD(coordina_graph_staffing_options, evaluation_limit),
-    COORDINA_FIELD(coordina_graph_staffing_options, time_limit_ms),
-    COORDINA_FIELD(coordina_graph_staffing_options, reserved));
+    COORDINA_FIELD(coordina_graph_staffing_options, time_limit_ms));
 
   COORDINA_STRUCT(
     coordina_graph_staff_change,
@@ -340,7 +397,9 @@ int main()
     COORDINA_FIELD(coordina_graph_staffing, p50_days_before),
     COORDINA_FIELD(coordina_graph_staffing, p85_days_before),
     COORDINA_FIELD(coordina_graph_staffing, p50_days_after),
-    COORDINA_FIELD(coordina_graph_staffing, p85_days_after));
+    COORDINA_FIELD(coordina_graph_staffing, p85_days_after),
+    COORDINA_FIELD(coordina_graph_staffing, others_late_days_before),
+    COORDINA_FIELD(coordina_graph_staffing, others_late_days_after));
 
   std::printf("\n  ],\n  \"enums\": [");
   first_entry = true;

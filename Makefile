@@ -1,4 +1,4 @@
-.PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke api api-restore api-tools api-build api-format api-format-check api-test api-test-unit api-test-integration api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down docker-logs docker-test-up docker-test-down docker-build clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
+.PHONY: help cpp-tools graph-engine-format graph-engine-build graph-engine-test graph-engine-abi graph-engine-abi-check graph-engine-sanitize graph-engine-benchmark graph-engine-benchmark-smoke graph-engine-lab api api-restore api-tools api-build api-format api-format-check api-test api-test-unit api-test-integration api-migration api-migrate web web-build web-format web-format-check web-lint web-test web-e2e web-typecheck docs test lint format format-check quality dev docker-up docker-down docker-logs docker-test-up docker-test-down docker-build clean start-api watch-api run-web start-full check check-all check-staged affected verify suite quality-baseline quality-rules quality-test hooks contract web-contract-check
 
 .PHONY: api-migrations-check e2e-api e2e-db
 
@@ -31,7 +31,7 @@ GRAPH_ENGINE_SANITIZE_OBJECTS := $(GRAPH_ENGINE_SOURCES:$(GRAPH_ENGINE_DIR)/src/
 # The native targets compile their objects through this, on every core.
 NATIVE_MAKE := $(MAKE) --no-print-directory -j$(shell nproc)
 GRAPH_ENGINE_SANITIZE_FLAGS := $(filter-out -O2,$(GRAPH_ENGINE_FLAGS)) -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all
-GRAPH_ENGINE_TESTS := graph_engine_tests planning_tests schedule_tests forecast_tests scope_tests staffing_tests
+GRAPH_ENGINE_TESTS := graph_engine_tests planning_tests numeric_tests duration_tests schedule_tests forecast_tests scope_tests staffing_tests
 GRAPH_ENGINE_ABI := contracts/graph-engine-abi.json
 CLANG_TOOLS_DIR := .tools/clang
 CLANG_TOOLS_REQUIREMENTS := tools/clang/requirements.txt
@@ -46,6 +46,7 @@ help:
 	@echo "  make cpp-tools    Installe clang-format et clang-tidy aux versions de tools/clang/requirements.txt"
 	@echo "  make graph-engine-abi Regenere contracts/graph-engine-abi.json depuis le header C"
 	@echo "  make graph-engine-benchmark Mesure l'analyse de board native (sizes=\"100 1000\" optionnel)"
+	@echo "  make graph-engine-lab Mesure la justesse des previsions et des conseils sur des equipes simulees"
 	@echo "  make api          Lance l'API C#"
 	@echo "  make api-watch    Lance l'API C# en mode watch"
 	@echo "  make api-restore  Restaure les dependances .NET"
@@ -142,6 +143,10 @@ graph-engine-abi-check:
 graph-engine-benchmark:
 	$(NATIVE_MAKE) $(GRAPH_ENGINE_TEST_OUT)/graph_engine_benchmarks
 	$(GRAPH_ENGINE_TEST_OUT)/graph_engine_benchmarks $(sizes)
+
+graph-engine-lab:
+	$(NATIVE_MAKE) $(GRAPH_ENGINE_TEST_OUT)/lab
+	$(GRAPH_ENGINE_TEST_OUT)/lab
 
 graph-engine-benchmark-smoke:
 	$(MAKE) graph-engine-benchmark sizes="100 500 1000"

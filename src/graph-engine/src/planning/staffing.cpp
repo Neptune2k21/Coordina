@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <limits>
 #include <numeric>
-#include <unordered_set>
+#include <utility>
 
 // Setting a staffing search up from the team, and what it answers: the plan
 // it proposes, or the measure of changes someone chose.
@@ -19,69 +19,102 @@ constexpr auto no_card = std::numeric_limits<std::size_t>::max();
 // The share of the time left that annealing gets; pruning gets the rest.
 constexpr double annealing_share = 0.8;
 
-ScopeOptions scope_options_of(const StaffingOptions& options) noexcept
+// How late the other milestones are, by their weights against this one's.
+double late_days_of_others(const PlanModel& model, const Forecast& forecast, std::size_t milestone)
 {
-  return ScopeOptions{
-    .seed = options.seed,
-    .run_count = options.run_count,
-    .screen_run_count = options.run_count,
-    .thread_count = options.thread_count
-  };
+  auto late = 0.0;
+
+  for (std::size_t other = 0U; other < forecast.milestones.size(); ++other)
+  {
+    if (other != milestone)
+    {
+      late += forecast.milestones[other].late_days * model.milestones()[other].weight
+        / model.milestones()[milestone].weight;
+    }
+  }
+
+  return late;
 }
 
-// Whether the second plan ships sooner: its 85% date first, then its 50% one.
-bool ships_sooner(const ScopeSample& after, const ScopeSample& before) noexcept
+// Whether the plan ships the milestone sooner, its 85% date first, then its
+// 50% one, by more than it delays the others.
+bool is_worth_it(const StaffingPlan& plan)
 {
-  return after.p85_hours < before.p85_hours
-    || (!(after.p85_hours > before.p85_hours) && after.p50_hours < before.p50_hours);
+  const auto harm = std::max(0.0, plan.others_late_days_after - plan.others_late_days_before);
+  const auto gain = plan.p85_days_before - plan.p85_days_after;
+  return gain > harm || (!(gain < harm) && plan.p50_days_after < plan.p50_days_before);
+}
+
+template <typename Solve>
+StaffingPlan search_staffing(
+  const PlanningBoard& board,
+  const StaffingTeam& team,
+  const StaffingOptions& options,
+  const Solve& solve)
+{
+  const PlannedBoard planned(board, options.simulation);
+
+  if (planned.error() != PlanError::none)
+  {
+    return StaffingPlan{.error = planned.error(), .changes = {}};
+  }
+
+  const auto milestone = planned.find_milestone(options.milestone);
+
+  if (milestone == PlannedBoard::no_milestone)
+  {
+    return StaffingPlan{.error = PlanError::unknown_milestone, .changes = {}};
+  }
+
+  if (planned.model().milestones()[milestone].card == PlanMilestone::done)
+  {
+    return StaffingPlan{};
+  }
+
+  StaffSearch search(planned, milestone, team, options);
+  return solve(search);
 }
 }
 
-StaffSearch::Plan::Plan(const ForecastModel& model)
+StaffSearch::Plan::Plan(const PlanModel& model)
     : people(model.card_count(), keep), held(model.person_count(), 0U)
 {
 }
 
-StaffSearch::Runner::Runner(const ForecastModel& model, std::size_t pool_words)
-    : plan(model), pool(pool_words, 0U), scheduler(model)
+StaffSearch::Runner::Runner(const PlanModel& model, std::size_t team_words)
+    : plan(model), team(team_words, 0U), scheduler(model)
 {
   driving.reserve(model.card_count());
 }
 
 StaffSearch::StaffSearch(
-  const ForecastModel& model,
-  const std::vector<WorkItem>& work_items,
+  const PlannedBoard& planned,
+  std::size_t milestone,
   const StaffingTeam& team,
   const StaffingOptions& options)
-    : model_(&model), options_(&options), nobody_(model.person_count() - 1U),
-      pool_words_((model.person_count() + word_bits - 1U) / word_bits),
-      simulator_(model, scope_options_of(options)), likely_(model.likely_hours()),
-      active_(model.card_count(), 1U), in_progress_(model.card_count(), 0U),
-      is_receiver_(model.person_count(), 0U), elsewhere_(pool_words_, 0U),
-      movable_flags_(model.card_count(), 0U), keep_(model), started_(Clock::now())
+    : planned_(&planned), model_(&planned.model()), options_(&options), milestone_(milestone),
+      nobody_(model_->nobody()), team_words_((model_->person_count() + word_bits - 1U) / word_bits),
+      is_receiver_(model_->person_count(), 0U), elsewhere_(team_words_, 0U),
+      movable_flags_(model_->card_count(), 0U), keep_(*model_), started_(Clock::now())
 {
   index_cards();
-  read_work(work_items, team.assignees);
+  find_busy_elsewhere();
   link_skills(team.skilled);
   draw_screen_runs();
   pick_receivers(team.receivers);
   find_movable();
 
-  const auto cards = model.card_count();
-
+  const auto& hours = model_->planned_hours();
   // A move changes the finish by about one card's duration.
-  if (cards > 0U)
-  {
-    temperature_ = std::max(
-      std::accumulate(likely_.begin(), likely_.end(), 0.0) / static_cast<double>(cards),
-      0.25);
-  }
+  temperature_ = std::max(
+    std::accumulate(hours.begin(), hours.end(), 0.0) / static_cast<double>(hours.size()),
+    0.25);
 
-  const auto draws =
-    static_cast<std::size_t>(options.evaluation_limit) * options.screen_run_count * cards;
+  const auto draws = static_cast<std::size_t>(options.evaluation_limit) * options.screen_run_count
+    * model_->card_count();
   runners_.assign(
-    thread_count_for(options.thread_count, chain_count, draws),
-    Runner(model, pool_words_));
+    thread_count_for(options.simulation.thread_count, chain_count, draws),
+    Runner(*model_, team_words_));
   bests_.assign(chain_count, keep_);
   best_costs_.assign(chain_count, 0.0);
 }
@@ -102,32 +135,20 @@ void StaffSearch::index_cards()
   }
 }
 
-// Marks the cards in progress, and the people assigned to open cards outside
-// the scope: they stay on the team whatever the plan.
-void StaffSearch::read_work(
-  const std::vector<WorkItem>& work_items,
-  const std::vector<Assignee>& assignees)
+// The people assigned to open cards outside the plan stay on the team
+// whatever it does.
+void StaffSearch::find_busy_elsewhere()
 {
-  std::unordered_set<NodeId, NodeHash> completed;
+  const BoardIndex board(planned_->board());
 
-  for (const auto& item : work_items)
+  for (std::size_t card = 0U; card < board.size(); ++card)
   {
-    if (item.is_completed)
+    if (!board.item(card).is_completed && index_of(board.item(card).node) == no_card)
     {
-      completed.insert(item.node);
-    }
-    else if (const auto card = index_of(item.node); card != no_card)
-    {
-      in_progress_[card] = item.is_in_progress ? 1U : 0U;
-    }
-  }
-
-  for (const auto& assignee : assignees)
-  {
-    if (assignee.person < nobody_ && index_of(assignee.node) == no_card
-      && !completed.contains(assignee.node))
-    {
-      set_bit(elsewhere_, assignee.person);
+      for (const auto person : board.people(card))
+      {
+        set_bit(elsewhere_, person);
+      }
     }
   }
 }
@@ -160,18 +181,27 @@ void StaffSearch::link_skills(const std::vector<Assignee>& skilled)
   std::partial_sum(skilled_offsets_.begin(), skilled_offsets_.end(), skilled_offsets_.begin());
 }
 
-// The screening runs, drawn once from the forecast's streams.
+// The screening runs, the first of the forecast's, and when each milestone
+// ends in them as things are.
 void StaffSearch::draw_screen_runs()
 {
   const auto cards = model_->card_count();
-  const CardStreams streams(options_->seed, model_->nodes());
-  screen_hours_.reserve(options_->screen_run_count * cards);
+  const auto& milestones = model_->milestones();
+  const DurationSampler sampler(*model_, planned_->durations(), options_->simulation.seed);
+  auto shared = sampler.make_draw();
+  Scheduler scheduler(*model_);
+  screen_hours_.assign(options_->screen_run_count * cards, 0.0);
 
-  for (std::uint32_t run = 0U; run < options_->screen_run_count; ++run)
+  for (std::size_t run = 0U; run < options_->screen_run_count; ++run)
   {
-    for (std::size_t card = 0U; card < cards; ++card)
+    const auto hours = std::span(screen_hours_).subspan(run * cards, cards);
+    sampler.draw(run, shared, hours);
+    scheduler.run(hours);
+
+    for (std::size_t milestone = 0U; milestone < milestones.size(); ++milestone)
     {
-      screen_hours_.push_back(model_->duration(card)(streams.unit(card, run)));
+      allowed_.push_back(
+        std::max(scheduler.finish_of(milestone), milestones[milestone].target_hours));
     }
   }
 }
@@ -210,27 +240,25 @@ std::size_t StaffSearch::index_of(NodeId node) const
 
 StaffingPlan StaffSearch::propose()
 {
-  auto& first = runners_.front();
-  first.plan = keep_;
-  const auto before = measure(first);
+  const auto before = planned_->forecast_now();
 
   if (movable_.empty())
   {
-    return finish(first, before, before);
+    return finish(before, keep_);
   }
 
   auto budget = Clock::duration::zero();
 
   if (options_->time_limit.count() > 0)
   {
-    // Measuring the plan found takes about as long as measuring the current
-    // one, with some room to spare.
+    // Forecasting the plan found takes about as long as forecasting the
+    // current one, with some room to spare.
     const auto now = Clock::now();
     deadline_ = started_ + options_->time_limit - (2 * (now - started_));
 
     if (deadline_ <= now)
     {
-      return finish(first, before, before);
+      return finish(before, keep_);
     }
 
     const auto left = std::chrono::duration<double>(deadline_ - now) * annealing_share;
@@ -246,93 +274,77 @@ StaffingPlan StaffSearch::propose()
       anneal(runner, chain, budget);
     });
 
+  auto& first = runners_.front();
   const auto best_chain =
     static_cast<std::size_t>(std::ranges::min_element(best_costs_) - best_costs_.begin());
   first.plan = bests_[best_chain];
   auto best = best_costs_[best_chain];
   prune(first, best);
+  const auto plan = finish(before, first.plan);
 
-  if (first.plan.changes == 0U)
-  {
-    return finish(first, before, before);
-  }
-
-  const auto after = measure(first);
-
-  if (!ships_sooner(after, before))
-  {
-    first.plan = keep_;
-    return finish(first, before, before);
-  }
-
-  return finish(first, before, after);
+  return plan.changes.empty() || is_worth_it(plan) ? plan : finish(before, keep_);
 }
 
 StaffingPlan StaffSearch::evaluate(const std::vector<Assignee>& changes)
 {
-  auto& first = runners_.front();
-  first.plan = keep_;
-  const auto before = measure(first);
+  auto plan = keep_;
 
   for (const auto& change : changes)
   {
-    if (const auto card = index_of(change.node); card != no_card && change.person < nobody_)
+    if (const auto card = index_of(change.node);
+      card != no_card && model_->in_scope(milestone_, card) && change.person < nobody_)
     {
-      give(first.plan, card, normalized(card, change.person));
+      give(plan, card, normalized(card, change.person));
     }
   }
 
-  return finish(first, before, first.plan.changes == 0U ? before : measure(first));
+  return finish(planned_->forecast_now(), plan);
 }
 
-// When each card starts if every card takes its likely time.
-std::vector<double> StaffSearch::starts_of(Runner& runner, const Plan& plan)
+std::vector<Assignee> StaffSearch::changes_of(const Plan& plan) const
 {
-  fill_pool(plan, runner.pool);
-  runner.scheduler.run(likely_, {}, Staffing{.people = plan.people, .pool = runner.pool});
-  std::vector<double> starts;
-  starts.reserve(model_->card_count());
-
-  for (const auto& card : runner.scheduler.schedule().cards)
-  {
-    starts.push_back(card.start_hours);
-  }
-
-  return starts;
-}
-
-StaffingPlan StaffSearch::finish(
-  Runner& runner,
-  const ScopeSample& before,
-  const ScopeSample& after)
-{
-  StaffingPlan result;
-  result.p50_days_before = before.p50_hours / focus_hours_per_day;
-  result.p85_days_before = before.p85_hours / focus_hours_per_day;
-  result.p50_days_after = after.p50_hours / focus_hours_per_day;
-  result.p85_days_after = after.p85_hours / focus_hours_per_day;
-
-  if (runner.plan.changes == 0U)
-  {
-    return result;
-  }
-
-  const auto plan = runner.plan;
-  const auto starts_before = starts_of(runner, keep_);
-  const auto starts_after = starts_of(runner, plan);
+  std::vector<Assignee> changes;
 
   for (std::size_t card = 0U; card < plan.people.size(); ++card)
   {
     if (plan.people[card] != keep)
     {
-      result.changes.push_back(
-        StaffChange{
-          .node = model_->nodes()[card],
-          .person = plan.people[card],
-          .start_days_before = starts_before[card] / focus_hours_per_day,
-          .start_days_after = starts_after[card] / focus_hours_per_day
-        });
+      changes.push_back(Assignee{.node = model_->nodes()[card], .person = plan.people[card]});
     }
+  }
+
+  return changes;
+}
+
+StaffingPlan StaffSearch::finish(const Forecast& before, const Plan& plan) const
+{
+  const auto changes = changes_of(plan);
+  const auto after = changes.empty() ? before : planned_->forecast_with(changes);
+  StaffingPlan result{
+    .error = PlanError::none,
+    .changes = {},
+    .p50_days_before = before.milestones[milestone_].p50_days,
+    .p85_days_before = before.milestones[milestone_].p85_days,
+    .p50_days_after = after.milestones[milestone_].p50_days,
+    .p85_days_after = after.milestones[milestone_].p85_days,
+    .others_late_days_before = late_days_of_others(*model_, before, milestone_),
+    .others_late_days_after = late_days_of_others(*model_, after, milestone_)
+  };
+  const auto start_of = [](const Forecast& forecast, NodeId node)
+  {
+    const auto found = std::ranges::find(forecast.plan, node, &PlannedCard::node);
+    return found == forecast.plan.end() ? 0.0 : found->start_days;
+  };
+
+  for (const auto& change : changes)
+  {
+    result.changes.push_back(
+      StaffChange{
+        .node = change.node,
+        .person = change.person,
+        .start_days_before = start_of(before, change.node),
+        .start_days_after = start_of(after, change.node)
+      });
   }
 
   std::ranges::stable_sort(
@@ -346,34 +358,32 @@ StaffingPlan StaffSearch::finish(
 }
 
 StaffingPlan propose_staffing(
-  const ForecastModel& model,
-  const std::vector<WorkItem>& work_items,
+  const PlanningBoard& board,
   const StaffingTeam& team,
   const StaffingOptions& options)
 {
-  if (model.error() != ForecastError::none || options.run_count == 0U
-    || options.screen_run_count == 0U)
-  {
-    return {};
-  }
-
-  StaffSearch search(model, work_items, team, options);
-  return search.propose();
+  return search_staffing(
+    board,
+    team,
+    options,
+    [](StaffSearch& search)
+    {
+      return search.propose();
+    });
 }
 
 StaffingPlan evaluate_staffing(
-  const ForecastModel& model,
-  const std::vector<WorkItem>& work_items,
-  const StaffingTeam& team,
+  const PlanningBoard& board,
   const std::vector<Assignee>& changes,
   const StaffingOptions& options)
 {
-  if (model.error() != ForecastError::none || options.run_count == 0U)
-  {
-    return {};
-  }
-
-  StaffSearch search(model, work_items, team, options);
-  return search.evaluate(changes);
+  return search_staffing(
+    board,
+    StaffingTeam{},
+    options,
+    [&changes](StaffSearch& search)
+    {
+      return search.evaluate(changes);
+    });
 }
 }

@@ -1,13 +1,17 @@
 #include "planning/scope_search.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace coordina::graph
 {
 namespace
 {
-constexpr auto no_card = ScopeGraph::no_card;
+constexpr auto no_card = std::numeric_limits<std::size_t>::max();
 constexpr std::size_t swap_tries = 2U;
+
+// Keeps a ratio finite for a card that takes next to no time.
+constexpr double least_hours = 1e-6;
 
 // The cards of a ranking, lowest first; ties go to the lower card.
 std::vector<std::size_t> cards_of(
@@ -56,8 +60,8 @@ void ScopeSearch::find_cuttable()
   {
     const auto dependents = model_->dependents(card);
 
-    if (card == graph_.milestone() || !graph_.is_reachable(card) || blocked_[card] != 0U
-      || (dependents.size() == 1U && dependents.front() != graph_.milestone()))
+    if (card == graph_.milestone_card() || !graph_.contains(card) || blocked_[card] != 0U
+      || (dependents.size() == 1U && dependents.front() != graph_.milestone_card()))
     {
       continue;
     }
@@ -87,15 +91,24 @@ void ScopeSearch::rebuild()
     graph_.close_up(card, cut_);
   }
 
-  graph_.activate(cut_, active_);
+  graph_.apply(cut_, dropped_, active_);
+}
+
+void ScopeSearch::apply_trial()
+{
+  graph_.apply(trial_cut_, trial_dropped_, trial_active_);
 }
 
 // Rebuilds the cut from the chosen cards and simulates the scope left.
-ScopeSample ScopeSearch::measure(std::size_t runs)
+PlanSample ScopeSearch::measure(std::size_t runs)
 {
   rebuild();
   ++evaluations_;
-  return simulator_.run(active_, runs, &contribution_);
+  return simulator_.run(
+    runs,
+    Cut{.active = active_, .dropped = dropped_, .milestone_card = graph_.milestone_card()},
+    {},
+    &contribution_);
 }
 
 // What adding the card to the cut gives up, and the hours it saves by the
@@ -104,12 +117,12 @@ ScopeSearch::Margin ScopeSearch::margin_of(std::size_t card)
 {
   trial_cut_ = cut_;
   graph_.close_up(card, trial_cut_);
-  graph_.activate(trial_cut_, trial_active_);
+  apply_trial();
   Margin margin;
 
   for (std::size_t other = 0U; other < active_.size(); ++other)
   {
-    if (active_[other] != 0U && trial_active_[other] == 0U)
+    if (leaves(other))
     {
       margin.value += values_[other];
       margin.gain += contribution_[other];
@@ -119,37 +132,47 @@ ScopeSearch::Margin ScopeSearch::margin_of(std::size_t card)
   return margin;
 }
 
+// Whether the trial takes the card out of the milestone's scope.
+bool ScopeSearch::leaves(std::size_t card) const noexcept
+{
+  return dropped_[card] == 0U && trial_dropped_[card] != 0U;
+}
+
 double ScopeSearch::value_of_cut() const
 {
   double value = 0.0;
 
-  for (std::size_t card = 0U; card < active_.size(); ++card)
+  for (std::size_t card = 0U; card < dropped_.size(); ++card)
   {
-    value += active_[card] == 0U ? values_[card] : 0.0;
+    value += dropped_[card] != 0U ? values_[card] : 0.0;
   }
 
   return value;
 }
 
-// The value the card's cut gives up on its own.
-double ScopeSearch::value_of(std::size_t card)
+// The value the card's cut gives up on its own, and the hours it frees.
+ScopeSearch::Margin ScopeSearch::margin_alone(std::size_t card)
 {
   std::ranges::fill(trial_cut_, 0U);
   graph_.close_up(card, trial_cut_);
-  graph_.activate(trial_cut_, trial_active_);
-  double value = 0.0;
+  apply_trial();
+  Margin margin;
 
-  for (std::size_t other = 0U; other < trial_active_.size(); ++other)
+  for (std::size_t other = 0U; other < trial_dropped_.size(); ++other)
   {
-    value += trial_active_[other] == 0U ? values_[other] : 0.0;
+    if (trial_dropped_[other] != 0U)
+    {
+      margin.value += values_[other];
+      margin.gain += model_->planned_hours()[other];
+    }
   }
 
-  return value;
+  return margin;
 }
 
 // Measures again after each batch, since cards that waited behind the ones
 // cut may now set the date.
-void ScopeSearch::grow(ScopeSample& screen)
+void ScopeSearch::grow(PlanSample& screen)
 {
   while (screen.on_time < options_->goal && !exhausted() && grow_batch(screen))
   {
@@ -160,7 +183,7 @@ void ScopeSearch::grow(ScopeSample& screen)
 // Cuts the cards that give up least value per hour saved: enough of them that
 // their savings would bring the goal's finish down to the target. Returns
 // whether it cut any.
-bool ScopeSearch::grow_batch(const ScopeSample& sample)
+bool ScopeSearch::grow_batch(const PlanSample& sample)
 {
   Ranking candidates;
   candidates.reserve(cuttable_.size());
@@ -176,7 +199,7 @@ bool ScopeSearch::grow_batch(const ScopeSample& sample)
     }
   }
 
-  const auto needed = sample.goal_hours - options_->target_hours;
+  const auto needed = sample.goal_hours - model_->milestones()[milestone_].target_hours;
   const auto chosen_before = chosen_.size();
   auto saved = 0.0;
 
@@ -196,6 +219,7 @@ bool ScopeSearch::grow_batch(const ScopeSample& sample)
     {
       chosen_.push_back(card);
       cut_ = trial_cut_;
+      dropped_ = trial_dropped_;
       active_ = trial_active_;
       saved += margin.gain;
     }
@@ -204,10 +228,11 @@ bool ScopeSearch::grow_batch(const ScopeSample& sample)
   return chosen_.size() > chosen_before;
 }
 
-// Gives back the cuts the goal no longer needs, the most valuable first.
+// Gives back the cuts the goal no longer needs, those that give up most value
+// per hour first.
 void ScopeSearch::shrink(double floor)
 {
-  for (const auto card : by_value())
+  for (const auto card : by_value_per_hour())
   {
     if (exhausted())
     {
@@ -276,7 +301,21 @@ std::vector<std::size_t> ScopeSearch::by_value()
 
   for (const auto card : chosen_)
   {
-    ranking.emplace_back(-value_of(card), card);
+    ranking.emplace_back(-margin_alone(card).value, card);
+  }
+
+  return cards_of(ranking, ranking.size());
+}
+
+std::vector<std::size_t> ScopeSearch::by_value_per_hour()
+{
+  Ranking ranking;
+  ranking.reserve(chosen_.size());
+
+  for (const auto card : chosen_)
+  {
+    const auto margin = margin_alone(card);
+    ranking.emplace_back(-margin.value / std::max(margin.gain, least_hours), card);
   }
 
   return cards_of(ranking, ranking.size());

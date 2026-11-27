@@ -29,46 +29,29 @@ constexpr bool finishes_later(
 }
 }
 
-Scheduler::Scheduler(const ForecastModel& model)
+Scheduler::Scheduler(const PlanModel& model)
     : model_(&model), cards_(model.card_count()), last_card_(model.person_count()),
-      free_people_((model.person_count() + word_bits - 1U) / word_bits), pool_(free_people_.size()),
-      own_(model.person_count(), ReadySet(model.card_count())), shared_(model.card_count())
+      own_hours_(model.person_count()),
+      free_people_((model.person_count() + word_bits - 1U) / word_bits), team_(model.team()),
+      own_(model.person_count(), ReadySet(model.card_count())), shared_(model.card_count()),
+      is_milestone_(model.card_count(), 0U)
 {
   running_.reserve(model.person_count());
+
+  for (const auto& milestone : model.milestones())
+  {
+    if (milestone.card != PlanMilestone::done)
+    {
+      is_milestone_[milestone.card] = 1U;
+    }
+  }
 }
 
-double Scheduler::run(
-  std::span<const double> hours,
-  std::span<const std::uint8_t> active,
-  const Staffing& staffing)
+void Scheduler::run(std::span<const double> hours, const Cut& cut, const Staffing& staffing)
 {
-  const auto count = model_->card_count();
-  hours_ = hours;
-  staff(staffing);
-  std::ranges::fill(last_card_, no_card);
-  std::ranges::fill(free_people_, ~std::uint64_t{0U});
-  running_.clear();
-  last_ = none;
+  reset(hours, cut, staffing);
 
-  for (std::size_t card = 0U; card < count; ++card)
-  {
-    cards_[card] = CardState{
-      .ready_at = 0.0,
-      .start = 0.0,
-      .finish = 0.0,
-      .remaining = model_->dependency_count(card),
-      .person = 0U,
-      .ready_cause = no_card,
-      .cause = no_card
-    };
-  }
-
-  if (!active.empty())
-  {
-    leave_out(active);
-  }
-
-  for (std::size_t card = 0U; card < count; ++card)
+  for (std::size_t card = 0U; card < cards_.size(); ++card)
   {
     if (cards_[card].remaining == 0U)
     {
@@ -76,97 +59,101 @@ double Scheduler::run(
     }
   }
 
-  start_cards(0.0);
-
-  while (!running_.empty())
+  if (milestones_left_ > 0U)
   {
-    const auto now = running_.front().finish;
-    finish_cards(now);
-    start_cards(now);
+    start_cards(0.0);
   }
 
-  return last_ == none ? 0.0 : cards_[last_].finish;
-}
-
-void Scheduler::driving_chain(std::vector<std::size_t>& chain) const
-{
-  chain.clear();
-
-  if (last_ == none)
+  while (!running_.empty() && milestones_left_ > 0U)
   {
-    return;
-  }
+    end_ = running_.front().finish;
+    finish_cards(end_);
 
-  for (auto card = static_cast<std::uint32_t>(last_); card != no_card; card = cards_[card].cause)
-  {
-    chain.push_back(card);
-  }
-
-  std::ranges::reverse(chain);
-}
-
-Schedule Scheduler::schedule() const
-{
-  Schedule result;
-  result.cards.reserve(model_->card_count());
-
-  for (std::size_t card = 0U; card < model_->card_count(); ++card)
-  {
-    result.cards.push_back(
-      ScheduledCard{
-        .node = model_->nodes()[card],
-        .person = cards_[card].person,
-        .start_hours = cards_[card].start,
-        .finish_hours = cards_[card].finish
-      });
-  }
-
-  driving_chain(result.driving_chain);
-  result.finish_hours = last_ == none ? 0.0 : cards_[last_].finish;
-  return result;
-}
-
-// A card left out never becomes ready, and the cards waiting for it stop
-// counting it among their dependencies.
-void Scheduler::leave_out(std::span<const std::uint8_t> active) noexcept
-{
-  for (std::size_t card = 0U; card < active.size(); ++card)
-  {
-    if (active[card] != 0U)
+    if (milestones_left_ > 0U)
     {
-      continue;
+      start_cards(end_);
     }
+  }
+}
 
-    cards_[card].remaining = left_out;
+void Scheduler::reset(std::span<const double> hours, const Cut& cut, const Staffing& staffing)
+{
+  hours_ = hours;
+  cut_ = cut;
+  chosen_ = staffing.people;
+  team_ = staffing.team.empty() ? model_->team() : staffing.team;
+  std::ranges::fill(last_card_, no_card);
+  std::ranges::fill(own_hours_, 0.0);
+  // Only the people who can take a card matter; the rest of the workspace would
+  // be scanned at every step for nothing.
+  std::ranges::copy(team_, free_people_.begin());
+  running_.clear();
+  shared_.clear();
+  milestones_left_ = 0U;
+  end_ = 0.0;
+
+  for (auto& ready : own_)
+  {
+    ready.clear();
+  }
+
+  for (std::size_t card = 0U; card < cards_.size(); ++card)
+  {
+    cards_[card] = CardState{
+      .ready_at = 0.0,
+      .start = std::numeric_limits<double>::infinity(),
+      .finish = 0.0,
+      .remaining = model_->dependency_count(card),
+      .person = 0U,
+      .ready_cause = no_card,
+      .cause = no_card
+    };
+    milestones_left_ += is_milestone_[card];
+    const auto takers = people(card);
+
+    for (const auto person : takers)
+    {
+      own_hours_[person] += model_->planned_hours()[card] / static_cast<double>(takers.size());
+      free_people_[person / word_bits] |= std::uint64_t{1U} << (person % word_bits);
+    }
+  }
+
+  if (!cut_.active.empty())
+  {
+    leave_out();
+  }
+}
+
+void Scheduler::leave_out() noexcept
+{
+  for (std::size_t card = 0U; card < cards_.size(); ++card)
+  {
+    const auto is_out = !is_active(card);
 
     for (const auto dependent : model_->dependents(card))
     {
-      if (active[dependent] != 0U)
+      if (is_active(dependent) && (is_out || !waits(dependent, card)))
       {
         --cards_[dependent].remaining;
       }
     }
+
+    if (is_out)
+    {
+      cards_[card].remaining = left_out;
+      milestones_left_ -= is_milestone_[card];
+    }
   }
 }
 
-void Scheduler::staff(const Staffing& staffing) noexcept
+bool Scheduler::is_active(std::size_t card) const noexcept
 {
-  chosen_ = staffing.people;
+  return cut_.active.empty() || cut_.active[card] != 0U;
+}
 
-  if (!staffing.pool.empty())
-  {
-    std::ranges::fill(pool_, 0U);
-    const auto words = std::min(staffing.pool.size(), pool_.size());
-    std::ranges::copy(staffing.pool.first(words), pool_.begin());
-    return;
-  }
-
-  std::ranges::fill(pool_, ~std::uint64_t{0U});
-
-  if (const auto extra = model_->person_count() % word_bits; extra != 0U)
-  {
-    pool_.back() = (std::uint64_t{1U} << extra) - 1U;
-  }
+bool Scheduler::waits(std::size_t dependent, std::size_t dependency) const noexcept
+{
+  return dependent != cut_.milestone_card || cut_.dropped.empty() || cut_.dropped[dependency] == 0U;
 }
 
 std::span<const std::uint32_t> Scheduler::people(std::size_t card) const noexcept
@@ -181,15 +168,15 @@ std::span<const std::uint32_t> Scheduler::people(std::size_t card) const noexcep
 
 void Scheduler::release(std::size_t card) noexcept
 {
-  const auto people = this->people(card);
+  const auto takers = people(card);
 
-  if (people.empty())
+  if (takers.empty())
   {
     shared_.insert(card);
     return;
   }
 
-  for (const auto person : people)
+  for (const auto person : takers)
   {
     own_[person].insert(card);
   }
@@ -203,88 +190,99 @@ bool Scheduler::is_free(std::uint32_t person) const noexcept
 std::size_t Scheduler::next_card() const noexcept
 {
   auto next = none;
-  auto pool_free = false;
+  auto team_free = false;
 
   for (std::size_t word = 0U; word < free_people_.size(); ++word)
   {
-    pool_free = pool_free || (free_people_[word] & pool_[word]) != 0U;
+    team_free = team_free || (free_people_[word] & team_[word]) != 0U;
 
     for (auto bits = free_people_[word]; bits != 0U; bits &= bits - 1U)
     {
       const auto person = (word * word_bits) + static_cast<std::size_t>(std::countr_zero(bits));
-
-      if (person >= own_.size())
-      {
-        break;
-      }
-
       next = std::min(next, own_[person].min());
     }
   }
 
-  return pool_free ? std::min(next, shared_.min()) : next;
+  return team_free ? std::min(next, shared_.min()) : next;
 }
 
 std::uint32_t Scheduler::person_for(std::size_t card) const noexcept
 {
-  const auto people = this->people(card);
-
-  if (people.empty())
+  auto chosen = no_card;
+  const auto consider = [&](std::uint32_t person)
   {
-    for (std::size_t word = 0U; word < free_people_.size(); ++word)
+    if (chosen == no_card || own_hours_[person] < own_hours_[chosen])
     {
-      if (const auto bits = free_people_[word] & pool_[word]; bits != 0U)
-      {
-        return static_cast<std::uint32_t>(
-          (word * word_bits) + static_cast<std::size_t>(std::countr_zero(bits)));
-      }
+      chosen = person;
     }
-  }
+  };
+  const auto takers = people(card);
 
-  for (const auto person : people)
+  for (const auto person : takers)
   {
     if (is_free(person))
     {
-      return person;
+      consider(person);
     }
   }
 
-  return 0U;
+  if (!takers.empty())
+  {
+    return chosen;
+  }
+
+  for (std::size_t word = 0U; word < free_people_.size(); ++word)
+  {
+    for (auto bits = free_people_[word] & team_[word]; bits != 0U; bits &= bits - 1U)
+    {
+      consider(
+        static_cast<std::uint32_t>(
+          (word * word_bits) + static_cast<std::size_t>(std::countr_zero(bits))));
+    }
+  }
+
+  return chosen;
 }
 
 void Scheduler::start_cards(double now)
 {
   for (auto card = next_card(); card != none; card = next_card())
   {
-    const auto person = person_for(card);
-    const auto people = this->people(card);
-
-    if (people.empty())
-    {
-      shared_.erase(card);
-    }
-
-    for (const auto assignee : people)
-    {
-      own_[assignee].erase(card);
-    }
-
-    // A card that was ready before now waited for its person, who has just
-    // finished another card; otherwise it waited for its last dependency.
-    auto& state = cards_[card];
-    state.cause = state.ready_at < now ? last_card_[person] : state.ready_cause;
-    free_people_[person / word_bits] &= ~(std::uint64_t{1U} << (person % word_bits));
-    state.person = person;
-    state.start = now;
-    state.finish = now + hours_[card];
-    running_.push_back(Running{.finish = state.finish, .card = card});
-    std::ranges::push_heap(
-      running_,
-      [](const Running& left, const Running& right)
-      {
-        return finishes_later(left.finish, left.card, right.finish, right.card);
-      });
+    start(card, now);
   }
+}
+
+void Scheduler::start(std::size_t card, double now)
+{
+  const auto person = person_for(card);
+  const auto takers = people(card);
+
+  if (takers.empty())
+  {
+    shared_.erase(card);
+  }
+
+  for (const auto taker : takers)
+  {
+    own_[taker].erase(card);
+    own_hours_[taker] -= model_->planned_hours()[card] / static_cast<double>(takers.size());
+  }
+
+  // A card that was ready before now waited for its person, who has just
+  // finished another card; otherwise it waited for its last dependency.
+  auto& state = cards_[card];
+  state.cause = state.ready_at < now ? last_card_[person] : state.ready_cause;
+  free_people_[person / word_bits] &= ~(std::uint64_t{1U} << (person % word_bits));
+  state.person = person;
+  state.start = now;
+  state.finish = now + hours_[card];
+  running_.push_back(Running{.finish = state.finish, .card = card});
+  std::ranges::push_heap(
+    running_,
+    [](const Running& left, const Running& right)
+    {
+      return finishes_later(left.finish, left.card, right.finish, right.card);
+    });
 }
 
 void Scheduler::finish_cards(double now) noexcept
@@ -302,14 +300,15 @@ void Scheduler::finish_cards(double now) noexcept
     const auto person = cards_[done.card].person;
     free_people_[person / word_bits] |= std::uint64_t{1U} << (person % word_bits);
     last_card_[person] = static_cast<std::uint32_t>(done.card);
-
-    if (last_ == none || done.finish > cards_[last_].finish)
-    {
-      last_ = done.card;
-    }
+    milestones_left_ -= is_milestone_[done.card];
 
     for (const auto dependent : model_->dependents(done.card))
     {
+      if (!waits(dependent, done.card))
+      {
+        continue;
+      }
+
       auto& waiting = cards_[dependent];
 
       if (!(waiting.ready_at > done.finish))
@@ -324,5 +323,44 @@ void Scheduler::finish_cards(double now) noexcept
       }
     }
   }
+}
+
+double Scheduler::finish_of(std::size_t milestone) const noexcept
+{
+  const auto card = model_->milestones()[milestone].card;
+  return card == PlanMilestone::done ? 0.0 : cards_[card].finish;
+}
+
+void Scheduler::driving_chain(std::size_t card, std::vector<std::size_t>& chain) const
+{
+  chain.clear();
+
+  for (auto next = static_cast<std::uint32_t>(card); next != no_card; next = cards_[next].cause)
+  {
+    chain.push_back(next);
+  }
+
+  std::ranges::reverse(chain);
+}
+
+Schedule Scheduler::schedule() const
+{
+  Schedule result;
+  result.cards.reserve(cards_.size());
+  result.finish_hours = end_;
+
+  for (std::size_t card = 0U; card < cards_.size(); ++card)
+  {
+    const auto& state = cards_[card];
+    result.cards.push_back(
+      ScheduledCard{
+        .node = model_->nodes()[card],
+        .person = state.person,
+        .start_hours = std::min(state.start, end_),
+        .finish_hours = state.start > end_ ? end_ : state.finish
+      });
+  }
+
+  return result;
 }
 }

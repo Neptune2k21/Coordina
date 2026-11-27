@@ -49,6 +49,8 @@ typedef struct coordina_graph_work_item
   uint32_t assignment;
   uint32_t is_in_progress;
   uint32_t is_context_match;
+  /* Focus hours already spent on a card in progress. */
+  double elapsed_hours;
 } coordina_graph_work_item;
 
 typedef enum coordina_graph_assignment
@@ -114,7 +116,9 @@ typedef enum coordina_graph_status
   COORDINA_GRAPH_OK = 0,
   COORDINA_GRAPH_INVALID_ARGUMENT = 1,
   COORDINA_GRAPH_INSUFFICIENT_CAPACITY = 2,
-  COORDINA_GRAPH_CYCLE = 3
+  COORDINA_GRAPH_CYCLE = 3,
+  COORDINA_GRAPH_OUT_OF_MEMORY = 4,
+  COORDINA_GRAPH_INTERNAL_ERROR = 5
 } coordina_graph_status;
 
 typedef struct coordina_graph_node_buffer
@@ -146,7 +150,7 @@ typedef struct coordina_graph_board_analysis
   uint32_t reserved;
 } coordina_graph_board_analysis;
 
-/* A person working on a card. People are numbered from 0 to person_count. */
+/* A person on a card, open or done. People are numbered from 0 to person_count. */
 typedef struct coordina_graph_assignee
 {
   coordina_graph_node_id node;
@@ -154,65 +158,155 @@ typedef struct coordina_graph_assignee
   uint32_t reserved;
 } coordina_graph_assignee;
 
-typedef struct coordina_graph_forecast_options
+/* A label of a card, open or done, under any number. */
+typedef struct coordina_graph_card_label
 {
-  coordina_graph_node_id milestone;
-  /* The same seed gives the same forecast, whatever thread_count is. */
-  uint64_t seed;
-  /* The team: unassigned cards go to the first of them who is free. */
-  uint32_t person_count;
-  uint32_t run_count;
-  /* 0 uses every core. */
-  uint32_t thread_count;
+  coordina_graph_node_id node;
+  uint32_t label;
   uint32_t reserved;
-} coordina_graph_forecast_options;
+} coordina_graph_card_label;
+
+/*
+ * A card with a target date. Its scope is the card and every open card it
+ * depends on, directly or through open cards.
+ */
+typedef struct coordina_graph_milestone
+{
+  coordina_graph_node_id node;
+  /* Focus hours, 6 a working day, from now to the end of the target day. */
+  double target_hours;
+  /* What being late costs against the other milestones, above 0. */
+  double weight;
+} coordina_graph_milestone;
+
+/* How long a completed card took. */
+typedef struct coordina_graph_finished_card
+{
+  coordina_graph_node_id node;
+  /* Focus hours, above 0. */
+  double hours;
+  /* Days since it was completed. */
+  double age_days;
+} coordina_graph_finished_card;
+
+/*
+ * Everything the planning functions read about a board. Assignees and labels
+ * of completed cards say who did them and what they were. The caller owns
+ * every array.
+ */
+typedef struct coordina_graph_board
+{
+  const coordina_graph_node_id* nodes;
+  size_t node_count;
+  const coordina_graph_edge* edges;
+  size_t edge_count;
+  const coordina_graph_work_item* work_items;
+  size_t work_item_count;
+  const coordina_graph_assignee* assignees;
+  size_t assignee_count;
+  const coordina_graph_card_label* labels;
+  size_t label_count;
+  const coordina_graph_milestone* milestones;
+  size_t milestone_count;
+  const coordina_graph_finished_card* history;
+  size_t history_count;
+  uint32_t person_count;
+  /* Cards added to a milestone's scope after its work started. */
+  uint32_t discovered_count;
+  /* Cards completed in those scopes. */
+  uint32_t finished_count;
+  /* People nobody has named yet, who would take unassigned cards too. */
+  uint32_t extra_people;
+} coordina_graph_board;
+
+typedef struct coordina_graph_simulation
+{
+  /* The same seed gives the same result, whatever thread_count is. */
+  uint64_t seed;
+  /* From 1 to 100000. */
+  uint32_t run_count;
+  /* 0 uses the cores other calls leave free. */
+  uint32_t thread_count;
+} coordina_graph_simulation;
+
+typedef struct coordina_graph_milestone_forecast
+{
+  coordina_graph_node_id node;
+  /* Working days until the scope is done, with 10, 50, 85 and 95% chances. */
+  double p10_days;
+  double p50_days;
+  double p85_days;
+  double p95_days;
+  /* The share of runs done by the target, from 0 to 1. */
+  double on_time;
+  /* How late it is on average, counting 0 when on time. */
+  double late_days;
+  /* The 50% date with as many people as it takes. */
+  double chain_days;
+  uint32_t card_count;
+  /* Open cards of the scope without a size. */
+  uint32_t unsized_count;
+} coordina_graph_milestone_forecast;
 
 typedef struct coordina_graph_card_forecast
 {
   coordina_graph_node_id node;
+  /* The index of the milestone in the board's. */
+  uint32_t milestone;
+  uint32_t reserved;
   /* The share of runs where the card drives the date, from 0 to 1. */
   double criticality;
-  /* The correlation between the card's duration and the date, from -1 to 1. */
+  /*
+   * The correlation between the card's own uncertainty and the date, from -1
+   * to 1. Squared, it is the share of the date's spread the card explains.
+   */
   double sensitivity;
 } coordina_graph_card_forecast;
 
-/*
- * Output of coordina_graph_forecast. The caller owns the card buffer and sets
- * its capacity; node_count is always enough. If it is too small the call
- * returns COORDINA_GRAPH_INSUFFICIENT_CAPACITY, sets card_count and writes no
- * card.
- */
-typedef struct coordina_graph_milestone_forecast
+typedef struct coordina_graph_planned_card
 {
-  /* Every open card of the scope, most critical first. */
+  coordina_graph_node_id node;
+  /* person_count or more when nobody in particular is expected to take it. */
+  uint32_t person;
+  uint32_t reserved;
+  /* Working days from now, if every card takes its median time. */
+  double start_days;
+  double finish_days;
+} coordina_graph_planned_card;
+
+/*
+ * Output of coordina_graph_forecast. The caller owns the buffers and sets
+ * their capacities; milestone_count milestones, node_count planned cards, and
+ * milestone_count * node_count cards are always enough. If one is too small
+ * the call returns COORDINA_GRAPH_INSUFFICIENT_CAPACITY, sets the counts and
+ * writes nothing else.
+ */
+typedef struct coordina_graph_forecast_output
+{
+  /* In the board's order. */
+  coordina_graph_milestone_forecast* milestones;
+  size_t milestone_capacity;
+  size_t milestone_count;
+  /* By milestone, then most critical first. */
   coordina_graph_card_forecast* cards;
   size_t card_capacity;
   size_t card_count;
-  /* Working days until the scope is done: one chance in two, and 85%. */
-  double p50_days;
-  double p85_days;
-  /* Open cards without a size, planned as M. */
-  uint32_t unsized_count;
-  uint32_t reserved;
-} coordina_graph_milestone_forecast;
+  /* The open cards of every scope, in the order to pick them up. */
+  coordina_graph_planned_card* plan;
+  size_t plan_capacity;
+  size_t plan_count;
+} coordina_graph_forecast_output;
 
 /* Options of coordina_graph_propose_scope and coordina_graph_evaluate_scope. */
 typedef struct coordina_graph_scope_options
 {
+  /* One of the board's milestones. */
   coordina_graph_node_id milestone;
-  /* The same seed gives the same result, whatever thread_count is. */
-  uint64_t seed;
-  /* Focus hours, 6 a working day, from now to the end of the target day. */
-  double target_hours;
+  coordina_graph_simulation simulation;
   /* The chance of shipping by the target a proposal aims for, above 0 and at most 1. */
   double goal;
-  uint32_t person_count;
-  /* Runs that measure the scope before and after the cut. */
-  uint32_t run_count;
   /* Runs that compare candidates during the search, on the same draws. */
   uint32_t screen_run_count;
-  /* 0 uses every core. */
-  uint32_t thread_count;
   /*
    * The search compares at most evaluation_limit candidates. When
    * time_limit_ms is not 0, it also stops early enough for the whole call to
@@ -220,6 +314,7 @@ typedef struct coordina_graph_scope_options
    */
   uint32_t evaluation_limit;
   uint32_t time_limit_ms;
+  uint32_t reserved;
 } coordina_graph_scope_options;
 
 typedef struct coordina_graph_dropped_card
@@ -246,10 +341,9 @@ typedef struct coordina_graph_scope_cut
   coordina_graph_dropped_card* dropped;
   size_t dropped_capacity;
   size_t dropped_count;
-  /* The share of runs done by the target, from 0 to 1. */
+  /* The milestone's forecast now, and the one it shows once the cut is applied. */
   double on_time_before;
   double on_time_after;
-  /* Working days until the scope left is done: one chance in two, and 85%. */
   double p50_days;
   double p85_days;
 } coordina_graph_scope_cut;
@@ -257,17 +351,11 @@ typedef struct coordina_graph_scope_cut
 /* Options of coordina_graph_propose_staffing and coordina_graph_evaluate_staffing. */
 typedef struct coordina_graph_staffing_options
 {
+  /* One of the board's milestones. */
   coordina_graph_node_id milestone;
-  /* The same seed gives the same plan, whatever thread_count is. */
-  uint64_t seed;
-  /* Everyone the plan involves: the assignees of open cards and the receivers. */
-  uint32_t person_count;
-  /* Runs that measure the plan before and after. */
-  uint32_t run_count;
+  coordina_graph_simulation simulation;
   /* Runs that compare plans during the search, on the same draws. */
   uint32_t screen_run_count;
-  /* 0 uses every core. */
-  uint32_t thread_count;
   /* 1 lets the search move cards that already have assignees. */
   uint32_t allow_reassignment;
   /*
@@ -277,7 +365,6 @@ typedef struct coordina_graph_staffing_options
    */
   uint32_t evaluation_limit;
   uint32_t time_limit_ms;
-  uint32_t reserved;
 } coordina_graph_staffing_options;
 
 typedef struct coordina_graph_staff_change
@@ -286,7 +373,7 @@ typedef struct coordina_graph_staff_change
   /* The card's only assignee once the plan is applied. */
   uint32_t person;
   uint32_t reserved;
-  /* Working days from now until the card starts, if every card takes its likely time. */
+  /* Working days from now until the card starts, if every card takes its median time. */
   double start_days_before;
   double start_days_after;
 } coordina_graph_staff_change;
@@ -304,14 +391,24 @@ typedef struct coordina_graph_staffing
   coordina_graph_staff_change* changes;
   size_t change_capacity;
   size_t change_count;
-  /* Working days until the scope is done, before and after: one chance in two, and 85%. */
+  /* The milestone's forecast now, and the one it shows once the plan is applied. */
   double p50_days_before;
   double p85_days_before;
   double p50_days_after;
   double p85_days_after;
+  /* How late the other milestones are on average, together, by their weights. */
+  double others_late_days_before;
+  double others_late_days_after;
 } coordina_graph_staffing;
 
 COORDINA_GRAPH_EXPORT const char* coordina_graph_version(void);
+
+/*
+ * Why the last call on this thread failed, or an empty string. Functions that
+ * return a count report a failure as 0 and through this. The text is valid
+ * until the next call on the thread.
+ */
+COORDINA_GRAPH_EXPORT const char* coordina_graph_last_error(void);
 
 COORDINA_GRAPH_EXPORT coordina_graph_edge_status coordina_graph_evaluate_edge(
   const coordina_graph_node_id* nodes,
@@ -419,58 +516,53 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_analyze_board(
   coordina_graph_board_analysis* output);
 
 /*
- * Forecasts when a milestone ships. Its scope is the milestone and every card
- * it depends on, directly or not; completed cards are ignored. Each run draws
- * a duration for every open card within its size's range, from a random
- * stream of the card's own, then schedules the cards: each person works 6 focus hours a day
- * on one card at a time, cards start once their dependencies are done, and
- * people pick cards up in the board's plan_work order (computed for nobody in
- * particular). A card goes to the first of its assignees who is free, or to
- * anyone when it has none. Runs spread over threads.
+ * Forecasts when every milestone ships, all sharing one team. Each run draws a
+ * duration for every open card of their scopes, then schedules the cards: each
+ * person works 6 focus hours a day on one card at a time, and a card starts
+ * once its dependencies are done.
  *
- * Returns COORDINA_GRAPH_INVALID_ARGUMENT when the milestone is not a node,
- * person_count or run_count is 0, or an assignee is outside the team, and
- * COORDINA_GRAPH_CYCLE when the open cards depend on each other in a loop.
+ * Durations: a size stands for a range, not a number. What the board's history
+ * teaches about this team, its sizes, people and labels shifts it, and each run
+ * draws those shifts once for all its cards, so that when the team is slow
+ * every card is. A few cards run away from their size (a power-law tail), an
+ * unsized card draws its size first, a card in progress is drawn given the time
+ * it already took, and completed cards uncover new ones at the rate the board
+ * has seen.
+ *
+ * Order: cards in progress first, then by the latest they can start without
+ * making a milestone late. A card goes to one of its assignees who is free, or
+ * to anyone of the team when it has none, whoever has least work of their own
+ * left. The team is whoever is assigned to an open card of the board; while no
+ * one is, a single person nobody in particular does the work. Cards in progress
+ * outside the scopes keep their people busy first.
+ *
+ * Every planning function returns COORDINA_GRAPH_INVALID_ARGUMENT for a null
+ * array with a count, a milestone that is not a node, a person outside
+ * person_count, a number that is not finite or outside its range, and
+ * COORDINA_GRAPH_CYCLE when the open cards depend on each other in a loop;
+ * coordina_graph_last_error says which.
  */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_forecast(
-  const coordina_graph_node_id* nodes,
-  size_t node_count,
-  const coordina_graph_edge* edges,
-  size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  size_t work_item_count,
-  const coordina_graph_assignee* assignees,
-  size_t assignee_count,
-  const coordina_graph_forecast_options* options,
-  coordina_graph_milestone_forecast* output);
+  const coordina_graph_board* board,
+  const coordina_graph_simulation* simulation,
+  coordina_graph_forecast_output* output);
 
 /*
- * Proposes cards to take out of a milestone so it ships by the target. Taking
+ * Proposes cards to take out of a milestone so it ships by its target. Taking
  * a card out also takes out the cards of the scope that depend on it, and the
  * cards the milestone then no longer needs; a card it still needs through
- * another path stays. Applying the cut means dropping the milestone's
- * dependencies on the cards that leave.
+ * another path stays, and a card another milestone needs is still done for it.
+ * Applying the cut means dropping the milestone's dependencies on the cards
+ * that leave.
  *
  * The proposal aims for the goal's chance of shipping by the target while
- * giving up as little value as possible: a card is worth its likely hours,
- * weighted by priority (high 4, medium 2, otherwise 1). The milestone, cards
- * in progress, the keep cards, and any card whose cut would take one of them
- * out are never proposed. Cards are scheduled as in coordina_graph_forecast,
- * on the same random streams.
- *
- * Returns COORDINA_GRAPH_INVALID_ARGUMENT for the arguments
- * coordina_graph_forecast refuses, a goal outside (0, 1], or a run_count or
- * screen_run_count of 0, and COORDINA_GRAPH_CYCLE for a loop.
+ * giving up as little value as possible: a card is worth its priority (high 4,
+ * medium 2, otherwise 1), whatever its size. The milestone, cards in progress,
+ * the keep cards, and any card whose cut would take one of them out are never
+ * proposed.
  */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_scope(
-  const coordina_graph_node_id* nodes,
-  size_t node_count,
-  const coordina_graph_edge* edges,
-  size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  size_t work_item_count,
-  const coordina_graph_assignee* assignees,
-  size_t assignee_count,
+  const coordina_graph_board* board,
   const coordina_graph_node_id* keep,
   size_t keep_count,
   const coordina_graph_scope_options* options,
@@ -481,14 +573,7 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_scope(
  * proposals. Cards outside the scope and the milestone itself are ignored.
  */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_scope(
-  const coordina_graph_node_id* nodes,
-  size_t node_count,
-  const coordina_graph_edge* edges,
-  size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  size_t work_item_count,
-  const coordina_graph_assignee* assignees,
-  size_t assignee_count,
+  const coordina_graph_board* board,
   const coordina_graph_node_id* cuts,
   size_t cut_count,
   const coordina_graph_scope_options* options,
@@ -496,36 +581,21 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_scope(
 
 /*
  * Proposes who should take which card so a milestone ships soonest: its 85%
- * date first, then its 50% one. Cards are scheduled as in
- * coordina_graph_forecast, on the same random streams, with one difference
- * that a plan can change: the team is whoever is assigned to an open card,
- * and only they take unassigned cards; while no one is, a single person
- * nobody in particular does the work. The assignees are those of every open
- * card of the board, so the dates after are the forecast the milestone shows
- * once the plan is applied.
+ * date first, then its 50% one, without making the other milestones late for
+ * it.
  *
- * A change gives a card to one of the receivers, who becomes its only
- * assignee. Cards in progress never move, nor cards with assignees unless
+ * A change gives a card of the scope to one of the receivers, who becomes its
+ * only assignee. Cards in progress never move, nor cards with assignees unless
  * allow_reassignment is 1. A card goes preferably to someone skilled for it,
  * a skilled pair saying that person has done cards like it; giving it to
- * someone else must ship the milestone two focus hours sooner. The search
+ * someone else must ship the milestone two focus hours sooner, and taking a card
+ * off someone half a day sooner. The search
  * compares plans on screen_run_count runs (simulated annealing in a fixed
  * number of chains), drops the changes the plan does not need, and proposes
  * nothing when the plan found would not bring a date in.
- *
- * Returns COORDINA_GRAPH_INVALID_ARGUMENT when the milestone is not a node,
- * run_count or screen_run_count is 0, or a person is outside person_count, and
- * COORDINA_GRAPH_CYCLE when the open cards depend on each other in a loop.
  */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_staffing(
-  const coordina_graph_node_id* nodes,
-  size_t node_count,
-  const coordina_graph_edge* edges,
-  size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  size_t work_item_count,
-  const coordina_graph_assignee* assignees,
-  size_t assignee_count,
+  const coordina_graph_board* board,
   const uint32_t* receivers,
   size_t receiver_count,
   const coordina_graph_assignee* skilled,
@@ -539,14 +609,7 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_staffing(
  * are ignored, and so are changes that give a card to its only assignee.
  */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_staffing(
-  const coordina_graph_node_id* nodes,
-  size_t node_count,
-  const coordina_graph_edge* edges,
-  size_t edge_count,
-  const coordina_graph_work_item* work_items,
-  size_t work_item_count,
-  const coordina_graph_assignee* assignees,
-  size_t assignee_count,
+  const coordina_graph_board* board,
   const coordina_graph_assignee* changes,
   size_t change_count,
   const coordina_graph_staffing_options* options,

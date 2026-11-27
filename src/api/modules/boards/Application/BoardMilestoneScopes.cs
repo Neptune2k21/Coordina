@@ -1,5 +1,6 @@
 using Coordina.Api.Core.Results;
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Domain;
 
@@ -24,50 +25,24 @@ internal static class BoardMilestoneScopes
 
   public static Result<ScopeCut> Propose(
     IGraphEngine<Guid> graphEngine,
-    ProjectBoard board,
+    BoardPlan plan,
     Guid milestoneId,
-    IReadOnlyCollection<Guid> keep,
-    DateOnly today) =>
-    Run(
-      board,
-      milestoneId,
-      today,
-      (input, options) => graphEngine.ProposeScope(
-        input.Graph.Nodes,
-        input.Graph.Edges,
-        input.WorkItems,
-        input.Team.Assignees,
-        keep,
-        options));
+    IReadOnlyCollection<Guid> keep) =>
+    Run(plan, milestoneId, options => graphEngine.ProposeScope(plan.Graph, keep, options));
 
   public static Result<ScopeCut> Evaluate(
     IGraphEngine<Guid> graphEngine,
-    ProjectBoard board,
+    BoardPlan plan,
     Guid milestoneId,
-    IReadOnlyCollection<Guid> cuts,
-    DateOnly today) =>
-    Run(
-      board,
-      milestoneId,
-      today,
-      (input, options) => graphEngine.EvaluateScope(
-        input.Graph.Nodes,
-        input.Graph.Edges,
-        input.WorkItems,
-        input.Team.Assignees,
-        cuts,
-        options));
+    IReadOnlyCollection<Guid> cuts) =>
+    Run(plan, milestoneId, options => graphEngine.EvaluateScope(plan.Graph, cuts, options));
 
   private static Result<ScopeCut> Run(
-    ProjectBoard board,
+    BoardPlan plan,
     Guid milestoneId,
-    DateOnly today,
-    Func<ScopeInput, GraphScopeOptions<Guid>, GraphScopeCut<Guid>> solve)
+    Func<GraphScopeOptions<Guid>, GraphScopeCut<Guid>> solve)
   {
-    var graph = BoardDependencyGraph.ToGraph(board);
-    var milestone = graph.Cards.FirstOrDefault(card => card.Id == milestoneId);
-
-    if (milestone?.MilestoneDate is not { } target)
+    if (plan.FindMilestone(milestoneId) is not { MilestoneDate: { } target } milestone)
     {
       return Error.NotFound();
     }
@@ -77,47 +52,30 @@ internal static class BoardMilestoneScopes
       return Error.Validation("milestoneId", "This milestone is done; there is nothing left to cut.");
     }
 
-    var workingDays = WorkingDays.Until(today, target);
-
-    if (workingDays == 0)
+    if (WorkingDays.Until(plan.Today, target) == 0)
     {
       return Error.Validation("milestoneId", "This milestone's target date has passed.");
     }
 
-    var team = BoardMilestoneForecasts.TeamOf(graph.Cards);
-    var input = new ScopeInput(
-      graph,
-      BoardDependencyGraph.ToWorkItems(board, graph.Cards, today, BoardMilestoneForecasts.Nobody),
-      team);
     var cut = solve(
-      input,
       new GraphScopeOptions<Guid>(
         milestoneId,
-        team.Size,
-        workingDays * WorkingDays.FocusHoursPerDay,
+        BoardPlan.Simulation,
         Goal,
-        BoardMilestoneForecasts.RunCount,
         ScreenRunCount,
-        BoardMilestoneForecasts.Seed,
         EvaluationLimit,
         TimeLimit));
 
-    return Result.Success(new ScopeCut(milestone, target, today, cut, graph.Cards.ToDictionary(card => card.Id)));
+    return Result.Success(new ScopeCut(milestone, target, plan, cut));
   }
-
-  private sealed record ScopeInput(
-    BoardGraphSnapshot Graph,
-    IReadOnlyCollection<GraphWorkItem<Guid>> WorkItems,
-    BoardMilestoneForecasts.ForecastTeam Team);
 }
 
 /// <summary>A cut the engine proposed or measured, and the board it was measured on.</summary>
 internal sealed record ScopeCut(
   ProjectBoardCard Milestone,
   DateOnly Target,
-  DateOnly Today,
-  GraphScopeCut<Guid> Engine,
-  Dictionary<Guid, ProjectBoardCard> CardsById)
+  BoardPlan Plan,
+  GraphScopeCut<Guid> Engine)
 {
   /// <summary>The cards that leave the scope, which the milestone may depend on directly.</summary>
   public IReadOnlyCollection<Guid> DroppedCardIds =>
@@ -129,15 +87,15 @@ internal sealed record ScopeCut(
       Target,
       Engine.OnTimeBefore,
       Engine.OnTimeAfter,
-      WorkingDays.Finish(Today, Engine.P50Days),
-      WorkingDays.Finish(Today, Engine.P85Days),
+      Plan.Finish(Engine.P50Days),
+      Plan.Finish(Engine.P85Days),
       Engine.Cuts
         .Select((cardId, index) => new BoardMilestoneCutResponse(
           cardId,
-          CardsById[cardId].Title,
+          Plan.Cards[cardId].Title,
           Engine.Dropped
             .Where(card => card.Cut == index && card.Node != cardId)
-            .Select(card => new BoardMilestoneCutCardResponse(card.Node, CardsById[card.Node].Title))
+            .Select(card => new BoardMilestoneCutCardResponse(card.Node, Plan.Cards[card.Node].Title))
             .ToArray()))
         .ToArray());
 }

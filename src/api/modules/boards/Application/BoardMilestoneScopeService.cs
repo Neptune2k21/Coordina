@@ -1,14 +1,14 @@
 using Coordina.Api.Core.Results;
-using Coordina.Api.Core.Time;
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Contracts;
-using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Modules.Projects.Application;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
-public sealed class BoardMilestoneScopeService(
+internal sealed class BoardMilestoneScopeService(
   IBoardStore boards,
+  BoardPlanReader plans,
   IProjectAccessGuard projectAccess,
   IGraphEngine<Guid> graphEngine,
   TimeProvider clock) : IBoardMilestoneScopeService
@@ -22,13 +22,8 @@ public sealed class BoardMilestoneScopeService(
     Guid userId,
     CancellationToken cancellationToken) =>
     MeasureAsync(
-      new BoardAccess(workspaceId, projectId, boardId, userId),
-      board => BoardMilestoneScopes.Propose(
-        graphEngine,
-        board,
-        milestoneId,
-        request.Keep ?? [],
-        clock.GetUtcToday()),
+      new BoardTarget(workspaceId, projectId, boardId, userId),
+      plan => BoardMilestoneScopes.Propose(graphEngine, plan, milestoneId, request.Keep ?? []),
       cancellationToken);
 
   public Task<Result<BoardMilestoneScopeResponse>> EvaluateAsync(
@@ -40,13 +35,8 @@ public sealed class BoardMilestoneScopeService(
     Guid userId,
     CancellationToken cancellationToken) =>
     MeasureAsync(
-      new BoardAccess(workspaceId, projectId, boardId, userId),
-      board => BoardMilestoneScopes.Evaluate(
-        graphEngine,
-        board,
-        milestoneId,
-        request.CardIds ?? [],
-        clock.GetUtcToday()),
+      new BoardTarget(workspaceId, projectId, boardId, userId),
+      plan => BoardMilestoneScopes.Evaluate(graphEngine, plan, milestoneId, request.CardIds ?? []),
       cancellationToken);
 
   public async Task<Result<BoardResponse>> CutAsync(
@@ -87,17 +77,16 @@ public sealed class BoardMilestoneScopeService(
 
         var cut = BoardMilestoneScopes.Evaluate(
           graphEngine,
-          board,
+          await plans.PlanAsync(board, [], exclusiveToken),
           milestoneId,
-          cardIds,
-          clock.GetUtcToday());
+          cardIds);
 
         if (!cut.IsSuccess)
         {
           return cut.Error;
         }
 
-        await DropDependenciesAsync(new BoardAccess(workspaceId, projectId, boardId, userId), cut.Value, exclusiveToken);
+        await DropDependenciesAsync(new BoardTarget(workspaceId, projectId, boardId, userId), cut.Value, exclusiveToken);
         var updated = await boards.FindInProjectAsync(workspaceId, projectId, boardId, exclusiveToken);
 
         return updated is null ? Error.NotFound() : Result.Success(BoardResponseMapper.ToResponse(updated));
@@ -109,7 +98,7 @@ public sealed class BoardMilestoneScopeService(
   // that leaves too, so dropping its direct dependencies on them takes the
   // whole cut out.
   private async Task DropDependenciesAsync(
-    BoardAccess target,
+    BoardTarget target,
     ScopeCut cut,
     CancellationToken cancellationToken)
   {
@@ -134,24 +123,19 @@ public sealed class BoardMilestoneScopeService(
 
   // Measuring a cut changes nothing, so reading the board is enough.
   private async Task<Result<BoardMilestoneScopeResponse>> MeasureAsync(
-    BoardAccess target,
-    Func<ProjectBoard, Result<ScopeCut>> measure,
+    BoardTarget target,
+    Func<BoardPlan, Result<ScopeCut>> measure,
     CancellationToken cancellationToken)
   {
-    var board = await boards.FindReadableAsync(
-      projectAccess,
-      new BoardTarget(target.WorkspaceId, target.ProjectId, target.BoardId, target.UserId),
-      cancellationToken);
+    var plan = await plans.ReadAsync(target, [], cancellationToken);
 
-    if (!board.IsSuccess)
+    if (!plan.IsSuccess)
     {
-      return board.Error;
+      return plan.Error;
     }
 
-    var cut = measure(board.Value);
+    var cut = measure(plan.Value);
 
     return cut.IsSuccess ? Result.Success(cut.Value.ToResponse()) : cut.Error;
   }
-
-  private sealed record BoardAccess(Guid WorkspaceId, Guid ProjectId, Guid BoardId, Guid UserId);
 }

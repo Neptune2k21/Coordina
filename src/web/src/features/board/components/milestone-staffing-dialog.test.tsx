@@ -19,6 +19,10 @@ const launch: BoardMilestone = {
   status: "LATE",
   forecastDate: "2027-03-18",
   commitDate: "2027-03-24",
+  bestCaseDate: "2027-03-10",
+  worstCaseDate: "2027-03-31",
+  unlimitedTeamDate: "2027-03-09",
+  onTime: 0.35,
   slipDays: 6,
   openCardCount: 5,
   unsizedCardCount: 0,
@@ -42,6 +46,7 @@ const proposal: BoardMilestoneStaffing = {
   commitDateBefore: "2027-03-24",
   forecastDateAfter: "2027-03-15",
   commitDateAfter: "2027-03-20",
+  othersDelayDays: 0,
   people: [ada, grace],
   changes: [
     {

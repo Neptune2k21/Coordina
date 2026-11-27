@@ -30,6 +30,8 @@ struct WorkItem
   Assignment assignment = Assignment::unassigned;
   bool is_in_progress = false;
   bool is_context_match = false;
+  // Focus hours already spent on a card in progress.
+  double elapsed_hours = 0.0;
 };
 
 struct PlanningOptions

@@ -1,60 +1,91 @@
 #include "planning/scope_cut.h"
 
+#include "planning/planned_board.h"
 #include "planning/scope_search.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace coordina::graph
 {
 namespace
 {
-constexpr auto no_card = ScopeGraph::no_card;
+constexpr auto no_card = std::numeric_limits<std::size_t>::max();
 
 // The search tunes the cut on the screening runs, so it can stop just short
 // of the goal on the others. A few batches measured on every run repair that,
 // each kept only if it raises the chance of shipping on time.
 constexpr std::size_t repair_limit = 3U;
 
-// A high-priority card is worth twice a medium one, and four times a low or
-// unprioritised one, for the same hours.
-double priority_weight(std::uint32_t priority) noexcept
+ScopeCut no_cut(const MilestoneForecast& forecast)
 {
-  switch (priority)
+  return ScopeCut{
+    .error = PlanError::none,
+    .cuts = {},
+    .dropped = {},
+    .on_time_before = forecast.on_time,
+    .on_time_after = forecast.on_time,
+    .p50_days = forecast.p50_days,
+    .p85_days = forecast.p85_days
+  };
+}
+
+// Searches the milestone's cut, once the board and the milestone are known to
+// be fine.
+template <typename Solve>
+ScopeCut search_scope(const PlanningBoard& board, const ScopeOptions& options, const Solve& solve)
+{
+  const PlannedBoard planned(board, options.simulation);
+
+  if (planned.error() != PlanError::none)
   {
-    case 3U:
-      return 4.0;
-    case 2U:
-      return 2.0;
-    default:
-      return 1.0;
+    return ScopeCut{.error = planned.error(), .cuts = {}, .dropped = {}};
   }
+
+  const auto milestone = planned.find_milestone(options.milestone);
+
+  if (milestone == PlannedBoard::no_milestone)
+  {
+    return ScopeCut{.error = PlanError::unknown_milestone, .cuts = {}, .dropped = {}};
+  }
+
+  if (planned.model().milestones()[milestone].card == PlanMilestone::done)
+  {
+    return no_cut(planned.forecast_now().milestones[milestone]);
+  }
+
+  ScopeSearch search(planned, milestone, options);
+  return solve(search);
 }
 }
 
 ScopeSearch::ScopeSearch(
-  const ForecastModel& model,
-  const std::vector<WorkItem>& work_items,
-  NodeId milestone,
+  const PlannedBoard& planned,
+  std::size_t milestone,
   const ScopeOptions& options)
-    : model_(&model), options_(&options), graph_(model, milestone), simulator_(model, options),
-      values_(model.likely_hours()), blocked_(model.card_count(), 0U), cut_(model.card_count(), 0U),
-      active_(model.card_count(), 1U), trial_cut_(model.card_count(), 0U),
-      trial_active_(model.card_count(), 1U), started_(Clock::now())
+    : planned_(&planned), model_(&planned.model()), options_(&options), milestone_(milestone),
+      sampler_(planned.model(), planned.durations(), options.simulation.seed),
+      graph_(planned.model(), milestone),
+      simulator_(
+        planned.model(),
+        sampler_,
+        milestone,
+        options.goal,
+        std::max(options.simulation.run_count, options.screen_run_count),
+        options.simulation.thread_count),
+      values_(model_->card_count(), 0.0), blocked_(model_->card_count(), 0U),
+      cut_(model_->card_count(), 0U), dropped_(model_->card_count(), 0U),
+      active_(model_->card_count(), 1U), trial_cut_(model_->card_count(), 0U),
+      trial_dropped_(model_->card_count(), 0U), trial_active_(model_->card_count(), 1U),
+      started_(Clock::now())
 {
-  index_.reserve(model.card_count());
+  index_.reserve(model_->card_count());
 
-  for (std::size_t card = 0U; card < model.card_count(); ++card)
+  for (std::size_t card = 0U; card < model_->card_count(); ++card)
   {
-    index_.emplace(model.nodes()[card], card);
-  }
-
-  for (const auto& item : work_items)
-  {
-    if (const auto card = index_of(item.node); card != no_card)
-    {
-      values_[card] *= priority_weight(item.priority);
-      blocked_[card] = item.is_in_progress ? 1U : 0U;
-    }
+    index_.emplace(model_->nodes()[card], card);
+    values_[card] = priority_weight(model_->item(card).priority);
+    blocked_[card] = model_->item(card).is_in_progress ? 1U : 0U;
   }
 }
 
@@ -68,72 +99,71 @@ ScopeCut ScopeSearch::propose(const std::vector<NodeId>& keep)
     }
   }
 
-  const auto before = simulator_.run(active_, options_->run_count, nullptr);
+  const auto before = planned_->forecast_now().milestones[milestone_];
   full_run_cost_ = Clock::now() - started_;
-
-  if (graph_.milestone() == no_card)
-  {
-    return finish(before, &before);
-  }
-
   find_cuttable();
   auto screen = measure(options_->screen_run_count);
 
-  if (screen.on_time < options_->goal)
+  if (screen.on_time >= options_->goal && before.on_time >= options_->goal)
   {
-    grow(screen);
-    const auto floor = std::min(options_->goal, screen.on_time);
-    shrink(floor);
-    swap(floor);
+    return no_cut(before);
   }
 
-  auto after = measure(options_->run_count);
+  grow(screen);
+  const auto floor = std::min(options_->goal, screen.on_time);
+  shrink(floor);
+  swap(floor);
+  repair();
+  auto result = finish(before);
 
-  for (std::size_t repair = 0U;
-    repair < repair_limit && after.on_time < options_->goal && !timed_out(full_run_cost_);
-    ++repair)
+  // Cutting changes the order cards are picked up in, which only the forecast
+  // of the cut board counts: a cut that does not help there is not worth it.
+  return result.on_time_after > before.on_time ? result : no_cut(before);
+}
+
+// Adds batches measured on every run while the goal is not reached.
+void ScopeSearch::repair()
+{
+  auto after = measure(options_->simulation.run_count);
+
+  for (std::size_t batch = 0U;
+    batch < repair_limit && after.on_time < options_->goal && !timed_out(full_run_cost_);
+    ++batch)
   {
     const auto kept = chosen_;
 
     if (!grow_batch(after))
     {
-      break;
+      return;
     }
 
-    const auto repaired = measure(options_->run_count);
+    const auto repaired = measure(options_->simulation.run_count);
 
     if (!(repaired.on_time > after.on_time))
     {
       chosen_ = kept;
       rebuild();
-      break;
+      return;
     }
 
     after = repaired;
   }
-
-  return finish(before, &after);
 }
 
 ScopeCut ScopeSearch::evaluate(const std::vector<NodeId>& cuts)
 {
-  const auto before = simulator_.run(active_, options_->run_count, nullptr);
-
-  if (graph_.milestone() != no_card)
+  for (const auto node : cuts)
   {
-    for (const auto node : cuts)
-    {
-      const auto card = index_of(node);
+    const auto card = index_of(node);
 
-      if (card != no_card && card != graph_.milestone() && graph_.is_reachable(card)
-        && std::ranges::find(chosen_, card) == chosen_.end())
-      {
-        chosen_.push_back(card);
-      }
+    if (card != no_card && card != graph_.milestone_card() && graph_.contains(card)
+      && std::ranges::find(chosen_, card) == chosen_.end())
+    {
+      chosen_.push_back(card);
     }
   }
 
-  return finish(before, nullptr);
+  return finish(planned_->forecast_now().milestones[milestone_]);
 }
 
 // The chosen cards that no other chosen card takes out, in order.
@@ -162,81 +192,74 @@ std::vector<std::size_t> ScopeSearch::roots()
   return kept;
 }
 
-// Credits each card that leaves to the first cut, in order, that takes it
-// out. after, when not null, already measures the scope left on every run.
-ScopeCut ScopeSearch::finish(const ScopeSample& before, const ScopeSample* after)
+// Credits each card that leaves to the first cut, in order, that takes it out,
+// and forecasts the board without them.
+ScopeCut ScopeSearch::finish(const MilestoneForecast& before)
 {
-  ScopeCut result;
-  result.on_time_before = before.on_time;
+  auto result = no_cut(before);
   const auto cuts = roots();
-  std::ranges::fill(cut_, 0U);
-  std::ranges::fill(active_, 1U);
 
-  for (std::size_t cut = 0U; cut < cuts.size(); ++cut)
+  if (cuts.empty())
   {
-    result.cuts.push_back(model_->nodes()[cuts[cut]]);
-    graph_.close_up(cuts[cut], cut_);
-    graph_.activate(cut_, trial_active_);
+    return result;
+  }
 
-    for (std::size_t card = 0U; card < active_.size(); ++card)
+  std::ranges::fill(trial_cut_, 0U);
+  std::ranges::fill(dropped_, 0U);
+  std::vector<NodeId> leaving;
+
+  for (const auto card : cuts)
+  {
+    const auto cut = static_cast<std::uint32_t>(result.cuts.size());
+    result.cuts.push_back(model_->nodes()[card]);
+    graph_.close_up(card, trial_cut_);
+    apply_trial();
+
+    for (std::size_t other = 0U; other < dropped_.size(); ++other)
     {
-      if (active_[card] != 0U && trial_active_[card] == 0U)
+      if (leaves(other))
       {
-        result.dropped.push_back(
-          DroppedCard{.node = model_->nodes()[card], .cut = static_cast<std::uint32_t>(cut)});
+        result.dropped.push_back(DroppedCard{.node = model_->nodes()[other], .cut = cut});
+        leaving.push_back(model_->nodes()[other]);
       }
     }
 
-    active_ = trial_active_;
+    dropped_ = trial_dropped_;
   }
 
-  auto left = before;
-
-  if (after != nullptr)
-  {
-    left = *after;
-  }
-  else if (!cuts.empty())
-  {
-    left = simulator_.run(active_, options_->run_count, nullptr);
-  }
-
-  result.on_time_after = left.on_time;
-  result.p50_days = left.p50_hours / focus_hours_per_day;
-  result.p85_days = left.p85_hours / focus_hours_per_day;
+  const auto after =
+    planned_->forecast_without(options_->milestone, leaving).milestones[milestone_];
+  result.on_time_after = after.on_time;
+  result.p50_days = after.p50_days;
+  result.p85_days = after.p85_days;
   return result;
 }
 
 ScopeCut propose_scope(
-  const ForecastModel& model,
-  const std::vector<WorkItem>& work_items,
-  NodeId milestone,
+  const PlanningBoard& board,
   const std::vector<NodeId>& keep,
   const ScopeOptions& options)
 {
-  if (model.error() != ForecastError::none || options.run_count == 0U
-    || options.screen_run_count == 0U)
-  {
-    return {};
-  }
-
-  ScopeSearch search(model, work_items, milestone, options);
-  return search.propose(keep);
+  return search_scope(
+    board,
+    options,
+    [&keep](ScopeSearch& search)
+    {
+      return search.propose(keep);
+    });
 }
 
 ScopeCut evaluate_scope(
-  const ForecastModel& model,
-  const std::vector<WorkItem>& work_items,
-  NodeId milestone,
+  const PlanningBoard& board,
   const std::vector<NodeId>& cuts,
   const ScopeOptions& options)
 {
-  if (model.error() != ForecastError::none || options.run_count == 0U)
-  {
-    return {};
-  }
-
-  ScopeSearch search(model, work_items, milestone, options);
-  return search.evaluate(cuts);
+  return search_scope(
+    board,
+    options,
+    [&cuts](ScopeSearch& search)
+    {
+      return search.evaluate(cuts);
+    });
 }
 }

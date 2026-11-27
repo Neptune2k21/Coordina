@@ -24,6 +24,8 @@ public sealed partial class NativeGuidGraphEngine : IGraphEngine<Guid>
       ToNative(source),
       ToNative(target));
 
+    ThrowIfFailed("evaluate_edge");
+
     return new GraphEdgeEvaluation(status);
   }
 
@@ -60,7 +62,10 @@ public sealed partial class NativeGuidGraphEngine : IGraphEngine<Guid>
   {
     var graph = MarshalledGraph.From(nodes, edges);
 
-    return NativeMethods.IsAcyclic(graph.Nodes, graph.NodeCount, graph.Edges, graph.EdgeCount) == 1;
+    var isAcyclic = NativeMethods.IsAcyclic(graph.Nodes, graph.NodeCount, graph.Edges, graph.EdgeCount);
+    ThrowIfFailed("is_acyclic");
+
+    return isAcyclic == 1;
   }
 
   public IReadOnlyCollection<Guid> SortTopologically(
@@ -196,67 +201,8 @@ public sealed partial class NativeGuidGraphEngine : IGraphEngine<Guid>
       ref nativeOptions,
       ref output));
 
-    if (status != NativeGraphStatus.Ok)
-    {
-      throw new GraphEngineException("analyze_board", (int)status);
-    }
+    ThrowIfFailed("analyze_board", status);
 
     return buffers.ToAnalysis();
-  }
-
-  public GraphMilestoneForecast<Guid> Forecast(
-    IReadOnlyCollection<Guid> nodes,
-    IReadOnlyCollection<GraphEdge<Guid>> edges,
-    IReadOnlyCollection<GraphWorkItem<Guid>> workItems,
-    IReadOnlyCollection<GraphAssignee<Guid>> assignees,
-    GraphForecastOptions<Guid> options)
-  {
-    var graph = MarshalledGraph.From(nodes, edges, workItems);
-    ArgumentNullException.ThrowIfNull(assignees);
-    ArgumentNullException.ThrowIfNull(options);
-
-    var nativeAssignees = ToNativeAssignees(assignees);
-    var nativeOptions = new NativeGraphForecastOptions(
-      ToNative(options.Milestone),
-      options.Seed,
-      checked((uint)options.PersonCount),
-      checked((uint)options.RunCount),
-      checked((uint)options.ThreadCount),
-      0U);
-    // Every open card of the scope is a node, so the node count always fits.
-    var cards = new NativeGraphCardForecast[graph.Nodes.Length];
-    var output = new NativeGraphMilestoneForecast { CardCapacity = ToNativeCount(cards.Length) };
-
-    var status = WithPinned(
-      [cards],
-      pointers =>
-      {
-        output.Cards = pointers[0];
-        return NativeMethods.Forecast(
-          graph.Nodes,
-          graph.NodeCount,
-          graph.Edges,
-          graph.EdgeCount,
-          graph.WorkItems,
-          graph.WorkItemCount,
-          nativeAssignees,
-          ToNativeCount(nativeAssignees.Length),
-          ref nativeOptions,
-          ref output);
-      });
-
-    if (status != NativeGraphStatus.Ok)
-    {
-      throw new GraphEngineException("forecast", (int)status);
-    }
-
-    return new GraphMilestoneForecast<Guid>(
-      output.P50Days,
-      output.P85Days,
-      checked((int)output.UnsizedCount),
-      Written(
-        cards,
-        output.CardCount,
-        card => new GraphCardForecast<Guid>(FromNative(card.Node), card.Criticality, card.Sensitivity)));
   }
 }

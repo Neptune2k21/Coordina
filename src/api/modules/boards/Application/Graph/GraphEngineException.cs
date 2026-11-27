@@ -16,8 +16,8 @@ public sealed class GraphEngineException : Exception
   {
   }
 
-  public GraphEngineException(string operation, int status)
-    : base($"Native graph operation '{operation}' failed with status {status}.")
+  public GraphEngineException(string operation, int status, string reason)
+    : base($"Native graph operation '{operation}' failed with status {status}: {reason}")
   {
     Operation = operation;
     Status = status;

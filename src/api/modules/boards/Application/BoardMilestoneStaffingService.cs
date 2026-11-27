@@ -1,6 +1,7 @@
 using Coordina.Api.Core.Results;
 using Coordina.Api.Core.Time;
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Boards.Domain;
 using Coordina.Api.Modules.Projects.Application;
@@ -8,8 +9,9 @@ using Coordina.Api.Modules.Workspaces.Application;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
-public sealed class BoardMilestoneStaffingService(
+internal sealed class BoardMilestoneStaffingService(
   IBoardStore boards,
+  BoardPlanReader plans,
   IProjectAccessGuard projectAccess,
   IWorkspaceStore workspaces,
   IGraphEngine<Guid> graphEngine,
@@ -151,7 +153,7 @@ public sealed class BoardMilestoneStaffingService(
       return people.Distinct().ToArray();
     }
 
-    var team = BoardMilestoneStaffings.TeamOf(target.Board)
+    var team = BoardMilestoneStaffings.TeamOf(target.Plan.Board)
       .Where(target.Members.ContainsKey)
       .ToArray();
 
@@ -170,21 +172,15 @@ public sealed class BoardMilestoneStaffingService(
     BoardAccess target,
     CancellationToken cancellationToken)
   {
-    var board = await boards.FindReadableAsync(
-      projectAccess,
+    var members = await MembersAsync(target.WorkspaceId, cancellationToken);
+    var plan = await plans.ReadAsync(
       new BoardTarget(target.WorkspaceId, target.ProjectId, target.BoardId, target.UserId),
+      members.Keys,
       cancellationToken);
 
-    if (!board.IsSuccess)
-    {
-      return board.Error;
-    }
-
-    return Result.Success(new StaffingBoard(
-      board.Value,
-      target.MilestoneId,
-      await MembersAsync(target.WorkspaceId, cancellationToken),
-      clock.GetUtcToday()));
+    return plan.IsSuccess
+      ? Result.Success(new StaffingBoard(plan.Value, target.MilestoneId, members))
+      : plan.Error;
   }
 
   private async Task<Dictionary<Guid, BoardCardAssigneeResponse>> MembersAsync(

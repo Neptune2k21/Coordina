@@ -21,7 +21,7 @@ src/
       boards/      Boards, lists with workflow status, cards (single source of project work)
       work/        "My work": a user's cards across a workspace, ranked by the boards' planning
       health/      Liveness and readiness (database) checks
-  graph-engine/   C++20 native library (critical path, planning, forecasts, suggestions)
+  graph-engine/   C++20 native library (forecasts, plans, advice, learned durations)
   web/            React + Vite application
     app/           Routing and the app shell, composing the features
     features/      One folder per product area (auth, workspaces, projects, board)
@@ -226,7 +226,16 @@ behind one interface.
 The structs both sides exchange are described in
 `contracts/graph-engine-abi.json`, generated from the C header. The native
 tests and `GraphEngineAbiTests` each check their side against it, so a layout
-change on one side fails a test instead of corrupting memory. See
+change on one side fails a test instead of corrupting memory.
+
+No exception crosses the boundary: each becomes a status, and
+`coordina_graph_last_error` says why in one sentence, which
+`GraphEngineException` carries. Simulations share the machine: helper threads
+come from one budget per process, so concurrent requests split the cores instead
+of each starting a thread per core, and results do not depend on how many they
+get. The planning functions take one `coordina_graph_board`, built by
+`BoardPlans` from a board, so two answers about the same board always start from
+the same place. See
 [CONTRIBUTING](https://github.com/Neptune2k21/Coordina/blob/master/CONTRIBUTING.md#graph-engine-abi).
 
 ## Scaling roadmap

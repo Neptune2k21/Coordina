@@ -54,33 +54,22 @@ public interface IGraphEngine<TNode>
     IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
     GraphPlanningOptions? options = null);
 
-  /// <summary>Simulates when the milestone's open cards are done; see <c>coordina_graph_forecast</c>.</summary>
-  GraphMilestoneForecast<TNode> Forecast(
-    IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges,
-    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
-    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
-    GraphForecastOptions<TNode> options);
+  /// <summary>Simulates when every milestone's open cards are done; see <c>coordina_graph_forecast</c>.</summary>
+  GraphForecast<TNode> Forecast(GraphBoard<TNode> board, GraphSimulation simulation);
 
   /// <summary>
-  /// Proposes cards to take out of a milestone so it ships by the target,
+  /// Proposes cards to take out of a milestone so it ships by its target,
   /// giving up as little value as possible. The milestone, cards in progress,
   /// the <paramref name="keep"/> cards and whatever they need are never proposed.
   /// </summary>
   GraphScopeCut<TNode> ProposeScope(
-    IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges,
-    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
-    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    GraphBoard<TNode> board,
     IReadOnlyCollection<TNode> keep,
     GraphScopeOptions<TNode> options);
 
   /// <summary>Measures a cut someone chose; cards outside the scope and the milestone are ignored.</summary>
   GraphScopeCut<TNode> EvaluateScope(
-    IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges,
-    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
-    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    GraphBoard<TNode> board,
     IReadOnlyCollection<TNode> cuts,
     GraphScopeOptions<TNode> options);
 
@@ -90,20 +79,14 @@ public interface IGraphEngine<TNode>
   /// <paramref name="skilled"/> one; see <c>coordina_graph_propose_staffing</c>.
   /// </summary>
   GraphStaffing<TNode> ProposeStaffing(
-    IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges,
-    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
-    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    GraphBoard<TNode> board,
     IReadOnlyCollection<int> receivers,
     IReadOnlyCollection<GraphAssignee<TNode>> skilled,
     GraphStaffingOptions<TNode> options);
 
   /// <summary>Measures changes someone chose, each giving a card to one person.</summary>
   GraphStaffing<TNode> EvaluateStaffing(
-    IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges,
-    IReadOnlyCollection<GraphWorkItem<TNode>> workItems,
-    IReadOnlyCollection<GraphAssignee<TNode>> assignees,
+    GraphBoard<TNode> board,
     IReadOnlyCollection<GraphAssignee<TNode>> changes,
     GraphStaffingOptions<TNode> options);
 }

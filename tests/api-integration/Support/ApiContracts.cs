@@ -150,6 +150,10 @@ public sealed record BoardMilestoneResponse(
   string Status,
   DateOnly? ForecastDate,
   DateOnly? CommitDate,
+  DateOnly? BestCaseDate,
+  DateOnly? WorstCaseDate,
+  DateOnly? UnlimitedTeamDate,
+  double? OnTime,
   int? SlipDays,
   int OpenCardCount,
   int UnsizedCardCount,
@@ -178,6 +182,7 @@ public sealed record BoardMilestoneStaffingResponse(
   DateOnly CommitDateBefore,
   DateOnly ForecastDateAfter,
   DateOnly CommitDateAfter,
+  double OthersDelayDays,
   IReadOnlyCollection<BoardCardAssigneeResponse> People,
   IReadOnlyCollection<BoardMilestoneStaffChangeResponse> Changes);
 

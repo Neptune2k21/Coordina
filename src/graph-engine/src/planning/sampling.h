@@ -2,7 +2,6 @@
 #define COORDINA_GRAPH_ENGINE_SAMPLING_H
 
 #include "core/graph_types.h"
-#include "planning/card_size.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -14,16 +13,33 @@ namespace coordina::graph
 // the schedule: adding or reordering unrelated cards leaves every other
 // card's draws untouched, so a forecast only moves when something it depends
 // on changes, and two versions of a board can be compared run by run. A draw
-// depends only on (seed, card, run), so threads can split the runs.
+// depends only on (seed, card, run, draw), so threads can split the runs.
 class CardStreams
 {
 public:
   CardStreams(std::uint64_t seed, const std::vector<NodeId>& cards);
 
-  double unit(std::size_t card, std::uint64_t run) const noexcept;
+  double unit(std::size_t card, std::uint64_t run, std::uint64_t draw = 0U) const noexcept;
 
 private:
   std::vector<std::uint64_t> keys_;
+};
+
+// What a whole run shares, such as how far the team's estimates are off. One
+// shared draw moves every card at once, so it makes most of the date's spread:
+// the first two dimensions follow a low-discrepancy sequence, which covers it
+// evenly from the first runs on, and any prefix of the runs is a fair sample.
+class RunStreams
+{
+public:
+  static constexpr std::uint64_t even_dimensions = 2U;
+
+  explicit RunStreams(std::uint64_t seed) noexcept;
+
+  double unit(std::uint64_t run, std::uint64_t dimension) const noexcept;
+
+private:
+  std::uint64_t seed_;
 };
 
 // A fast stream of random numbers for searches (splitmix64): the same seed
@@ -41,25 +57,8 @@ private:
   std::uint64_t state_;
 };
 
-// The inverse of the triangular distribution's CDF over a size's range: the
-// ranges lean high, so cards slip further than they come in early.
-class Triangular
-{
-public:
-  Triangular() = default;
-  explicit Triangular(const SizeRange& range) noexcept;
-
-  double operator()(double unit) const noexcept;
-  double likely() const noexcept;
-
-private:
-  double low_ = 0.0;
-  double likely_ = 0.0;
-  double high_ = 0.0;
-  double split_ = 0.0;
-  double below_ = 0.0;
-  double above_ = 0.0;
-};
+// A gamma draw of the given shape, at least 1, and scale 1 (Marsaglia and Tsang).
+double draw_gamma(double shape, SplitMix& random) noexcept;
 }
 
 #endif

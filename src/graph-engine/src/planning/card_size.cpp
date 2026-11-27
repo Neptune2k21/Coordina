@@ -1,7 +1,26 @@
 #include "planning/card_size.h"
 
+#include "numeric/normal.h"
+
+#include <cmath>
+
 namespace coordina::graph
 {
+double SizeRange::low_hours() const noexcept
+{
+  return likely_hours / spread;
+}
+
+double SizeRange::high_hours() const noexcept
+{
+  return likely_hours * spread;
+}
+
+double SizeRange::sigma() const noexcept
+{
+  return std::log(spread) / normal_p90;
+}
+
 SizeRange size_range(CardSize size) noexcept
 {
   constexpr double day = focus_hours_per_day;
@@ -9,22 +28,17 @@ SizeRange size_range(CardSize size) noexcept
   switch (size)
   {
     case CardSize::xs:
-      return SizeRange{.low_hours = 0.25, .likely_hours = 0.5, .high_hours = 1.0};
+      return SizeRange{.likely_hours = 0.5, .spread = 2.0};
     case CardSize::s:
-      return SizeRange{.low_hours = 1.0, .likely_hours = 2.0, .high_hours = day / 2.0};
+      return SizeRange{.likely_hours = 2.0, .spread = 2.0};
     case CardSize::m:
-      return SizeRange{.low_hours = day / 2.0, .likely_hours = day, .high_hours = 2.0 * day};
+      return SizeRange{.likely_hours = day, .spread = 2.0};
     case CardSize::l:
-      return SizeRange{.low_hours = 2.0 * day, .likely_hours = 3.0 * day, .high_hours = 4.0 * day};
+      return SizeRange{.likely_hours = 3.0 * day, .spread = 1.5};
     case CardSize::xl:
-      return SizeRange{.low_hours = 4.0 * day, .likely_hours = 5.0 * day, .high_hours = 8.0 * day};
+      return SizeRange{.likely_hours = 5.0 * day, .spread = 1.5};
     case CardSize::xxl:
-      return SizeRange{
-        .low_hours = 5.0 * day,
-        .likely_hours = 8.0 * day,
-        .high_hours = 15.0 * day,
-        .should_split = true
-      };
+      return SizeRange{.likely_hours = 8.0 * day, .spread = 2.0, .should_split = true};
     case CardSize::none:
       break;
   }
@@ -39,8 +53,7 @@ SizeRange planned_range(CardSize size) noexcept
 
 CardSize to_card_size(std::uint32_t value) noexcept
 {
-  return value <= static_cast<std::uint32_t>(CardSize::xxl) ? static_cast<CardSize>(value)
-                                                            : CardSize::none;
+  return value < card_size_count ? static_cast<CardSize>(value) : CardSize::none;
 }
 
 bool fits_size_limit(CardSize size, CardSize max_size) noexcept

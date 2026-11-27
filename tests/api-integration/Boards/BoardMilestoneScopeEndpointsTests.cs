@@ -20,8 +20,8 @@ public sealed class BoardMilestoneScopeEndpointsTests(ApiTestApplicationFactory 
     var cut = Assert.Single(proposal.Cuts);
     Assert.Equal("Export PDF", cut.Title);
     Assert.Equal(["PDF templates"], cut.AlsoRemoved.Select(card => card.Title));
-    Assert.InRange(proposal.OnTimeBefore, 0, 0.05);
-    Assert.Equal(1, proposal.OnTimeAfter);
+    Assert.InRange(proposal.OnTimeBefore, 0, 0.8);
+    Assert.InRange(proposal.OnTimeAfter, 0.85, 1);
     Assert.True(proposal.CommitDate <= proposal.TargetDate);
     Assert.True(proposal.ForecastDate <= proposal.CommitDate);
   }
@@ -34,7 +34,7 @@ public sealed class BoardMilestoneScopeEndpointsTests(ApiTestApplicationFactory 
     var proposal = await ProposeAsync(release.Scope, release.Launch.Id, keep: [release.Pdf.Id]);
 
     Assert.Equal(["SSO"], proposal.Cuts.Select(cut => cut.Title));
-    Assert.Equal(1, proposal.OnTimeAfter);
+    Assert.InRange(proposal.OnTimeAfter, 0.85, 1);
   }
 
   [Fact]
@@ -141,10 +141,10 @@ public sealed class BoardMilestoneScopeEndpointsTests(ApiTestApplicationFactory 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
   }
 
-  // One person works through a launch due in five working days (30 focus
-  // hours). It needs two large features, a small one, and docs; the PDF export
-  // needs templates nothing else needs. Without the PDF export at most 28
-  // hours are left, while all of it takes at least 26.25 and usually about 41.
+  // One person works through a launch due in seven working days (42 focus
+  // hours). It needs two large features and docs; the PDF export needs
+  // templates nothing else needs. All of it takes about 41 hours, so it is
+  // late half the time, and about 21 without the PDF export.
   private async Task<Release> ReleaseAsync()
   {
     var scope = await BoardScope.CreateAsync(Api);
@@ -158,7 +158,7 @@ public sealed class BoardMilestoneScopeEndpointsTests(ApiTestApplicationFactory 
     await scope.AddDependencyAsync(launch.Id, pdf.Id);
     await scope.AddDependencyAsync(launch.Id, sso.Id);
     await scope.AddDependencyAsync(launch.Id, docs.Id);
-    await scope.UpdateCardAsync(launch.Id, new { milestoneDate = WorkingDaysAway(5) });
+    await scope.UpdateCardAsync(launch.Id, new { milestoneDate = WorkingDaysAway(7) });
 
     return new Release(scope, launch, pdf, docs);
   }
