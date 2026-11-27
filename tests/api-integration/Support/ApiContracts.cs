@@ -159,6 +159,42 @@ public sealed record BoardMilestoneResponse(
   int UnsizedCardCount,
   IReadOnlyCollection<BoardMilestoneDriverResponse> Drivers);
 
+public sealed record BoardLearningResponse(
+  BoardDurationRatioResponse Team,
+  IReadOnlyCollection<BoardDurationRatioResponse> Sizes,
+  IReadOnlyCollection<BoardDurationRatioResponse> Labels,
+  double NewCardsPerCompletedCard,
+  BoardCardAccuracyResponse? Cards,
+  BoardMilestoneAccuracyResponse? Milestones);
+
+public sealed record BoardDurationRatioResponse(
+  string? Name,
+  double Low,
+  double Median,
+  double High,
+  int CardCount);
+
+public sealed record BoardCardAccuracyResponse(int CardCount, double WithinHalf, double WithinCommit);
+
+public sealed record BoardMilestoneAccuracyResponse(
+  int MilestoneCount,
+  int SnapshotCount,
+  double ForecastMet,
+  double CommitMet,
+  double MeanSlipDays);
+
+public sealed record BoardEventPageResponse(
+  IReadOnlyCollection<BoardCardEventResponse> Events,
+  long? NextAfter);
+
+public sealed record BoardCardEventResponse(
+  long Id,
+  string CardId,
+  string Kind,
+  string? From,
+  string? To,
+  DateTimeOffset OccurredAt);
+
 public sealed record BoardMilestoneScopeResponse(
   string MilestoneId,
   DateOnly TargetDate,

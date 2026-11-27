@@ -35,4 +35,4 @@ internal static class BoardReading
 }
 
 /// <summary>A board, and the user asking about it.</summary>
-internal sealed record BoardTarget(Guid WorkspaceId, Guid ProjectId, Guid BoardId, Guid UserId);
+public sealed record BoardTarget(Guid WorkspaceId, Guid ProjectId, Guid BoardId, Guid UserId);
