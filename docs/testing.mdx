@@ -43,6 +43,7 @@ The quality tool and the analyzers have their own tests in `tests/quality` and
 | `make api-test-integration` | API integration tests |
 | `make api-test` | Every .NET test, with coverage collected in `TestResults` |
 | `make graph-engine-test` | Native engine tests |
+| `make graph-engine-lab` | How right the engine's dates and advice are, on made-up teams |
 | `make web-test` | Web tests |
 | `make web-e2e` | End-to-end tests |
 | `make verify` | Only the suites your changes can break |
@@ -114,6 +115,22 @@ rollback.
 
 Migration tests do not need the API. They ask `TestDatabaseServer` for an empty
 database, or for one stopped at an earlier migration.
+
+## Graph engine lab
+
+`make graph-engine-lab` measures how good the engine's answers are, where the
+benchmark measures how fast. It makes up teams whose true durations are known,
+some as the engine assumes and some not (estimates 40% too low, a team that
+changes, cards that take five times their size), and reports:
+
+- how often the 50, 85 and 95% dates are met, by length of history;
+- how far plans are from a bound no plan beats;
+- whether an announced gain holds on other draws.
+
+Run it before and after changing an algorithm. It checks nothing by itself and is
+not part of CI. Made-up teams share the engine's idea of what a team is, so good
+figures here say the arithmetic is right, not that real teams behave this way:
+only `GET .../learning` on real boards can say that.
 
 ## Graph engine benchmark
 
