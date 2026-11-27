@@ -31,7 +31,7 @@ GRAPH_ENGINE_SANITIZE_OBJECTS := $(GRAPH_ENGINE_SOURCES:$(GRAPH_ENGINE_DIR)/src/
 # The native targets compile their objects through this, on every core.
 NATIVE_MAKE := $(MAKE) --no-print-directory -j$(shell nproc)
 GRAPH_ENGINE_SANITIZE_FLAGS := $(filter-out -O2,$(GRAPH_ENGINE_FLAGS)) -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all
-GRAPH_ENGINE_TESTS := graph_engine_tests planning_tests schedule_tests forecast_tests scope_tests staffing_tests
+GRAPH_ENGINE_TESTS := graph_engine_tests planning_tests numeric_tests schedule_tests forecast_tests scope_tests staffing_tests
 GRAPH_ENGINE_ABI := contracts/graph-engine-abi.json
 CLANG_TOOLS_DIR := .tools/clang
 CLANG_TOOLS_REQUIREMENTS := tools/clang/requirements.txt
