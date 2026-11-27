@@ -28,7 +28,9 @@ public sealed partial class GraphEngineAbiTests
     ["coordina_graph_assignment"] = typeof(GraphAssignment),
     ["coordina_graph_size"] = typeof(GraphSize),
     ["coordina_graph_edge_status"] = typeof(GraphEdgeStatus),
-    ["coordina_graph_status"] = NestedType("NativeGraphStatus")
+    ["coordina_graph_status"] = NestedType("NativeGraphStatus"),
+    ["coordina_graph_action_kind"] = typeof(GraphActionKind),
+    ["coordina_graph_question_kind"] = typeof(GraphQuestionKind)
   };
 
   public static TheoryData<string> Structs => new(Entries("structs").Select(Name));

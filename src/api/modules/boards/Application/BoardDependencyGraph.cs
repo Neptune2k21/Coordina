@@ -6,7 +6,6 @@ namespace Coordina.Api.Modules.Boards.Application;
 
 internal static class BoardDependencyGraph
 {
-  private const int DefaultSuggestionLimit = 8;
   private const int NextCardLimit = 5;
 
   public static GraphEdgeEvaluation EvaluateDependency(
@@ -90,10 +89,11 @@ internal static class BoardDependencyGraph
     IGraphEngine<Guid> graphEngine,
     ProjectBoard board,
     Guid cardId,
-    int maxSuggestions = DefaultSuggestionLimit)
+    IReadOnlyCollection<Guid> suggestions)
   {
     ArgumentNullException.ThrowIfNull(graphEngine);
     ArgumentNullException.ThrowIfNull(board);
+    ArgumentNullException.ThrowIfNull(suggestions);
 
     var graph = ToGraph(board);
     var cardsById = graph.Cards.ToDictionary(card => card.Id);
@@ -120,11 +120,6 @@ internal static class BoardDependencyGraph
       .ToArray();
     var readyCardIds = graphEngine.FindReadyNodes(graph.Nodes, graph.Edges)
       .ToHashSet();
-    var suggestions = graphEngine.SuggestTargets(
-      graph.Nodes,
-      graph.Edges,
-      cardId,
-      maxSuggestions);
     var impacted = graphEngine.FindImpactedDependents(
       graph.Nodes,
       graph.Edges,

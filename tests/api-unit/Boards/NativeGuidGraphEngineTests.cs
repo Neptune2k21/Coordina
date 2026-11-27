@@ -60,26 +60,6 @@ public sealed class NativeGuidGraphEngineTests
   }
 
   [Fact]
-  public void SuggestTargets_ExcludesSelfDuplicatesAndCycleTargets()
-  {
-    var first = Guid.NewGuid();
-    var second = Guid.NewGuid();
-    var third = Guid.NewGuid();
-    var fourth = Guid.NewGuid();
-
-    var suggestions = _graphEngine.SuggestTargets(
-      [first, second, third, fourth],
-      [
-        new GraphEdge<Guid>(first, second),
-        new GraphEdge<Guid>(third, first)
-      ],
-      first,
-      10);
-
-    Assert.Equal([fourth], suggestions);
-  }
-
-  [Fact]
   public void SortTopologically_ReturnsDependencyFirstOrder()
   {
     var dependency = Guid.NewGuid();

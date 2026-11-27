@@ -164,6 +164,82 @@ public sealed partial class NativeGuidGraphEngine
   }
 
   [StructLayout(LayoutKind.Sequential)]
+  private record struct NativeGraphActionOptions(
+    NativeGraphNodeId Milestone,
+    NativeGraphSimulation Simulation,
+    uint ScreenRunCount,
+    uint Limit);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphAction(
+    NativeGraphNodeId Node,
+    uint Kind,
+    uint Person,
+    double OnTimeBefore,
+    double OnTimeAfter,
+    double P85DaysBefore,
+    double P85DaysAfter,
+    double OthersDelayDays,
+    uint DroppedCount,
+    uint Reserved,
+    double ValueLost);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphActionOutput
+  {
+    public IntPtr Actions;
+    public UIntPtr ActionCapacity;
+    public UIntPtr ActionCount;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphCardToken(
+    NativeGraphNodeId Node,
+    double Weight,
+    uint Token,
+    uint Reserved);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphDependencyHint(
+    NativeGraphNodeId Card,
+    NativeGraphNodeId Dependency,
+    double Probability);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphHintOutput
+  {
+    public IntPtr Hints;
+    public UIntPtr HintCapacity;
+    public UIntPtr HintCount;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  private record struct NativeGraphQuestionOptions(
+    NativeGraphNodeId Milestone,
+    NativeGraphSimulation Simulation,
+    uint Limit,
+    uint Reserved);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphQuestion(
+    NativeGraphNodeId Node,
+    NativeGraphNodeId Other,
+    uint Kind,
+    uint Reserved,
+    double Probability,
+    double MarginDays,
+    double ShiftDays);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphQuestionOutput
+  {
+    public IntPtr Questions;
+    public UIntPtr QuestionCapacity;
+    public UIntPtr QuestionCount;
+    public double MarginDays;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
   private readonly record struct NativeGraphDurationRatio(
     double Low,
     double Median,

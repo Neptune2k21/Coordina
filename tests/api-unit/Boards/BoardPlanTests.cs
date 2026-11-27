@@ -102,6 +102,17 @@ public sealed class BoardPlanTests
     Assert.Equal(1, plan.Graph.Growth.Finished);
   }
 
+  [Fact]
+  public void CardTokens_IgnoreCaseAccentsAndPlurals()
+  {
+    var left = PlanningBoards.Card("Détails des FACTURES");
+    var right = PlanningBoards.Card("facture : detail");
+
+    var tokens = CardTokens.Of([left, right]).ToLookup(token => token.Node, token => token.Token);
+
+    Assert.Equal(tokens[right.Id].Order(), tokens[left.Id].Distinct().Intersect(tokens[right.Id]).Order());
+  }
+
   private static BoardPlan Build(ProjectBoard board, params Guid[] newcomers) =>
     BoardPlans.Build(board, [], newcomers, Now);
 

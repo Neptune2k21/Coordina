@@ -104,12 +104,20 @@ internal static class BoardPlans
     BoardFocusTimes times,
     DateOnly today)
   {
+    // Cards created together, as a template's are, share their place: which of
+    // them comes first would mean nothing.
+    var createdOrder = cards
+      .GroupBy(card => card.CreatedAt)
+      .OrderBy(group => group.Key)
+      .SelectMany((group, index) => group.Select(card => (card.Id, index)))
+      .ToDictionary(card => card.Id, card => card.index);
     var items = BoardDependencyGraph.ToWorkItems(board, cards, today, Nobody);
 
     return items
       .Zip(cards, (item, card) => item with
       {
-        ElapsedHours = item.IsInProgress ? times.HoursOf(card) : 0
+        ElapsedHours = item.IsInProgress ? times.HoursOf(card) : 0,
+        CreatedOrder = createdOrder[card.Id]
       })
       .ToArray();
   }

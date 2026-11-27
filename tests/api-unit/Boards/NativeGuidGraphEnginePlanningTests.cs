@@ -165,6 +165,58 @@ public sealed class NativeGuidGraphEnginePlanningTests
     Assert.Contains("person", error.Message, StringComparison.Ordinal);
   }
 
+  [Fact]
+  public void ProposeActions_RanksEveryKindByTheSameMeasure()
+  {
+    var actions = _graphEngine.ProposeActions(
+      Board([new(_api, 0)], 2, 30),
+      [0, 1],
+      new GraphActionOptions<Guid>(_launch, Simulation, 64, 6));
+
+    Assert.NotEmpty(actions);
+    Assert.All(actions, action => Assert.True(action.OnTimeAfter >= action.OnTimeBefore));
+    Assert.Equal(
+      actions.OrderByDescending(action => Math.Round(action.OnTimeAfter - (0.02 * action.ValueLost), 9)),
+      actions);
+    Assert.Contains(actions, action => action.Kind == GraphActionKind.AddPerson);
+  }
+
+  [Fact]
+  public void RankQuestions_AsksAboutTheUnsizedCardAndTheSuspectedDependency()
+  {
+    var questions = _graphEngine.RankQuestions(
+      Board([new(_api, 0), new(_onboarding, 1)], 2),
+      [new GraphCardToken<Guid>(_api, 1U, 1)],
+      [new GraphDependencyHint<Guid>(_onboarding, _api, 0.5)],
+      new GraphQuestionOptions<Guid>(_launch, Simulation, 10));
+
+    Assert.True(questions.MarginDays > 0);
+    Assert.Contains(
+      questions.Questions,
+      question => question.Kind == GraphQuestionKind.Size && question.Node == _onboarding);
+    Assert.Contains(
+      questions.Questions,
+      question => question.Kind == GraphQuestionKind.Dependency && question.Other == _api);
+  }
+
+  [Fact]
+  public void SuggestDependencies_ExcludesWhatIsKnownOrImpossible()
+  {
+    var board = Board([], 1) with
+    {
+      Edges = [new GraphEdge<Guid>(_onboarding, _api)]
+    };
+    GraphCardToken<Guid>[] tokens =
+      [new(_api, 5U, 1), new(_onboarding, 5U, 1), new(_launch, 5U, 1), new(_launch, 6U, 1)];
+
+    var hints = _graphEngine.SuggestDependencies(board, tokens, _onboarding, 5);
+
+    Assert.All(hints, hint => Assert.Equal(_onboarding, hint.Card));
+    Assert.DoesNotContain(hints, hint => hint.Dependency == _api);
+    Assert.DoesNotContain(_graphEngine.SuggestDependencies(board, tokens, _api, 5)
+, hint => hint.Dependency == _onboarding);
+  }
+
   private GraphBoard<Guid> Board(GraphAssignee<Guid>[] assignees, int people, double targetHours = 60) =>
     new(
       [_api, _onboarding, _launch],
