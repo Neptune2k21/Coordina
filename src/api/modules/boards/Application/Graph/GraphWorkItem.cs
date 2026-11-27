@@ -12,7 +12,8 @@ public sealed record GraphWorkItem<TNode>(
   GraphAssignment Assignment = GraphAssignment.Unassigned,
   bool IsInProgress = false,
   bool IsContextMatch = false,
-  double ElapsedHours = 0)
+  double ElapsedHours = 0,
+  int CreatedOrder = 0)
   where TNode : notnull
 {
   public const int NoDueDate = int.MaxValue;

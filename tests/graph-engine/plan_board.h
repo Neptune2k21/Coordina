@@ -98,6 +98,7 @@ struct PlanBoard
     nodes.push_back(node(id));
     auto item = sized_item(id, size, static_cast<std::uint32_t>(items.size()));
     item.priority = priority;
+    item.created_order = static_cast<std::uint32_t>(items.size());
     items.push_back(item);
     return items.back();
   }

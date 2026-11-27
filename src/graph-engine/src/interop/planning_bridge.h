@@ -5,6 +5,7 @@
 #include "interop/abi_errors.h"
 #include "interop/abi_queries.h"
 #include "interop/native_bridge.h"
+#include "planning/dependency_hints.h"
 #include "planning/forecast.h"
 #include "planning/planning_board.h"
 
@@ -41,6 +42,7 @@ PlanningBoard build_board(const coordina_graph_board& board);
 SimulationOptions build_simulation(const coordina_graph_simulation& simulation) noexcept;
 std::vector<Assignee> build_assignees(const coordina_graph_assignee* assignees, std::size_t count);
 std::vector<NodeId> build_node_ids(const coordina_graph_node_id* nodes, std::size_t count);
+std::vector<CardToken> build_tokens(const coordina_graph_card_token* tokens, std::size_t count);
 
 // Writes every item when the buffer is large enough, and says whether it was.
 template <typename Item, typename Output, typename Convert>

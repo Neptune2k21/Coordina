@@ -1,0 +1,58 @@
+---
+title: "Assistants"
+description: "How an AI assistant, hosted or your own, plans a board with Coordina."
+---
+
+Coordina splits the work with an assistant: **the assistant understands text, the
+engine computes**. A language model reads cards, specifications and messages, and
+suspects what a board misses. It is poor at scheduling twelve cards over three
+people under uncertainty, and worse at knowing how sure it is. The engine does
+that part, the same way every time, and its answers are numbers to check rather
+than prose to believe.
+
+Any client works, since everything is the HTTP API: a hosted model, one you run
+yourself, or a script. `GET /openapi/v1.json` describes every endpoint with typed
+schemas and descriptions, which most agent frameworks turn into tools directly.
+
+## The loop
+
+1. **Read.** `GET .../plan`: the milestones' dates, who is expected to take which
+   card and when, and what the forecast assumes. `GET .../learning` says how far
+   to trust it.
+2. **Suspect.** The assistant reads the cards and lists the dependencies it
+   thinks are missing, each with a probability.
+3. **Weigh.** `POST .../milestones/{id}/questions` with those as
+   `dependencyHints`. The engine returns the few questions worth a person's time,
+   with the days each answer is worth. Most suspicions do not matter to the date,
+   and are dropped here rather than asked.
+4. **Try.** `POST .../what-if` with the changes it has in mind, or
+   `GET .../milestones/{id}/actions` for the engine's own.
+5. **Act.** Only once someone agrees, through the endpoints that write: cards,
+   dependencies, `scope-cut`, `staffing`.
+
+## What to rely on
+
+| Guarantee | Why it matters to an assistant |
+| --- | --- |
+| Steps 1, 3 and 4 change nothing | It can explore freely |
+| The same board gives the same answer, with any number of threads | An answer can be checked again; proposals with a time limit (`scope-proposal`, `staffing-proposal`) are the exception |
+| A change is measured by forecasting the board with it | What `what-if` announces is what the board shows once it is done |
+| Before and after use the same simulated runs | The difference comes from the change, not from luck |
+| Kinds and statuses are codes, dates are ISO, chances go from 0 to 1 | Nothing has to be parsed out of a sentence |
+| Invalid input gets `400` naming the field, a loop `409` | It can correct itself |
+| Access is the signed-in user's | An assistant sees and does what its user can, no more |
+
+## Learning from a board
+
+`GET .../events` is the board's history in pages: cards created, moved between
+task statuses, sized, linked, assigned and deleted, with no text in it. It is
+what the engine itself learns from, and a dataset for anyone training a model on
+how work unfolds. Assignment events carry user ids, so treat an export as
+personal data.
+
+## Plugging in a model
+
+The engine takes probabilities, not models, so a model can be replaced without
+touching it. `dependencyHints` is the entry point today: a language model, a
+graph neural network trained on `events`, or a person's hunch all give the same
+thing, a pair of cards and a probability, and all are weighed the same way.

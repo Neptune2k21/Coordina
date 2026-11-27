@@ -1,5 +1,8 @@
+using Coordina.Api.Modules.Boards.Application;
 using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Domain;
+using Coordina.Api.Modules.Insights.Application;
+using Coordina.Api.Modules.Insights.Contracts;
 
 namespace Coordina.Api.Unit.Tests.Boards;
 
@@ -102,8 +105,87 @@ public sealed class BoardPlanTests
     Assert.Equal(1, plan.Graph.Growth.Finished);
   }
 
+  [Fact]
+  public void CardTokens_IgnoreCaseAccentsAndPlurals()
+  {
+    var left = PlanningBoards.Card("Détails des FACTURES");
+    var right = PlanningBoards.Card("facture : detail");
+
+    var tokens = CardTokens.Of([left, right]).ToLookup(token => token.Node, token => token.Token);
+
+    Assert.Equal(tokens[right.Id].Order(), tokens[left.Id].Distinct().Intersect(tokens[right.Id]).Order());
+  }
+
+  [Fact]
+  public void Scenario_AppliesChangesInOrderWithoutTouchingTheBoard()
+  {
+    var api = PlanningBoards.Card("API", _ada);
+    var launch = PlanningBoards.Card("Launch") with { MilestoneDate = Today.AddDays(9) };
+    var board = PlanningBoards.Board(api, launch);
+
+    var scenario = BoardScenario.Apply(
+      board,
+      [
+        Change("SET_SIZE", api.Id) with { Size = "XL" },
+        Change("ASSIGN", api.Id) with { UserIds = [_grace] },
+        Change("ADD_DEPENDENCY", launch.Id) with { DependsOnCardId = api.Id },
+        Change("SET_TARGET", launch.Id) with { Date = Today.AddDays(30) },
+        Change("ADD_PEOPLE", null) with { Count = 2 }
+      ],
+      new HashSet<Guid> { _ada, _grace },
+      Today);
+
+    Assert.True(scenario.IsSuccess);
+    var cards = Cards(scenario.Value.Board);
+    Assert.Equal(CardSize.Xl, cards["API"].Size);
+    Assert.Equal(_grace, Assert.Single(cards["API"].Assignees).UserId);
+    Assert.Equal(api.Id, Assert.Single(cards["Launch"].Dependencies).CardId);
+    Assert.Equal(Today.AddDays(30), cards["Launch"].MilestoneDate);
+    Assert.Equal(2, scenario.Value.ExtraPeople);
+    Assert.Equal(CardSize.M, Cards(board)["API"].Size);
+  }
+
+  [Theory]
+  [InlineData("UNKNOWN")]
+  [InlineData("SET_SIZE")]
+  [InlineData("ASSIGN")]
+  [InlineData("ADD_DEPENDENCY")]
+  [InlineData("SET_TARGET")]
+  [InlineData("COMPLETE")]
+  [InlineData("ADD_PEOPLE")]
+  public void Scenario_WithAChangeThatCannotBe_IsRefused(string kind)
+  {
+    var scenario = BoardScenario.Apply(
+      PlanningBoards.Board(PlanningBoards.Card("API")),
+      [Change(kind, Guid.NewGuid())],
+      new HashSet<Guid>(),
+      Today);
+
+    Assert.False(scenario.IsSuccess);
+  }
+
+  [Fact]
+  public void Scenario_WithSomeoneOutsideTheWorkspace_IsRefused()
+  {
+    var api = PlanningBoards.Card("API");
+
+    var scenario = BoardScenario.Apply(
+      PlanningBoards.Board(api),
+      [Change("ASSIGN", api.Id) with { UserIds = [_ada] }],
+      new HashSet<Guid> { _grace },
+      Today);
+
+    Assert.False(scenario.IsSuccess);
+  }
+
   private static BoardPlan Build(ProjectBoard board, params Guid[] newcomers) =>
     BoardPlans.Build(board, [], newcomers, Now);
+
+  private static Dictionary<string, ProjectBoardCard> Cards(ProjectBoard board) =>
+    board.Lists.SelectMany(list => list.Cards).ToDictionary(card => card.Title);
+
+  private static BoardWhatIfChangeRequest Change(string kind, Guid? cardId) =>
+    new(kind, cardId, null, null, null, null, null);
 
   private static BoardCardEvent Event(long id, Guid cardId, BoardTaskStatus status, DateTimeOffset at) =>
     new(

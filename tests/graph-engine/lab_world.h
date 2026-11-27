@@ -137,6 +137,7 @@ inline LabBoard make_board(
     item.node = lab_node(id);
     item.due_days = std::numeric_limits<std::int32_t>::max();
     item.position = static_cast<std::uint32_t>(id);
+    item.created_order = static_cast<std::uint32_t>(id);
     item.size = size;
     board.nodes.push_back(item.node);
     board.items.push_back(item);

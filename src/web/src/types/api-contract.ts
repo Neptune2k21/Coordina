@@ -2064,6 +2064,96 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/plan": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get the board's plan
+     * @description Returns every open milestone's forecast, the cards of their scopes in the order to pick them up with who is expected to take each and when, and what the forecast assumes. The milestones share one team.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardPlanResponse"]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/what-if": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Try changes on a board
+     * @description Returns the milestones' forecasts as they are and as they would be with the changes, on the same simulated runs, so the difference comes from the changes alone. Saves nothing. Changes that make cards depend on each other in a loop are refused (409).
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardWhatIfRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardWhatIfResponse"]
+          }
+        }
+      }
+    }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning": {
     parameters: {
       query?: never
@@ -2147,6 +2237,98 @@ export interface paths {
     }
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/actions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Rank what to do about a milestone
+     * @description Returns the single steps that help the milestone most, the best first: taking a card out, giving a card to someone of the team, adding a person. Each is measured by forecasting the board with it, so they compare. Empty when nothing helps.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneActionResponse"][]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/questions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Rank what to ask about a milestone
+     * @description Returns the few answers that would make the milestone's date surest: a card to size or to split, a card in progress that drags on, a dependency that may be missing. dependencyHints adds dependencies someone suspects; they are weighed, not saved.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          workspaceId: string
+          projectId: string
+          boardId: string
+          milestoneId: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BoardMilestoneQuestionsRequest"]
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            "application/json": components["schemas"]["BoardMilestoneQuestionsResponse"]
+          }
+        }
+      }
+    }
     delete?: never
     options?: never
     head?: never
@@ -2334,6 +2516,14 @@ export interface components {
       name: null | string
       email: null | string
     }
+    BoardDependencyHintRequest: {
+      /** Format: uuid */
+      cardId: string
+      /** Format: uuid */
+      dependsOnCardId: string
+      /** Format: double */
+      probability: number
+    }
     BoardDurationRatioResponse: {
       name: null | string
       /** Format: double */
@@ -2436,6 +2626,29 @@ export interface components {
       /** Format: double */
       meanSlipDays: number
     }
+    BoardMilestoneActionResponse: {
+      /** @enum {string} */
+      kind: "CUT_CARD" | "ASSIGN_CARD" | "ADD_PERSON"
+      /** Format: uuid */
+      cardId: null | string
+      title: null | string
+      /** Format: uuid */
+      userId: null | string
+      /** Format: int32 */
+      alsoRemoved: number
+      /** Format: double */
+      onTimeBefore: number
+      /** Format: double */
+      onTimeAfter: number
+      /** Format: date */
+      commitDateBefore: string
+      /** Format: date */
+      commitDateAfter: string
+      /** Format: double */
+      othersDelayDays: number
+      /** Format: double */
+      valueLost: number
+    }
     BoardMilestoneCutCardResponse: {
       /** Format: uuid */
       cardId: string
@@ -2458,6 +2671,33 @@ export interface components {
       criticality: number
       /** Format: double */
       sensitivity: number
+    }
+    BoardMilestoneQuestionResponse: {
+      /** @enum {string} */
+      kind: "SIZE" | "SPLIT" | "PROGRESS" | "DEPENDENCY"
+      /** Format: uuid */
+      cardId: string
+      title: string
+      /** Format: uuid */
+      dependsOnCardId: null | string
+      dependsOnTitle: null | string
+      /** Format: double */
+      probability: null | number
+      /** Format: double */
+      shiftDays: null | number
+      /** Format: double */
+      marginDaysSaved: number
+    }
+    BoardMilestoneQuestionsRequest: {
+      dependencyHints:
+        null | components["schemas"]["BoardDependencyHintRequest"][]
+    }
+    BoardMilestoneQuestionsResponse: {
+      /** Format: uuid */
+      milestoneId: string
+      /** Format: double */
+      marginDays: number
+      questions: components["schemas"]["BoardMilestoneQuestionResponse"][]
     }
     BoardMilestoneResponse: {
       /** Format: uuid */
@@ -2549,6 +2789,33 @@ export interface components {
       people: components["schemas"]["BoardCardAssigneeResponse"][]
       changes: components["schemas"]["BoardMilestoneStaffChangeResponse"][]
     }
+    BoardPlanAssumptionsResponse: {
+      /** Format: int32 */
+      runCount: number
+      /** Format: double */
+      focusHoursPerDay: number
+      /** Format: int32 */
+      learnedFromCards: number
+      /** Format: double */
+      newCardsPerCompletedCard: number
+    }
+    BoardPlannedCardResponse: {
+      /** Format: uuid */
+      cardId: string
+      title: string
+      /** Format: int32 */
+      order: number
+      /** Format: uuid */
+      userId: null | string
+      /** Format: date */
+      start: string
+      /** Format: date */
+      finish: string
+      isInProgress: boolean
+      /** Format: double */
+      elapsedHours: number
+      milestoneIds: string[]
+    }
     BoardPlanningPreferencesResponse: {
       /** @enum {null|string} */
       maxSize: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null
@@ -2561,6 +2828,15 @@ export interface components {
       context?: null | string
       preferAssigned?: null | boolean
       includeUnassigned?: null | boolean
+    }
+    BoardPlanResponse: {
+      /** Format: uuid */
+      boardId: string
+      /** Format: date */
+      today: string
+      milestones: components["schemas"]["BoardMilestoneResponse"][]
+      cards: components["schemas"]["BoardPlannedCardResponse"][]
+      assumptions: components["schemas"]["BoardPlanAssumptionsResponse"]
     }
     BoardResponse: {
       /** Format: uuid */
@@ -2614,6 +2890,35 @@ export interface components {
       name: string
       summary: string
       lists: components["schemas"]["BoardTemplateListResponse"][]
+    }
+    BoardWhatIfChangeRequest: {
+      /** @enum {null|string} */
+      kind:
+        | "SET_SIZE"
+        | "ASSIGN"
+        | "ADD_DEPENDENCY"
+        | "REMOVE_DEPENDENCY"
+        | "SET_TARGET"
+        | "COMPLETE"
+        | "ADD_PEOPLE"
+        | null
+      /** Format: uuid */
+      cardId: null | string
+      size: null | string
+      userIds: null | string[]
+      /** Format: uuid */
+      dependsOnCardId: null | string
+      /** Format: date */
+      date: null | string
+      /** Format: int32 */
+      count: null | number
+    }
+    BoardWhatIfRequest: {
+      changes: null | components["schemas"]["BoardWhatIfChangeRequest"][]
+    }
+    BoardWhatIfResponse: {
+      before: components["schemas"]["BoardMilestoneResponse"][]
+      after: components["schemas"]["BoardMilestoneResponse"][]
     }
     ChangeMemberRoleRequest: {
       /** @enum {string} */

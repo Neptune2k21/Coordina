@@ -23,13 +23,6 @@ void detects_cycles()
   assert(chain.call(coordina_graph_evaluate_edge, node(3U), node(1U)) == COORDINA_GRAPH_EDGE_CYCLE);
 }
 
-void suggests_only_safe_targets()
-{
-  const Graph graph(4U, {{1U, 2U}, {3U, 1U}});
-
-  assert(graph.ids(coordina_graph_suggest_targets, node(1U)) == Ids{4U});
-}
-
 void sorts_dependency_first()
 {
   assert(dependency_tree().ids(coordina_graph_topological_sort) == (Ids{1U, 2U, 3U, 4U}));
@@ -241,7 +234,6 @@ void batch_analysis_flags_cycles()
 int main()
 {
   detects_cycles();
-  suggests_only_safe_targets();
   sorts_dependency_first();
   finds_ready_nodes();
   finds_impacted_dependents();

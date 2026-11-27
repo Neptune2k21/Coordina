@@ -141,7 +141,8 @@ std::vector<WorkItem> build_work_items(
         .assignment = to_assignment(work_items[index].assignment),
         .is_in_progress = work_items[index].is_in_progress != 0U,
         .is_context_match = work_items[index].is_context_match != 0U,
-        .elapsed_hours = work_items[index].elapsed_hours
+        .elapsed_hours = work_items[index].elapsed_hours,
+        .created_order = work_items[index].created_order
       });
   }
 

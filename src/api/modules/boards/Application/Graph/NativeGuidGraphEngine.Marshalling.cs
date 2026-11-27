@@ -174,7 +174,9 @@ public sealed partial class NativeGuidGraphEngine
         (uint)item.Assignment,
         item.IsInProgress ? 1U : 0U,
         item.IsContextMatch ? 1U : 0U,
-        item.ElapsedHours))
+        item.ElapsedHours,
+        checked((uint)item.CreatedOrder),
+        0U))
       .ToArray();
 
   private static NativeGraphPlanningOptions ToNativeOptions(
@@ -237,7 +239,9 @@ public sealed partial class NativeGuidGraphEngine
     uint Assignment,
     uint IsInProgress,
     uint IsContextMatch,
-    double ElapsedHours);
+    double ElapsedHours,
+    uint CreatedOrder,
+    uint Reserved);
 
   [StructLayout(LayoutKind.Sequential)]
   private record struct NativeGraphPlanningOptions(

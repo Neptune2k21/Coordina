@@ -51,6 +51,9 @@ typedef struct coordina_graph_work_item
   uint32_t is_context_match;
   /* Focus hours already spent on a card in progress. */
   double elapsed_hours;
+  /* Where the card comes among the board's, oldest first. */
+  uint32_t created_order;
+  uint32_t reserved;
 } coordina_graph_work_item;
 
 typedef enum coordina_graph_assignment
@@ -401,6 +404,131 @@ typedef struct coordina_graph_staffing
   double others_late_days_after;
 } coordina_graph_staffing;
 
+typedef enum coordina_graph_action_kind
+{
+  COORDINA_GRAPH_ACTION_CUT_CARD = 1,
+  COORDINA_GRAPH_ACTION_ASSIGN_CARD = 2,
+  COORDINA_GRAPH_ACTION_ADD_PERSON = 3
+} coordina_graph_action_kind;
+
+typedef struct coordina_graph_action_options
+{
+  /* One of the board's milestones. */
+  coordina_graph_node_id milestone;
+  coordina_graph_simulation simulation;
+  /* Runs that compare the candidates before the best ones are forecast. */
+  uint32_t screen_run_count;
+  /* The most actions to return. */
+  uint32_t limit;
+} coordina_graph_action_options;
+
+/* One thing to do, and the milestone's forecast once it is done. */
+typedef struct coordina_graph_action
+{
+  /* The card to cut or assign; zero for ADD_PERSON. */
+  coordina_graph_node_id node;
+  /* A coordina_graph_action_kind. */
+  uint32_t kind;
+  /* Who to assign the card to. */
+  uint32_t person;
+  double on_time_before;
+  double on_time_after;
+  double p85_days_before;
+  double p85_days_after;
+  /* How much later the other milestones end up on average, by their weights. */
+  double others_delay_days;
+  /* The cards that leave the scope with a cut, the card itself included. */
+  uint32_t dropped_count;
+  uint32_t reserved;
+  /* What giving them up costs, by their priorities: high 4, medium 2, otherwise 1. */
+  double value_lost;
+} coordina_graph_action;
+
+/* Output of coordina_graph_propose_actions; limit actions are always enough. */
+typedef struct coordina_graph_action_output
+{
+  /* The best first. */
+  coordina_graph_action* actions;
+  size_t action_capacity;
+  size_t action_count;
+} coordina_graph_action_output;
+
+/* A word of a card's text, under any number, and how much it counts. */
+typedef struct coordina_graph_card_token
+{
+  coordina_graph_node_id node;
+  double weight;
+  uint32_t token;
+  uint32_t reserved;
+} coordina_graph_card_token;
+
+/* A dependency the board probably misses: card waits for dependency. */
+typedef struct coordina_graph_dependency_hint
+{
+  coordina_graph_node_id card;
+  coordina_graph_node_id dependency;
+  /* From 0 to 1. */
+  double probability;
+} coordina_graph_dependency_hint;
+
+/* Output of coordina_graph_suggest_dependencies; limit hints are always enough. */
+typedef struct coordina_graph_hint_output
+{
+  /* The most likely first. */
+  coordina_graph_dependency_hint* hints;
+  size_t hint_capacity;
+  size_t hint_count;
+} coordina_graph_hint_output;
+
+typedef enum coordina_graph_question_kind
+{
+  /* How big is this card? */
+  COORDINA_GRAPH_QUESTION_SIZE = 1,
+  /* Can this card be split? */
+  COORDINA_GRAPH_QUESTION_SPLIT = 2,
+  /* This card takes longer than expected: what is left? */
+  COORDINA_GRAPH_QUESTION_PROGRESS = 3,
+  /* Does this card wait for that one? */
+  COORDINA_GRAPH_QUESTION_DEPENDENCY = 4
+} coordina_graph_question_kind;
+
+typedef struct coordina_graph_question_options
+{
+  /* One of the board's milestones. */
+  coordina_graph_node_id milestone;
+  coordina_graph_simulation simulation;
+  /* The most questions to return. */
+  uint32_t limit;
+  uint32_t reserved;
+} coordina_graph_question_options;
+
+typedef struct coordina_graph_question
+{
+  coordina_graph_node_id node;
+  /* What node may wait for; zero unless the question is about a dependency. */
+  coordina_graph_node_id other;
+  /* A coordina_graph_question_kind. */
+  uint32_t kind;
+  uint32_t reserved;
+  /* How likely the dependency is; 1 for the other kinds. */
+  double probability;
+  /* Working days the answer is expected to take off the margin. */
+  double margin_days;
+  /* How many days the dependency moves the 50% date, if there is one. */
+  double shift_days;
+} coordina_graph_question;
+
+/* Output of coordina_graph_rank_questions; limit questions are always enough. */
+typedef struct coordina_graph_question_output
+{
+  /* The most worth asking first. */
+  coordina_graph_question* questions;
+  size_t question_capacity;
+  size_t question_count;
+  /* The days between the 50% and 85% dates as things are. */
+  double margin_days;
+} coordina_graph_question_output;
+
 /*
  * How long cards take against what their size says: 1.6 means 60% longer. A
  * tenth of the chance is below low and a tenth above high.
@@ -466,15 +594,6 @@ COORDINA_GRAPH_EXPORT int coordina_graph_has_path(
   size_t edge_count,
   coordina_graph_node_id source,
   coordina_graph_node_id target);
-
-COORDINA_GRAPH_EXPORT size_t coordina_graph_suggest_targets(
-  const coordina_graph_node_id* nodes,
-  size_t node_count,
-  const coordina_graph_edge* edges,
-  size_t edge_count,
-  coordina_graph_node_id source,
-  coordina_graph_node_id* output,
-  size_t output_capacity);
 
 COORDINA_GRAPH_EXPORT int coordina_graph_is_acyclic(
   const coordina_graph_node_id* nodes,
@@ -655,6 +774,48 @@ COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_evaluate_staffing(
   size_t change_count,
   const coordina_graph_staffing_options* options,
   coordina_graph_staffing* output);
+
+/*
+ * Ranks the single steps that help a milestone most: taking a card out, giving
+ * a card to one of the receivers, adding a person. Every kind is measured by
+ * forecasting the board with it, so they compare. An action that does not help
+ * is not returned.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_propose_actions(
+  const coordina_graph_board* board,
+  const uint32_t* receivers,
+  size_t receiver_count,
+  const coordina_graph_action_options* options,
+  coordina_graph_action_output* output);
+
+/*
+ * Ranks what to ask the team so a milestone's date gets surer fastest, by the
+ * share of the date's variance the answer is expected to remove. hints are
+ * possible dependencies from elsewhere; they replace the engine's own guess for
+ * the same pair.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_rank_questions(
+  const coordina_graph_board* board,
+  const coordina_graph_card_token* tokens,
+  size_t token_count,
+  const coordina_graph_dependency_hint* hints,
+  size_t hint_count,
+  const coordina_graph_question_options* options,
+  coordina_graph_question_output* output);
+
+/*
+ * Guesses the dependencies between open cards that nobody has entered, from
+ * their words, labels and order, weighed by what the board's own dependencies
+ * teach. source, when not null, limits the hints to what that card may wait
+ * for. Pairs that would close a loop or follow from others are left out.
+ */
+COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_suggest_dependencies(
+  const coordina_graph_board* board,
+  const coordina_graph_card_token* tokens,
+  size_t token_count,
+  const coordina_graph_node_id* source,
+  uint32_t limit,
+  coordina_graph_hint_output* output);
 
 /* What the board's history has taught, and how right the forecasts would have been. */
 COORDINA_GRAPH_EXPORT coordina_graph_status coordina_graph_calibrate(

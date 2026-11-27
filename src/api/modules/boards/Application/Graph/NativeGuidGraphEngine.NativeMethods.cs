@@ -23,20 +23,6 @@ public sealed partial class NativeGuidGraphEngine
 
     [DllImport(
       LibraryName,
-      EntryPoint = "coordina_graph_suggest_targets",
-      CallingConvention = CallingConvention.Cdecl)]
-    internal static extern UIntPtr SuggestTargets(
-      NativeGraphNodeId[] nodes,
-      UIntPtr nodeCount,
-      NativeGraphEdge[] edges,
-      UIntPtr edgeCount,
-      NativeGraphNodeId source,
-      [Out]
-      NativeGraphNodeId[] output,
-      UIntPtr outputCapacity);
-
-    [DllImport(
-      LibraryName,
       EntryPoint = "coordina_graph_is_acyclic",
       CallingConvention = CallingConvention.Cdecl)]
     internal static extern int IsAcyclic(

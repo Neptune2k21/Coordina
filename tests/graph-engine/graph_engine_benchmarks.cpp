@@ -364,5 +364,50 @@ int main(int argc, char** argv)
     }
   }
 
+  std::printf(
+    "\n%8s %8s %12s %10s %13s %7s\n",
+    "nodes",
+    "actions",
+    "actions_ms",
+    "questions",
+    "questions_ms",
+    "budget");
+
+  for (const auto size : sizes)
+  {
+    auto release = release_of(build_board(size));
+    set_target(release);
+    std::size_t actions = 0U;
+    std::size_t questions = 0U;
+    const auto samples = size <= 1000U ? 3 : 1;
+    const auto actions_ms = median_milliseconds(
+      samples,
+      [&]
+      {
+        actions = run_actions(release);
+      });
+    const auto questions_ms = median_milliseconds(
+      samples,
+      [&]
+      {
+        questions = run_questions(release);
+      });
+    const auto within = is_within(size, std::max(actions_ms, questions_ms), advice_budget_ms);
+
+    std::printf(
+      "%8zu %8zu %12.3f %10zu %13.3f %7s\n",
+      size,
+      actions,
+      actions_ms,
+      questions,
+      questions_ms,
+      within ? "ok" : "FAILED");
+
+    if (!within || actions == 0U)
+    {
+      return 1;
+    }
+  }
+
   return 0;
 }

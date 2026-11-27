@@ -5,11 +5,163 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Coordina.Api.Integration.Tests.Boards;
 
-/// <summary>What the engine has learned from a board, and the forecasts it records.</summary>
+/// <summary>What the engine makes of a board: its plan, what to do, what to ask, what a change would do.</summary>
 public sealed class BoardInsightEndpointsTests(ApiTestApplicationFactory factory) : ApiTest(factory)
 {
   private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
   private static readonly string[] Backend = ["backend"];
+
+  [Fact]
+  public async Task Plan_SaysWhoTakesWhatAndWhatItAssumes()
+  {
+    var release = await ReleaseAsync();
+
+    var plan = await release.Scope.SendForAsync<BoardPlanResponse>(HttpMethod.Get, "/plan");
+
+    Assert.Equal(release.Launch.Id, Assert.Single(plan.Milestones).CardId);
+    Assert.Equal(4, plan.Cards.Count);
+    Assert.Equal([1, 2, 3, 4], plan.Cards.Select(card => card.Order));
+    Assert.All(plan.Cards, card => Assert.Equal([release.Launch.Id], card.MilestoneIds));
+    Assert.All(plan.Cards, card => Assert.True(card.Start <= card.Finish));
+    Assert.Equal(release.Launch.Id, plan.Cards.Last().CardId);
+    Assert.Equal(release.Scope.Owner.User.Id, plan.Cards.Single(card => card.CardId == release.Api.Id).UserId);
+    Assert.Equal(0, plan.Assumptions.LearnedFromCards);
+    Assert.Equal(6, plan.Assumptions.FocusHoursPerDay);
+  }
+
+  [Fact]
+  public async Task Plan_StartsWithWhatIsInProgress()
+  {
+    var release = await ReleaseAsync("BASIC");
+    var doing = release.Scope.Board.Lists.Single(list => list.TaskStatus == "IN_PROGRESS");
+
+    await release.Scope.SendForAsync<BoardResponse>(
+      HttpMethod.Patch,
+      $"/cards/{release.Docs.Id}/move",
+      new { listId = doing.Id });
+    var plan = await release.Scope.SendForAsync<BoardPlanResponse>(HttpMethod.Get, "/plan");
+
+    Assert.Equal(release.Docs.Id, plan.Cards.First().CardId);
+    Assert.True(plan.Cards.First().IsInProgress);
+  }
+
+  [Fact]
+  public async Task Actions_AreRankedAndMeasured()
+  {
+    var release = await ReleaseAsync(targetDays: 4);
+    var member = await release.Scope.AddMemberAsync();
+    await release.Scope.UpdateCardAsync(release.Docs.Id, new { assigneeIds = new[] { member.User.Id } });
+
+    var actions = await release.Scope.SendForAsync<BoardMilestoneActionResponse[]>(
+      HttpMethod.Get,
+      $"/milestones/{release.Launch.Id}/actions");
+
+    Assert.NotEmpty(actions);
+    Assert.Equal(
+      actions.OrderByDescending(NetChance),
+      actions);
+    Assert.All(actions, action => Assert.True(action.CommitDateAfter <= action.CommitDateBefore));
+    Assert.Contains(actions, action => action.Kind == "ASSIGN_CARD" && action.UserId == member.User.Id);
+    Assert.Contains(actions, action => action.Kind == "CUT_CARD" && action.Title is not null);
+  }
+
+  [Fact]
+  public async Task Questions_PointAtTheUnsizedCardAndWeighAHint()
+  {
+    var release = await ReleaseAsync();
+
+    var questions = await release.Scope.SendForAsync<BoardMilestoneQuestionsResponse>(
+      HttpMethod.Post,
+      $"/milestones/{release.Launch.Id}/questions",
+      new
+      {
+        dependencyHints = new[]
+        {
+          new { cardId = release.Review.Id, dependsOnCardId = release.Api.Id, probability = 0.5 }
+        }
+      });
+
+    Assert.True(questions.MarginDays > 0);
+    Assert.Contains(questions.Questions, question => question.Kind == "SIZE" && question.CardId == release.Review.Id);
+    Assert.All(questions.Questions, question => Assert.InRange(question.MarginDaysSaved, 0, questions.MarginDays));
+    // A question changes nothing.
+    Assert.Empty((await release.Scope.GetBoardAsync()).Card(release.Review.Id).Dependencies);
+  }
+
+  [Theory]
+  [InlineData(1.5)]
+  [InlineData(-0.1)]
+  public async Task Questions_WithAnImpossibleProbability_AreRejected(double probability)
+  {
+    var release = await ReleaseAsync();
+
+    var response = await release.Scope.SendAsync(
+      HttpMethod.Post,
+      $"/milestones/{release.Launch.Id}/questions",
+      new
+      {
+        dependencyHints = new[]
+        {
+          new { cardId = release.Review.Id, dependsOnCardId = release.Api.Id, probability }
+        }
+      });
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task WhatIf_AnnouncesExactlyWhatApplyingShows()
+  {
+    var release = await ReleaseAsync();
+
+    var tried = await TryAsync(release.Scope, new { kind = "SET_SIZE", cardId = release.Api.Id, size = "XS" });
+    var untouched = Assert.Single(await GetMilestonesAsync(release.Scope));
+    await release.Scope.UpdateCardAsync(release.Api.Id, new { size = "XS" });
+    var applied = Assert.Single(await GetMilestonesAsync(release.Scope));
+
+    Assert.Equal(untouched.CommitDate, Assert.Single(tried.Before).CommitDate);
+    Assert.Equal(applied.CommitDate, Assert.Single(tried.After).CommitDate);
+    Assert.Equal(applied.OnTime, Assert.Single(tried.After).OnTime);
+    Assert.True(applied.CommitDate < untouched.CommitDate);
+  }
+
+  [Fact]
+  public async Task WhatIf_CombinesChanges()
+  {
+    var release = await ReleaseAsync();
+
+    var tried = await TryAsync(
+      release.Scope,
+      new { kind = "REMOVE_DEPENDENCY", cardId = release.Launch.Id, dependsOnCardId = release.Api.Id },
+      new { kind = "COMPLETE", cardId = release.Review.Id },
+      new { kind = "SET_TARGET", cardId = release.Launch.Id, date = Today.AddDays(90) },
+      new { kind = "ADD_PEOPLE", count = 1 });
+
+    var after = Assert.Single(tried.After);
+    Assert.Equal(2, after.OpenCardCount);
+    Assert.Equal(Today.AddDays(90), after.TargetDate);
+    Assert.True(after.ForecastDate < Assert.Single(tried.Before).ForecastDate);
+  }
+
+  [Fact]
+  public async Task WhatIf_ThatLoopsOrMakesNoSense_IsRefused()
+  {
+    var release = await ReleaseAsync();
+    var loop = await release.Scope.SendAsync(
+      HttpMethod.Post,
+      "/what-if",
+      Changes(new { kind = "ADD_DEPENDENCY", cardId = release.Api.Id, dependsOnCardId = release.Launch.Id }));
+    var nonsense = await release.Scope.SendAsync(
+      HttpMethod.Post,
+      "/what-if",
+      Changes(new { kind = "SET_SIZE", cardId = release.Api.Id, size = "HUGE" }));
+    var nothing = await release.Scope.SendAsync(HttpMethod.Post, "/what-if", new { });
+
+    Assert.Equal(HttpStatusCode.Conflict, loop.StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, nonsense.StatusCode);
+    Assert.Contains("Changes[0]", await nonsense.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    Assert.Equal(HttpStatusCode.BadRequest, nothing.StatusCode);
+  }
 
   [Fact]
   public async Task Learning_ComesFromTheTimeCardsWereInProgress()
@@ -72,8 +224,8 @@ public sealed class BoardInsightEndpointsTests(ApiTestApplicationFactory factory
   }
 
   [Theory]
+  [InlineData("GET", "/plan")]
   [InlineData("GET", "/learning")]
-  [InlineData("GET", "/events")]
   public async Task Insights_OfAnotherWorkspace_AreNotFound(string method, string path)
   {
     var scope = await BoardScope.CreateAsync(Api);
@@ -83,6 +235,25 @@ public sealed class BoardInsightEndpointsTests(ApiTestApplicationFactory factory
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
   }
+
+  [Fact]
+  public async Task Insights_OfAMilestoneThatIsNotOne_AreNotFound()
+  {
+    var release = await ReleaseAsync();
+
+    var actions = await release.Scope.SendAsync(HttpMethod.Get, $"/milestones/{release.Api.Id}/actions");
+    var questions = await release.Scope.SendAsync(
+      HttpMethod.Post,
+      $"/milestones/{release.Api.Id}/questions",
+      new { });
+
+    Assert.Equal(HttpStatusCode.NotFound, actions.StatusCode);
+    Assert.Equal(HttpStatusCode.NotFound, questions.StatusCode);
+  }
+
+  // Each unit of value given up has to bring two points of chance.
+  private static double NetChance(BoardMilestoneActionResponse action) =>
+    Math.Round(action.OnTimeAfter - (0.02 * action.ValueLost), 9);
 
   private async Task RecordAsync()
   {
@@ -95,6 +266,14 @@ public sealed class BoardInsightEndpointsTests(ApiTestApplicationFactory factory
       last = await recorder.RecordAsync(after, CancellationToken.None);
     }
   }
+
+  private static object Changes(params object[] changes) => new { changes };
+
+  private static Task<BoardWhatIfResponse> TryAsync(BoardScope scope, params object[] changes) =>
+    scope.SendForAsync<BoardWhatIfResponse>(HttpMethod.Post, "/what-if", Changes(changes));
+
+  private static Task<BoardMilestoneResponse[]> GetMilestonesAsync(BoardScope scope) =>
+    scope.SendForAsync<BoardMilestoneResponse[]>(HttpMethod.Get, "/milestones");
 
   // A launch that needs an API, a review nobody has sized and docs, all on
   // one person.

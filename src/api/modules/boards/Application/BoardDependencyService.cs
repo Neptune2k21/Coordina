@@ -1,17 +1,21 @@
 using Coordina.Api.Core.Results;
 using Coordina.Api.Core.Time;
 using Coordina.Api.Modules.Boards.Application.Graph;
+using Coordina.Api.Modules.Boards.Application.Planning;
 using Coordina.Api.Modules.Boards.Contracts;
 using Coordina.Api.Modules.Projects.Application;
 
 namespace Coordina.Api.Modules.Boards.Application;
 
-public sealed class BoardDependencyService(
+internal sealed class BoardDependencyService(
   IBoardStore boards,
+  BoardPlanReader plans,
   IProjectAccessGuard projectAccess,
   IGraphEngine<Guid> graphEngine,
   TimeProvider clock) : IBoardDependencyService
 {
+  private const int SuggestionLimit = 8;
+
   public async Task<Result<BoardGraphResponse>> GetGraphAsync(
     Guid workspaceId,
     Guid projectId,
@@ -62,32 +66,26 @@ public sealed class BoardDependencyService(
     Guid userId,
     CancellationToken cancellationToken)
   {
-    var access = await projectAccess.AuthorizeReadAsync(
-      workspaceId,
-      projectId,
-      userId,
+    var plan = await plans.ReadAsync(
+      new BoardTarget(workspaceId, projectId, boardId, userId),
+      [],
       cancellationToken);
 
-    if (!access.IsSuccess)
+    if (!plan.IsSuccess)
     {
-      return access.Error;
+      return plan.Error;
     }
 
-    var board = await boards.FindInProjectAsync(
-      workspaceId,
-      projectId,
-      boardId,
-      cancellationToken);
-
-    if (board is null)
-    {
-      return Error.NotFound();
-    }
-
+    var suggestions = graphEngine.SuggestDependencies(
+      plan.Value.Graph,
+      CardTokens.Of(plan.Value.Cards.Values),
+      cardId,
+      SuggestionLimit);
     var analysis = BoardDependencyGraph.AnalyzeCard(
       graphEngine,
-      board,
-      cardId);
+      plan.Value.Board,
+      cardId,
+      suggestions.Select(hint => hint.Dependency).ToArray());
 
     return analysis is null
       ? Error.NotFound()

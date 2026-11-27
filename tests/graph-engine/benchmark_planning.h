@@ -23,6 +23,7 @@ constexpr double scope_budget_ms = 700.0;
 constexpr std::uint32_t staffing_team = 8U;
 constexpr std::uint32_t staffing_time_limit_ms = 800U;
 constexpr double staffing_budget_ms = 1100.0;
+constexpr double advice_budget_ms = 2000.0;
 
 // A release that depends on every card of the board, so its scope is the whole
 // board. Assigned cards are spread over a team of five, and the completed ones
@@ -101,6 +102,65 @@ inline fixtures::StaffingResult run_staffing(const fixtures::PlanBoard& release)
   return release.propose_staffing(options);
 }
 
+inline std::size_t run_actions(const fixtures::PlanBoard& release)
+{
+  const auto view = release.view();
+  const coordina_graph_action_options options{
+    .milestone = release.nodes.back(),
+    .simulation = {release.seed, forecast_runs, 0U},
+    .screen_run_count = 128U,
+    .limit = 6U
+  };
+  std::vector<coordina_graph_action> actions(options.limit);
+  coordina_graph_action_output output{actions.data(), actions.size(), 0U};
+  const auto status = coordina_graph_propose_actions(
+    &view,
+    release.receivers.data(),
+    release.receivers.size(),
+    &options,
+    &output);
+  return status == COORDINA_GRAPH_OK ? output.action_count : 0U;
+}
+
+// Six words a card, shared by one card in forty.
+inline std::vector<coordina_graph_card_token> words_of(const fixtures::PlanBoard& release)
+{
+  std::vector<coordina_graph_card_token> tokens;
+
+  for (std::uint32_t card = 0U; card < release.nodes.size(); ++card)
+  {
+    for (std::uint32_t word = 0U; word < 6U; ++word)
+    {
+      const auto token = ((card * 7U) + (word * word * 31U)) % 240U;
+      tokens.push_back(coordina_graph_card_token{release.nodes[card], 1.0, token, 0U});
+    }
+  }
+
+  return tokens;
+}
+
+inline std::size_t run_questions(const fixtures::PlanBoard& release)
+{
+  const auto view = release.view();
+  const auto tokens = words_of(release);
+  const coordina_graph_question_options options{
+    .milestone = release.nodes.back(),
+    .simulation = {release.seed, forecast_runs, 0U},
+    .limit = 5U,
+    .reserved = 0U
+  };
+  std::vector<coordina_graph_question> questions(options.limit);
+  coordina_graph_question_output output{questions.data(), questions.size(), 0U, 0.0};
+  const auto status = coordina_graph_rank_questions(
+    &view,
+    tokens.data(),
+    tokens.size(),
+    nullptr,
+    0U,
+    &options,
+    &output);
+  return status == COORDINA_GRAPH_OK ? output.question_count : 0U;
+}
 }
 
 #endif

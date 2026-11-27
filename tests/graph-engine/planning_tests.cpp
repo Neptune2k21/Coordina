@@ -59,10 +59,10 @@ void ranks_actionable_work_by_impact()
 {
   const Graph graph(4U, {{2U, 1U}, {3U, 2U}});
   const coordina_graph_work_item work_items[] = {
-    coordina_graph_work_item{node(1U), 0U, 1U, 7, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0.0},
-    coordina_graph_work_item{node(2U), 0U, 3U, 0, 3U, 1U, 1U, 0U, 0U, 0U, 0U, 0.0},
-    coordina_graph_work_item{node(3U), 0U, 3U, -1, 2U, 0U, 2U, 0U, 0U, 0U, 0U, 0.0},
-    coordina_graph_work_item{node(4U), 0U, 3U, 0, 0U, 0U, 3U, 0U, 0U, 0U, 0U, 0.0}
+    coordina_graph_work_item{node(1U), 0U, 1U, 7, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0.0, 0U, 0U},
+    coordina_graph_work_item{node(2U), 0U, 3U, 0, 3U, 1U, 1U, 0U, 0U, 0U, 0U, 0.0, 0U, 0U},
+    coordina_graph_work_item{node(3U), 0U, 3U, -1, 2U, 0U, 2U, 0U, 0U, 0U, 0U, 0.0, 0U, 0U},
+    coordina_graph_work_item{node(4U), 0U, 3U, 0, 0U, 0U, 3U, 0U, 0U, 0U, 0U, 0.0, 0U, 0U}
   };
   coordina_graph_work_recommendation output[4U] = {};
 

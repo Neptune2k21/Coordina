@@ -9,12 +9,6 @@ public interface IGraphEngine<TNode>
     TNode source,
     TNode target);
 
-  IReadOnlyCollection<TNode> SuggestTargets(
-    IReadOnlyCollection<TNode> nodes,
-    IReadOnlyCollection<GraphEdge<TNode>> edges,
-    TNode source,
-    int maxSuggestions);
-
   bool IsAcyclic(
     IReadOnlyCollection<TNode> nodes,
     IReadOnlyCollection<GraphEdge<TNode>> edges);
@@ -89,6 +83,29 @@ public interface IGraphEngine<TNode>
     GraphBoard<TNode> board,
     IReadOnlyCollection<GraphAssignee<TNode>> changes,
     GraphStaffingOptions<TNode> options);
+
+  /// <summary>Ranks the single steps that help a milestone most, the best first.</summary>
+  IReadOnlyList<GraphAction<TNode>> ProposeActions(
+    GraphBoard<TNode> board,
+    IReadOnlyCollection<int> receivers,
+    GraphActionOptions<TNode> options);
+
+  /// <summary>
+  /// Ranks what to ask so the milestone's date gets surer fastest. The
+  /// <paramref name="hints"/> are possible dependencies from elsewhere.
+  /// </summary>
+  GraphQuestions<TNode> RankQuestions(
+    GraphBoard<TNode> board,
+    IReadOnlyCollection<GraphCardToken<TNode>> tokens,
+    IReadOnlyCollection<GraphDependencyHint<TNode>> hints,
+    GraphQuestionOptions<TNode> options);
+
+  /// <summary>Guesses what a card may wait for that nobody has entered, the most likely first.</summary>
+  IReadOnlyList<GraphDependencyHint<TNode>> SuggestDependencies(
+    GraphBoard<TNode> board,
+    IReadOnlyCollection<GraphCardToken<TNode>> tokens,
+    TNode source,
+    int limit);
 
   /// <summary>What the board's history has taught the forecasts.</summary>
   GraphCalibration Calibrate(GraphBoard<TNode> board);

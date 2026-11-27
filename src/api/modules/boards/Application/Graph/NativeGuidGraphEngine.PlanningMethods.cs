@@ -64,6 +64,42 @@ public sealed partial class NativeGuidGraphEngine
 
     [DllImport(
       LibraryName,
+      EntryPoint = "coordina_graph_propose_actions",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus ProposeActions(
+      ref NativeGraphBoard board,
+      uint[] receivers,
+      UIntPtr receiverCount,
+      ref NativeGraphActionOptions options,
+      ref NativeGraphActionOutput output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_rank_questions",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus RankQuestions(
+      ref NativeGraphBoard board,
+      NativeGraphCardToken[] tokens,
+      UIntPtr tokenCount,
+      NativeGraphDependencyHint[] hints,
+      UIntPtr hintCount,
+      ref NativeGraphQuestionOptions options,
+      ref NativeGraphQuestionOutput output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_suggest_dependencies",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus SuggestDependencies(
+      ref NativeGraphBoard board,
+      NativeGraphCardToken[] tokens,
+      UIntPtr tokenCount,
+      ref NativeGraphNodeId source,
+      uint limit,
+      ref NativeGraphHintOutput output);
+
+    [DllImport(
+      LibraryName,
       EntryPoint = "coordina_graph_calibrate",
       CallingConvention = CallingConvention.Cdecl)]
     internal static extern NativeGraphStatus Calibrate(

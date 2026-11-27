@@ -29,33 +29,6 @@ public sealed partial class NativeGuidGraphEngine : IGraphEngine<Guid>
     return new GraphEdgeEvaluation(status);
   }
 
-  public IReadOnlyCollection<Guid> SuggestTargets(
-    IReadOnlyCollection<Guid> nodes,
-    IReadOnlyCollection<GraphEdge<Guid>> edges,
-    Guid source,
-    int maxSuggestions)
-  {
-    var graph = MarshalledGraph.From(nodes, edges);
-
-    if (maxSuggestions < 1)
-    {
-      throw new ArgumentOutOfRangeException(
-        nameof(maxSuggestions),
-        "At least one suggestion is required.");
-    }
-
-    return ReadNodes(
-      maxSuggestions,
-      (output, capacity) => NativeMethods.SuggestTargets(
-        graph.Nodes,
-        graph.NodeCount,
-        graph.Edges,
-        graph.EdgeCount,
-        ToNative(source),
-        output,
-        capacity));
-  }
-
   public bool IsAcyclic(
     IReadOnlyCollection<Guid> nodes,
     IReadOnlyCollection<GraphEdge<Guid>> edges)
