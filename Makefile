@@ -24,8 +24,12 @@ E2E_ENV := POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=$(POSTGRES_TEST_PORT) POSTGRES_
 GRAPH_ENGINE_DIR := src/graph-engine
 GRAPH_ENGINE_OUT := $(GRAPH_ENGINE_DIR)/bin
 GRAPH_ENGINE_TEST_OUT := tests/graph-engine/bin
-GRAPH_ENGINE_SOURCES := $(GRAPH_ENGINE_DIR)/src/interop/coordina_graph_engine.cpp $(GRAPH_ENGINE_DIR)/src/interop/native_bridge.cpp $(GRAPH_ENGINE_DIR)/src/interop/planning_exports.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_snapshot.cpp $(GRAPH_ENGINE_DIR)/src/core/graph_types.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/critical_path.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/dependency_validator.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/graph_traversal.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/node_analysis.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/suggestion_engine.cpp $(GRAPH_ENGINE_DIR)/src/algorithms/topological_order.cpp $(GRAPH_ENGINE_DIR)/src/planning/card_size.cpp $(GRAPH_ENGINE_DIR)/src/planning/forecast.cpp $(GRAPH_ENGINE_DIR)/src/planning/forecast_model.cpp $(GRAPH_ENGINE_DIR)/src/planning/planning_analysis.cpp $(GRAPH_ENGINE_DIR)/src/planning/ready_set.cpp $(GRAPH_ENGINE_DIR)/src/planning/sampling.cpp $(GRAPH_ENGINE_DIR)/src/planning/schedule.cpp $(GRAPH_ENGINE_DIR)/src/planning/scope_cut.cpp $(GRAPH_ENGINE_DIR)/src/planning/scope_graph.cpp $(GRAPH_ENGINE_DIR)/src/planning/scope_search.cpp $(GRAPH_ENGINE_DIR)/src/planning/scope_simulator.cpp $(GRAPH_ENGINE_DIR)/src/planning/staff_search.cpp $(GRAPH_ENGINE_DIR)/src/planning/staffing.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_planner.cpp $(GRAPH_ENGINE_DIR)/src/planning/work_score.cpp
+GRAPH_ENGINE_SOURCES := $(sort $(wildcard $(GRAPH_ENGINE_DIR)/src/*/*.cpp))
 GRAPH_ENGINE_FLAGS := -std=c++20 -O2 -fPIC -pthread -Wall -Wextra -Wpedantic -Werror -I$(GRAPH_ENGINE_DIR)/include -I$(GRAPH_ENGINE_DIR)/src
+GRAPH_ENGINE_OBJECTS := $(GRAPH_ENGINE_SOURCES:$(GRAPH_ENGINE_DIR)/src/%.cpp=$(GRAPH_ENGINE_OUT)/obj/%.o)
+GRAPH_ENGINE_SANITIZE_OBJECTS := $(GRAPH_ENGINE_SOURCES:$(GRAPH_ENGINE_DIR)/src/%.cpp=$(GRAPH_ENGINE_OUT)/sanitized/%.o)
+# The native targets compile their objects through this, on every core.
+NATIVE_MAKE := $(MAKE) --no-print-directory -j$(shell nproc)
 GRAPH_ENGINE_SANITIZE_FLAGS := $(filter-out -O2,$(GRAPH_ENGINE_FLAGS)) -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all
 GRAPH_ENGINE_TESTS := graph_engine_tests planning_tests schedule_tests forecast_tests scope_tests staffing_tests
 GRAPH_ENGINE_ABI := contracts/graph-engine-abi.json
@@ -89,17 +93,40 @@ cpp-tools:
 graph-engine-format: cpp-tools
 	git ls-files --cached --others --exclude-standard -- '$(GRAPH_ENGINE_DIR)/*.cpp' '$(GRAPH_ENGINE_DIR)/*.h' 'tests/graph-engine/*.cpp' 'tests/graph-engine/*.h' | xargs $(CLANG_FORMAT) -i
 
+$(GRAPH_ENGINE_OUT)/obj/%.o: $(GRAPH_ENGINE_DIR)/src/%.cpp
+	@mkdir -p $(dir $@)
+	g++ $(GRAPH_ENGINE_FLAGS) -MMD -MP -c $< -o $@
+
+$(GRAPH_ENGINE_OUT)/sanitized/%.o: $(GRAPH_ENGINE_DIR)/src/%.cpp
+	@mkdir -p $(dir $@)
+	g++ $(GRAPH_ENGINE_SANITIZE_FLAGS) -MMD -MP -c $< -o $@
+
+$(GRAPH_ENGINE_TEST_OUT)/%: tests/graph-engine/%.cpp $(GRAPH_ENGINE_OBJECTS)
+	@mkdir -p $(GRAPH_ENGINE_TEST_OUT)
+	g++ $(GRAPH_ENGINE_FLAGS) -MMD -MP -MF $@.d $< $(GRAPH_ENGINE_OBJECTS) -o $@
+
+$(GRAPH_ENGINE_TEST_OUT)/%_sanitized: tests/graph-engine/%.cpp $(GRAPH_ENGINE_SANITIZE_OBJECTS)
+	@mkdir -p $(GRAPH_ENGINE_TEST_OUT)
+	g++ $(GRAPH_ENGINE_SANITIZE_FLAGS) -MMD -MP -MF $@.d $< $(GRAPH_ENGINE_SANITIZE_OBJECTS) -o $@
+
+# Kept between runs: make would delete objects only a pattern rule needs.
+.SECONDARY: $(GRAPH_ENGINE_OBJECTS) $(GRAPH_ENGINE_SANITIZE_OBJECTS)
+
+-include $(GRAPH_ENGINE_OBJECTS:.o=.d) $(GRAPH_ENGINE_SANITIZE_OBJECTS:.o=.d) $(wildcard $(GRAPH_ENGINE_TEST_OUT)/*.d)
+
+$(GRAPH_ENGINE_OUT)/libcoordina_graph_engine.so: $(GRAPH_ENGINE_OBJECTS)
+	g++ $(GRAPH_ENGINE_FLAGS) -shared $(GRAPH_ENGINE_OBJECTS) -o $@
+
 graph-engine-build:
-	mkdir -p $(GRAPH_ENGINE_OUT)
-	g++ $(GRAPH_ENGINE_FLAGS) -shared $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_OUT)/libcoordina_graph_engine.so
+	$(NATIVE_MAKE) $(GRAPH_ENGINE_OUT)/libcoordina_graph_engine.so
 
 graph-engine-test: graph-engine-abi-check
-	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
-	$(foreach test,$(GRAPH_ENGINE_TESTS),g++ $(GRAPH_ENGINE_FLAGS) tests/graph-engine/$(test).cpp $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_TEST_OUT)/$(test) && $(GRAPH_ENGINE_TEST_OUT)/$(test) &&) true
+	$(NATIVE_MAKE) $(GRAPH_ENGINE_TESTS:%=$(GRAPH_ENGINE_TEST_OUT)/%)
+	$(foreach test,$(GRAPH_ENGINE_TESTS),$(GRAPH_ENGINE_TEST_OUT)/$(test) &&) true
 
 graph-engine-sanitize:
-	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
-	$(foreach test,$(GRAPH_ENGINE_TESTS),g++ $(GRAPH_ENGINE_SANITIZE_FLAGS) tests/graph-engine/$(test).cpp $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_TEST_OUT)/$(test)_sanitized && ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1 $(GRAPH_ENGINE_TEST_OUT)/$(test)_sanitized &&) true
+	$(NATIVE_MAKE) $(GRAPH_ENGINE_TESTS:%=$(GRAPH_ENGINE_TEST_OUT)/%_sanitized)
+	$(foreach test,$(GRAPH_ENGINE_TESTS),ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1 $(GRAPH_ENGINE_TEST_OUT)/$(test)_sanitized &&) true
 
 graph-engine-abi:
 	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
@@ -113,8 +140,7 @@ graph-engine-abi-check:
 		|| (echo "$(GRAPH_ENGINE_ABI) is out of date. Run 'make graph-engine-abi' and commit the result." && exit 1)
 
 graph-engine-benchmark:
-	mkdir -p $(GRAPH_ENGINE_TEST_OUT)
-	g++ $(GRAPH_ENGINE_FLAGS) tests/graph-engine/graph_engine_benchmarks.cpp $(GRAPH_ENGINE_SOURCES) -o $(GRAPH_ENGINE_TEST_OUT)/graph_engine_benchmarks
+	$(NATIVE_MAKE) $(GRAPH_ENGINE_TEST_OUT)/graph_engine_benchmarks
 	$(GRAPH_ENGINE_TEST_OUT)/graph_engine_benchmarks $(sizes)
 
 graph-engine-benchmark-smoke:

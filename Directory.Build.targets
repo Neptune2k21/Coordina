@@ -1,17 +1,23 @@
 <Project>
   <PropertyGroup>
     <CoordinaGraphEngineSourceRoot>$(MSBuildThisFileDirectory)src/graph-engine/src</CoordinaGraphEngineSourceRoot>
-    <CoordinaGraphEngineSources>$(CoordinaGraphEngineSourceRoot)/interop/coordina_graph_engine.cpp $(CoordinaGraphEngineSourceRoot)/interop/native_bridge.cpp $(CoordinaGraphEngineSourceRoot)/interop/planning_exports.cpp $(CoordinaGraphEngineSourceRoot)/core/graph_snapshot.cpp $(CoordinaGraphEngineSourceRoot)/core/graph_types.cpp $(CoordinaGraphEngineSourceRoot)/algorithms/critical_path.cpp $(CoordinaGraphEngineSourceRoot)/algorithms/dependency_validator.cpp $(CoordinaGraphEngineSourceRoot)/algorithms/graph_traversal.cpp $(CoordinaGraphEngineSourceRoot)/algorithms/node_analysis.cpp $(CoordinaGraphEngineSourceRoot)/algorithms/suggestion_engine.cpp $(CoordinaGraphEngineSourceRoot)/algorithms/topological_order.cpp $(CoordinaGraphEngineSourceRoot)/planning/card_size.cpp $(CoordinaGraphEngineSourceRoot)/planning/forecast.cpp $(CoordinaGraphEngineSourceRoot)/planning/forecast_model.cpp $(CoordinaGraphEngineSourceRoot)/planning/planning_analysis.cpp $(CoordinaGraphEngineSourceRoot)/planning/ready_set.cpp $(CoordinaGraphEngineSourceRoot)/planning/sampling.cpp $(CoordinaGraphEngineSourceRoot)/planning/schedule.cpp $(CoordinaGraphEngineSourceRoot)/planning/scope_cut.cpp $(CoordinaGraphEngineSourceRoot)/planning/scope_graph.cpp $(CoordinaGraphEngineSourceRoot)/planning/scope_search.cpp $(CoordinaGraphEngineSourceRoot)/planning/scope_simulator.cpp $(CoordinaGraphEngineSourceRoot)/planning/staff_search.cpp $(CoordinaGraphEngineSourceRoot)/planning/staffing.cpp $(CoordinaGraphEngineSourceRoot)/planning/work_planner.cpp $(CoordinaGraphEngineSourceRoot)/planning/work_score.cpp</CoordinaGraphEngineSources>
     <CoordinaGraphEngineInclude>$(MSBuildThisFileDirectory)src/graph-engine/include</CoordinaGraphEngineInclude>
     <CoordinaGraphEngineOptimization Condition="'$(Configuration)' == 'Debug'">-O0 -g</CoordinaGraphEngineOptimization>
     <CoordinaGraphEngineOptimization Condition="'$(CoordinaGraphEngineOptimization)' == ''">-O2</CoordinaGraphEngineOptimization>
   </PropertyGroup>
 
+  <ItemGroup>
+    <CoordinaGraphEngineSource Include="$(CoordinaGraphEngineSourceRoot)/**/*.cpp" />
+    <CoordinaGraphEngineInput Include="@(CoordinaGraphEngineSource);$(CoordinaGraphEngineSourceRoot)/**/*.h;$(CoordinaGraphEngineInclude)/**/*.h;$(MSBuildThisFileFullPath)" />
+  </ItemGroup>
+
   <Target
     Name="BuildCoordinaGraphEngine"
     BeforeTargets="CopyFilesToOutputDirectory"
+    Inputs="@(CoordinaGraphEngineInput)"
+    Outputs="$(TargetDir)libcoordina_graph_engine.so"
     Condition="'$(CoordinaGraphEngine)' != 'false' and $([MSBuild]::IsOSPlatform('Linux')) and Exists('$(CoordinaGraphEngineSourceRoot)/interop/coordina_graph_engine.cpp')">
-    <Exec Command="g++ -std=c++20 $(CoordinaGraphEngineOptimization) -fPIC -pthread -shared -Wall -Wextra -Wpedantic -Werror -I&quot;$(CoordinaGraphEngineInclude)&quot; -I&quot;$(CoordinaGraphEngineSourceRoot)&quot; $(CoordinaGraphEngineSources) -o &quot;$(TargetDir)libcoordina_graph_engine.so&quot;" />
+    <Exec Command="g++ -std=c++20 $(CoordinaGraphEngineOptimization) -fPIC -pthread -shared -Wall -Wextra -Wpedantic -Werror -I&quot;$(CoordinaGraphEngineInclude)&quot; -I&quot;$(CoordinaGraphEngineSourceRoot)&quot; @(CoordinaGraphEngineSource, ' ') -o &quot;$(TargetDir)libcoordina_graph_engine.so&quot;" />
   </Target>
 
   <Target
