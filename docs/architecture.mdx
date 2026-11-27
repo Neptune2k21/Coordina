@@ -19,6 +19,7 @@ src/
       workspaces/  Tenancy, membership, invites
       projects/    Project lifecycle + shared project access guard
       boards/      Boards, lists with workflow status, cards (single source of project work)
+      insights/    What the engine has learned from a board, and its history
       work/        "My work": a user's cards across a workspace, ranked by the boards' planning
       health/      Liveness and readiness (database) checks
   graph-engine/   C++20 native library (forecasts, plans, advice, learned durations)
@@ -234,8 +235,8 @@ No exception crosses the boundary: each becomes a status, and
 come from one budget per process, so concurrent requests split the cores instead
 of each starting a thread per core, and results do not depend on how many they
 get. The planning functions take one `coordina_graph_board`, built by
-`BoardPlans` from a board, so two answers about the same board always start from
-the same place. See
+`BoardPlans` from a board and its recorded history, so two answers about the same
+board always start from the same place. See
 [CONTRIBUTING](https://github.com/Neptune2k21/Coordina/blob/master/CONTRIBUTING.md#graph-engine-abi).
 
 ## Scaling roadmap

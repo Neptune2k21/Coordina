@@ -31,6 +31,12 @@ POSTGRES_DB=coordina_demo make api
 The test database does not read `.env`: its settings are in
 `docker/compose.test.yml`. See [Testing](/testing#test-database).
 
+## Forecast history
+
+Every hour the API records the day's forecasts of boards that have none yet, so
+they can be checked once their milestones are done. Set
+`Forecasts__RecordDaily=false` to turn it off; the tests do.
+
 ## Allowed web origins
 
 Browsers only let the web app call the API, and send the refresh cookie, from
