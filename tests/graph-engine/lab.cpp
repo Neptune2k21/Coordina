@@ -5,7 +5,9 @@
 // an algorithm; it checks nothing by itself.
 
 #include "lab_world.h"
+#include "planning/dependency_hints.h"
 #include "planning/forecast.h"
+#include "planning/questions.h"
 #include "planning/schedule.h"
 #include "planning/staffing.h"
 
@@ -229,6 +231,75 @@ void measure_staffing()
     changes / boards);
 }
 
+double margin_after(const LabBoard& lab, const std::vector<NodeId>& asked)
+{
+  auto answered = lab.board;
+  const BoardIndex index(lab.board);
+
+  for (auto& item : answered.items)
+  {
+    if (std::ranges::find(asked, item.node) != asked.end())
+    {
+      item.size = lab.true_sizes[index.find(item.node)];
+    }
+  }
+
+  const auto milestone = forecast(answered, simulation()).milestones.front();
+  return milestone.p85_days - milestone.p50_days;
+}
+
+void measure_questions()
+{
+  std::puts("\nQuestions: the margin between P50 and P85 once three cards are sized");
+  constexpr std::uint64_t boards = 60U;
+  std::array<double, 3U> margins{};
+
+  for (std::uint64_t seed = 1U; seed <= boards; ++seed)
+  {
+    const auto lab = make_board(
+      BoardShape{.cards = 40U, .people = 3U, .assigned_share = 0.6, .unsized_share = 0.5},
+      World{},
+      60U,
+      seed);
+    const auto ranked = rank_questions(
+      lab.board,
+      {},
+      {},
+      QuestionOptions{
+        .milestone = lab_node(milestone_node),
+        .simulation = simulation(),
+        .limit = 100U
+      });
+    std::vector<NodeId> best;
+    std::vector<NodeId> any;
+
+    for (const auto& question : ranked.questions)
+    {
+      if (question.kind == QuestionKind::size_card && best.size() < 3U)
+      {
+        best.push_back(question.node);
+      }
+    }
+
+    for (const auto& item : lab.board.items)
+    {
+      if (item.size == CardSize::none && any.size() < 3U)
+      {
+        any.push_back(item.node);
+      }
+    }
+
+    margins[0] += margin_after(lab, {});
+    margins[1] += margin_after(lab, any);
+    margins[2] += margin_after(lab, best);
+  }
+
+  std::printf(
+    "  nothing asked %.2f d | any three %.2f d | the three proposed %.2f d\n",
+    margins[0] / boards,
+    margins[1] / boards,
+    margins[2] / boards);
+}
 }
 
 int main()
@@ -236,5 +307,6 @@ int main()
   measure_all_dates();
   measure_order();
   measure_staffing();
+  measure_questions();
   return 0;
 }
