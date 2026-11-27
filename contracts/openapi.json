@@ -2535,6 +2535,116 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/plan": {
+      "get": {
+        "tags": [
+          "Board insights"
+        ],
+        "summary": "Get the board\u0027s plan",
+        "description": "Returns every open milestone\u0027s forecast, the cards of their scopes in the order to pick them up with who is expected to take each and when, and what the forecast assumes. The milestones share one team.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/what-if": {
+      "post": {
+        "tags": [
+          "Board insights"
+        ],
+        "summary": "Try changes on a board",
+        "description": "Returns the milestones\u0027 forecasts as they are and as they would be with the changes, on the same simulated runs, so the difference comes from the changes alone. Saves nothing. Changes that make cards depend on each other in a loop are refused (409).",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardWhatIfRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardWhatIfResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning": {
       "get": {
         "tags": [
@@ -2644,6 +2754,137 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BoardEventPageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/actions": {
+      "get": {
+        "tags": [
+          "Board insights"
+        ],
+        "summary": "Rank what to do about a milestone",
+        "description": "Returns the single steps that help the milestone most, the best first: taking a card out, giving a card to someone of the team, adding a person. Each is measured by forecasting the board with it, so they compare. Empty when nothing helps.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BoardMilestoneActionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/questions": {
+      "post": {
+        "tags": [
+          "Board insights"
+        ],
+        "summary": "Rank what to ask about a milestone",
+        "description": "Returns the few answers that would make the milestone\u0027s date surest: a card to size or to split, a card in progress that drags on, a dependency that may be missing. dependencyHints adds dependencies someone suspects; they are weighed, not saved.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMilestoneQuestionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardMilestoneQuestionsResponse"
                 }
               }
             }
@@ -3177,6 +3418,28 @@
           }
         }
       },
+      "BoardDependencyHintRequest": {
+        "required": [
+          "cardId",
+          "dependsOnCardId",
+          "probability"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dependsOnCardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "probability": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "BoardDurationRatioResponse": {
         "required": [
           "name",
@@ -3572,6 +3835,80 @@
           }
         }
       },
+      "BoardMilestoneActionResponse": {
+        "required": [
+          "kind",
+          "cardId",
+          "title",
+          "userId",
+          "alsoRemoved",
+          "onTimeBefore",
+          "onTimeAfter",
+          "commitDateBefore",
+          "commitDateAfter",
+          "othersDelayDays",
+          "valueLost"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "CUT_CARD",
+              "ASSIGN_CARD",
+              "ADD_PERSON"
+            ],
+            "type": "string"
+          },
+          "cardId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "alsoRemoved": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "onTimeBefore": {
+            "type": "number",
+            "format": "double"
+          },
+          "onTimeAfter": {
+            "type": "number",
+            "format": "double"
+          },
+          "commitDateBefore": {
+            "type": "string",
+            "format": "date"
+          },
+          "commitDateAfter": {
+            "type": "string",
+            "format": "date"
+          },
+          "othersDelayDays": {
+            "type": "number",
+            "format": "double"
+          },
+          "valueLost": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "BoardMilestoneCutCardResponse": {
         "required": [
           "cardId",
@@ -3652,6 +3989,109 @@
           "sensitivity": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "BoardMilestoneQuestionResponse": {
+        "required": [
+          "kind",
+          "cardId",
+          "title",
+          "dependsOnCardId",
+          "dependsOnTitle",
+          "probability",
+          "shiftDays",
+          "marginDaysSaved"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "SIZE",
+              "SPLIT",
+              "PROGRESS",
+              "DEPENDENCY"
+            ],
+            "type": "string"
+          },
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "dependsOnCardId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "dependsOnTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "probability": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "shiftDays": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "marginDaysSaved": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BoardMilestoneQuestionsRequest": {
+        "required": [
+          "dependencyHints"
+        ],
+        "type": "object",
+        "properties": {
+          "dependencyHints": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BoardDependencyHintRequest"
+            }
+          }
+        }
+      },
+      "BoardMilestoneQuestionsResponse": {
+        "required": [
+          "milestoneId",
+          "marginDays",
+          "questions"
+        ],
+        "type": "object",
+        "properties": {
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "marginDays": {
+            "type": "number",
+            "format": "double"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneQuestionResponse"
+            }
           }
         }
       },
@@ -3978,6 +4418,89 @@
           }
         }
       },
+      "BoardPlanAssumptionsResponse": {
+        "required": [
+          "runCount",
+          "focusHoursPerDay",
+          "learnedFromCards",
+          "newCardsPerCompletedCard"
+        ],
+        "type": "object",
+        "properties": {
+          "runCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "focusHoursPerDay": {
+            "type": "number",
+            "format": "double"
+          },
+          "learnedFromCards": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newCardsPerCompletedCard": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BoardPlannedCardResponse": {
+        "required": [
+          "cardId",
+          "title",
+          "order",
+          "userId",
+          "start",
+          "finish",
+          "isInProgress",
+          "elapsedHours",
+          "milestoneIds"
+        ],
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "start": {
+            "type": "string",
+            "format": "date"
+          },
+          "finish": {
+            "type": "string",
+            "format": "date"
+          },
+          "isInProgress": {
+            "type": "boolean"
+          },
+          "elapsedHours": {
+            "type": "number",
+            "format": "double"
+          },
+          "milestoneIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "BoardPlanningPreferencesResponse": {
         "required": [
           "maxSize",
@@ -4042,6 +4565,41 @@
               "null",
               "boolean"
             ]
+          }
+        }
+      },
+      "BoardPlanResponse": {
+        "required": [
+          "boardId",
+          "today",
+          "milestones",
+          "cards",
+          "assumptions"
+        ],
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneResponse"
+            }
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardPlannedCardResponse"
+            }
+          },
+          "assumptions": {
+            "$ref": "#/components/schemas/BoardPlanAssumptionsResponse"
           }
         }
       },
@@ -4221,6 +4779,118 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardTemplateListResponse"
+            }
+          }
+        }
+      },
+      "BoardWhatIfChangeRequest": {
+        "required": [
+          "kind",
+          "cardId",
+          "size",
+          "userIds",
+          "dependsOnCardId",
+          "date",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "SET_SIZE",
+              "ASSIGN",
+              "ADD_DEPENDENCY",
+              "REMOVE_DEPENDENCY",
+              "SET_TARGET",
+              "COMPLETE",
+              "ADD_PEOPLE",
+              null
+            ],
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cardId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "size": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "dependsOnCardId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "count": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "BoardWhatIfRequest": {
+        "required": [
+          "changes"
+        ],
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BoardWhatIfChangeRequest"
+            }
+          }
+        }
+      },
+      "BoardWhatIfResponse": {
+        "required": [
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "before": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneResponse"
+            }
+          },
+          "after": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneResponse"
             }
           }
         }

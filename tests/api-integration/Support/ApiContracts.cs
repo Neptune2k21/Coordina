@@ -159,6 +159,62 @@ public sealed record BoardMilestoneResponse(
   int UnsizedCardCount,
   IReadOnlyCollection<BoardMilestoneDriverResponse> Drivers);
 
+public sealed record BoardPlanResponse(
+  string BoardId,
+  DateOnly Today,
+  IReadOnlyCollection<BoardMilestoneResponse> Milestones,
+  IReadOnlyCollection<BoardPlannedCardResponse> Cards,
+  BoardPlanAssumptionsResponse Assumptions);
+
+public sealed record BoardPlannedCardResponse(
+  string CardId,
+  string Title,
+  int Order,
+  string? UserId,
+  DateOnly Start,
+  DateOnly Finish,
+  bool IsInProgress,
+  double ElapsedHours,
+  IReadOnlyCollection<string> MilestoneIds);
+
+public sealed record BoardPlanAssumptionsResponse(
+  int RunCount,
+  double FocusHoursPerDay,
+  int LearnedFromCards,
+  double NewCardsPerCompletedCard);
+
+public sealed record BoardMilestoneActionResponse(
+  string Kind,
+  string? CardId,
+  string? Title,
+  string? UserId,
+  int AlsoRemoved,
+  double OnTimeBefore,
+  double OnTimeAfter,
+  DateOnly CommitDateBefore,
+  DateOnly CommitDateAfter,
+  double OthersDelayDays,
+  double ValueLost);
+
+public sealed record BoardMilestoneQuestionsResponse(
+  string MilestoneId,
+  double MarginDays,
+  IReadOnlyCollection<BoardMilestoneQuestionResponse> Questions);
+
+public sealed record BoardMilestoneQuestionResponse(
+  string Kind,
+  string CardId,
+  string Title,
+  string? DependsOnCardId,
+  string? DependsOnTitle,
+  double? Probability,
+  double? ShiftDays,
+  double MarginDaysSaved);
+
+public sealed record BoardWhatIfResponse(
+  IReadOnlyCollection<BoardMilestoneResponse> Before,
+  IReadOnlyCollection<BoardMilestoneResponse> After);
+
 public sealed record BoardLearningResponse(
   BoardDurationRatioResponse Team,
   IReadOnlyCollection<BoardDurationRatioResponse> Sizes,
