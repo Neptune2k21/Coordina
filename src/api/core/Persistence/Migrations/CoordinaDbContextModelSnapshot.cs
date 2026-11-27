@@ -307,6 +307,50 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardCardEventEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
+                    b.Property<string>("FromValue")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("from_value");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("ToValue")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("to_value");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId", "Id");
+
+                    b.ToTable("board_card_events", (string)null);
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardCardSubtaskEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -402,6 +446,47 @@ namespace Coordina.Api.Core.Persistence.Migrations
                     b.HasIndex("WorkspaceId", "ProjectId");
 
                     b.ToTable("boards", (string)null);
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardForecastSnapshotEntity", b =>
+                {
+                    b.Property<Guid>("MilestoneId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("milestone_id");
+
+                    b.Property<DateOnly>("TakenOn")
+                        .HasColumnType("date")
+                        .HasColumnName("taken_on");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<DateOnly>("CommitDate")
+                        .HasColumnType("date")
+                        .HasColumnName("commit_date");
+
+                    b.Property<DateOnly>("ForecastDate")
+                        .HasColumnType("date")
+                        .HasColumnName("forecast_date");
+
+                    b.Property<double>("OnTime")
+                        .HasColumnType("double precision")
+                        .HasColumnName("on_time");
+
+                    b.Property<int>("OpenCardCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_card_count");
+
+                    b.Property<DateOnly>("TargetDate")
+                        .HasColumnType("date")
+                        .HasColumnName("target_date");
+
+                    b.HasKey("MilestoneId", "TakenOn");
+
+                    b.HasIndex("BoardId");
+
+                    b.ToTable("board_forecast_snapshots", (string)null);
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardListEntity", b =>
@@ -738,6 +823,17 @@ namespace Coordina.Api.Core.Persistence.Migrations
                     b.Navigation("List");
                 });
 
+            modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardCardEventEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Boards.Infrastructure.BoardEntity", "Board")
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
+                });
+
             modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardCardSubtaskEntity", b =>
                 {
                     b.HasOne("Coordina.Api.Modules.Boards.Infrastructure.BoardCardEntity", "Card")
@@ -758,6 +854,17 @@ namespace Coordina.Api.Core.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardForecastSnapshotEntity", b =>
+                {
+                    b.HasOne("Coordina.Api.Modules.Boards.Infrastructure.BoardEntity", "Board")
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
                 });
 
             modelBuilder.Entity("Coordina.Api.Modules.Boards.Infrastructure.BoardListEntity", b =>
