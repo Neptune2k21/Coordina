@@ -185,6 +185,10 @@ result with any number of threads. On the benchmark board
 | `openCardCount`, `unsizedCardCount` | Open cards in the scope, and those without a size |
 | `drivers` | Up to three cards, other than the milestone, that set the date in at least one run in ten, most critical first. `criticality` is that share of runs; `sensitivity` is the correlation between the card's own uncertainty and the date, so squared it is the share of the date's spread that sizing or splitting the card can remove |
 
+`GET .../boards/{boardId}/plan` returns the same forecasts with the cards of
+every scope in the order to pick them up, who is expected to take each and when,
+and what the forecast assumes.
+
 ### What a board learns
 
 The database records every change of a card's status, size, dates, assignees and
@@ -401,6 +405,46 @@ unchecking a change measures the others; **Apply** gives the cards.
   helps the plan, but the dialog is the place to keep only those the team
   agrees with.
 
+### What to do, what to ask, what if
+
+These read the board and change nothing. They return values rather than prose,
+all measured on the same simulation, so people and assistants can chain them
+([Assistants](/assistants)).
+
+```http
+GET  .../boards/{boardId}/milestones/{milestoneId}/actions
+POST .../boards/{boardId}/milestones/{milestoneId}/questions
+     { "dependencyHints": [{ "cardId": "...", "dependsOnCardId": "...", "probability": 0.4 }] }
+POST .../boards/{boardId}/what-if
+     { "changes": [{ "kind": "SET_SIZE", "cardId": "...", "size": "S" }, { "kind": "ADD_PEOPLE", "count": 1 }] }
+```
+
+**Actions** rank the single steps that help the milestone most: `CUT_CARD`,
+`ASSIGN_CARD` (to someone already on the board), `ADD_PERSON`. Only the cards
+that drive the date are tried; the candidates race on more and more runs, and the
+winners are forecast in full, so every kind compares: the chance of being on time
+before and after, the 85% dates, and how much later the other milestones end up.
+A cut has to bring two points of chance for each unit of value it gives up
+(`valueLost`: high 4, medium 2, otherwise 1), so giving a card to someone beats
+taking one out for the same gain, and a low-priority card goes before a high one.
+
+**Questions** rank what to ask the team so the date gets surer: `SIZE` (how big
+is it?), `SPLIT` (can it be split?), `PROGRESS` (it drags on: what is left?) and
+`DEPENDENCY` (does it wait for that one?). The value of an answer is the share of
+the date's variance it is expected to remove, so a card with days to spare is
+never asked about. On a board without history, most of the margin is how fast the
+team is, which no question answers and every completed card does.
+
+**Missing dependencies** are guessed from the cards' words, labels and creation
+order, weighed by a logistic regression that learns from the links the board
+already has. They are guesses: on the templates' hand-written dependencies they
+do better than chance, not much better. Hints from someone who understands the
+text, such as an assistant, replace them.
+
+**What-if** applies up to 100 changes in memory and returns every milestone
+before and after: `SET_SIZE`, `ASSIGN`, `ADD_DEPENDENCY`, `REMOVE_DEPENDENCY`,
+`SET_TARGET`, `COMPLETE`, `ADD_PEOPLE`. Changes that close a loop get `409`.
+
 ## Concurrent changes
 
 Adding a dependency runs under a per-board lock (`IBoardStore.RunExclusiveAsync`), so the cycle check and the write cannot interleave with another request. When two requests would close a cycle together, one succeeds and the other gets `409`. Sending the same dependency several times stores it once, and every request succeeds.
@@ -433,6 +477,10 @@ POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestone
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-proposal
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing-evaluation
 POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/staffing
+GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/actions
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/milestones/{milestoneId}/questions
+GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/plan
+POST   /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/what-if
 GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/learning
 GET    /workspaces/{workspaceId}/projects/{projectId}/boards/{boardId}/events
 ```
