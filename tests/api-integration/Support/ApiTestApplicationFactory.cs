@@ -1,5 +1,6 @@
 using Coordina.Api.Core.Hosting;
 using Coordina.Api.Core.Persistence;
+using Coordina.Api.Modules.Boards;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -36,6 +37,7 @@ public sealed class ApiTestApplicationFactory : WebApplicationFactory<Program>, 
   {
     builder.UseEnvironment(CoreHostingExtensions.TestingEnvironment);
     builder.UseSetting("Cors:AllowedOrigins:0", WebAppOrigin);
+    builder.UseSetting(BoardsModule.SnapshotSetting, "false");
 
     // Replaced as a service, not as a setting: .env would win over a setting
     // and point the tests at the development database.
