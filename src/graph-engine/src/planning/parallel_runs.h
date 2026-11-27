@@ -1,12 +1,16 @@
 #ifndef COORDINA_GRAPH_ENGINE_PARALLEL_RUNS_H
 #define COORDINA_GRAPH_ENGINE_PARALLEL_RUNS_H
 
+#include "planning/core_lease.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <exception>
+#include <mutex>
 #include <span>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -44,34 +48,61 @@ inline std::size_t thread_count_for(std::uint32_t requested, std::size_t chunks,
   return std::min<std::size_t>(threads, chunks);
 }
 
-// Calls work(runner, chunk) once for every chunk, with one thread per runner.
+// Calls work(runner, chunk) once for every chunk, with one thread per runner
+// at most: fewer when other calls hold the cores, or when the system refuses a
+// thread. The first exception stops the work and reaches the caller.
 // Each runner holds the buffers of one thread, so the work allocates nothing.
 template <typename Runner, typename Work>
 void run_chunks(std::span<Runner> runners, std::size_t chunks, const Work& work)
 {
   std::atomic<std::size_t> next_chunk{0U};
+  std::exception_ptr failure;
+  std::mutex failure_lock;
 
-  const auto drain = [&](Runner& runner)
+  const auto drain = [&](Runner& runner) noexcept
   {
-    for (auto chunk = next_chunk.fetch_add(1U); chunk < chunks; chunk = next_chunk.fetch_add(1U))
+    try
     {
-      work(runner, chunk);
+      for (auto chunk = next_chunk.fetch_add(1U); chunk < chunks; chunk = next_chunk.fetch_add(1U))
+      {
+        work(runner, chunk);
+      }
+    }
+    catch (...)
+    {
+      next_chunk.store(chunks);
+      const std::scoped_lock guard(failure_lock);
+      failure = failure ? failure : std::current_exception();
     }
   };
 
-  std::vector<std::thread> workers;
-  workers.reserve(runners.size() - 1U);
-
-  for (std::size_t thread = 1U; thread < runners.size(); ++thread)
   {
-    workers.emplace_back(drain, std::ref(runners[thread]));
+    const CoreLease lease(std::min(runners.size(), chunks) - 1U);
+    std::vector<std::jthread> helpers;
+    helpers.reserve(lease.count());
+
+    try
+    {
+      for (std::size_t helper = 1U; helper <= lease.count(); ++helper)
+      {
+        helpers.emplace_back(
+          [&drain, &runner = runners[helper]]
+          {
+            drain(runner);
+          });
+      }
+    }
+    // NOLINTNEXTLINE(bugprone-empty-catch): the threads already started, and this one, do the work.
+    catch (const std::system_error&)
+    {
+    }
+
+    drain(runners.front());
   }
 
-  drain(runners.front());
-
-  for (auto& worker : workers)
+  if (failure)
   {
-    worker.join();
+    std::rethrow_exception(failure);
   }
 }
 }

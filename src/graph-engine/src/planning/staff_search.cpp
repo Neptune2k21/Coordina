@@ -9,9 +9,14 @@ namespace
 {
 constexpr auto keep = Staffing::keep_assignees;
 
-// Every change costs a minute, so of two plans that finish together the one
-// with fewer changes wins.
-constexpr double change_hours = 1.0 / 60.0;
+// What a change has to bring the date in by. Taking a card off someone costs
+// half a day, for the handover and because a plan of forty changes is not one
+// anybody applies; giving one nobody has costs a quarter of an hour. Asking
+// for that much also keeps the search from drifting among equal plans: on
+// random boards it gains a tenth more days than with no cost, with a sixth of
+// the changes.
+constexpr double handover_hours = 3.0;
+constexpr double change_hours = 0.25;
 
 // Giving a card to someone who has not done cards like it costs two focus
 // hours: it only happens when that ships the milestone sooner than that.
@@ -56,11 +61,12 @@ bool StaffSearch::is_skilled(std::size_t card, std::uint32_t person) const noexc
   return first == last || std::binary_search(first, last, person);
 }
 
-// A card can move when nobody is working on it, the options let it leave its
-// assignees, and some receiver would change who takes it.
+// A card of the scope can move when nobody is working on it, the options let
+// it leave its assignees, and some receiver would change who takes it.
 bool StaffSearch::can_move(std::size_t card) const noexcept
 {
-  if (in_progress_[card] != 0U || (!model_->people(card).empty() && !options_->allow_reassignment))
+  if (!model_->in_scope(milestone_, card) || model_->item(card).is_in_progress
+    || (!model_->people(card).empty() && !options_->allow_reassignment))
   {
     return false;
   }
@@ -87,9 +93,12 @@ void StaffSearch::give(Plan& plan, std::size_t card, std::uint32_t person) const
     --plan.held[holder];
   }
 
+  const auto is_handover = !model_->people(card).empty();
+
   if (previous != keep)
   {
     --plan.changes;
+    plan.handovers -= is_handover ? 1U : 0U;
     plan.unskilled -= is_skilled(card, previous) ? 0U : 1U;
   }
 
@@ -103,78 +112,91 @@ void StaffSearch::give(Plan& plan, std::size_t card, std::uint32_t person) const
   if (person != keep)
   {
     ++plan.changes;
+    plan.handovers += is_handover ? 1U : 0U;
     plan.unskilled += is_skilled(card, person) ? 0U : 1U;
   }
 }
 
 // The people who take unassigned cards: everyone assigned to an open card,
 // or nobody in particular when no one is.
-void StaffSearch::fill_pool(const Plan& plan, std::vector<std::uint64_t>& pool) const noexcept
+void StaffSearch::fill_team(const Plan& plan, std::vector<std::uint64_t>& team) const noexcept
 {
-  std::ranges::copy(elsewhere_, pool.begin());
+  std::ranges::copy(elsewhere_, team.begin());
 
   for (std::uint32_t person = 0U; person < nobody_; ++person)
   {
     if (plan.held[person] > 0U)
     {
-      set_bit(pool, person);
+      set_bit(team, person);
     }
   }
 
   if (std::ranges::all_of(
-        pool,
+        team,
         [](std::uint64_t word)
         {
           return word == 0U;
         }))
   {
-    set_bit(pool, nobody_);
+    set_bit(team, nobody_);
   }
 }
 
-// The mean finish over the screening runs, plus what the changes cost. The
-// scheduler is left on the last run.
+// The mean finish over the screening runs, plus what the changes cost and how
+// much they delay the other milestones. The scheduler is left on the last run.
 double StaffSearch::cost(Runner& runner)
 {
-  fill_pool(runner.plan, runner.pool);
-  const Staffing staffing{.people = runner.plan.people, .pool = runner.pool};
+  fill_team(runner.plan, runner.team);
+  const Staffing staffing{.people = runner.plan.people, .team = runner.team};
   const auto cards = model_->card_count();
   const auto runs = options_->screen_run_count;
   auto total = 0.0;
 
   for (std::size_t run = 0U; run < runs; ++run)
   {
-    total +=
-      runner.scheduler.run(std::span(screen_hours_).subspan(run * cards, cards), {}, staffing);
+    runner.scheduler.run(std::span(screen_hours_).subspan(run * cards, cards), {}, staffing);
+    total += runner.scheduler.finish_of(milestone_) + delay_to_others(run, runner.scheduler);
   }
 
-  return (total / runs) + (change_hours * runner.plan.changes)
-    + (unskilled_hours * runner.plan.unskilled);
+  return (total / runs) + (change_hours * (runner.plan.changes - runner.plan.handovers))
+    + (handover_hours * runner.plan.handovers) + (unskilled_hours * runner.plan.unskilled);
 }
 
-ScopeSample StaffSearch::measure(Runner& runner)
+// Delaying a milestone that has time to spare costs nothing.
+double StaffSearch::delay_to_others(std::size_t run, const Scheduler& scheduler) const noexcept
 {
-  fill_pool(runner.plan, runner.pool);
-  return simulator_.run(
-    active_,
-    options_->run_count,
-    nullptr,
-    Staffing{.people = runner.plan.people, .pool = runner.pool});
+  const auto& milestones = model_->milestones();
+  auto delay = 0.0;
+
+  for (std::size_t other = 0U; other < milestones.size(); ++other)
+  {
+    if (other != milestone_)
+    {
+      const auto allowed = allowed_[(run * milestones.size()) + other];
+      delay += std::max(0.0, scheduler.finish_of(other) - allowed) * milestones[other].weight
+        / milestones[milestone_].weight;
+    }
+  }
+
+  return delay;
 }
 
 // Unassigned cards go to whoever takes them when every receiver pitches in,
 // a start far from the current plan when idle people could help.
 void StaffSearch::start_from_everyone(Runner& runner)
 {
-  fill_pool(runner.plan, runner.pool);
-  runner.pool[nobody_ / word_bits] &= ~(std::uint64_t{1U} << (nobody_ % word_bits));
+  fill_team(runner.plan, runner.team);
+  runner.team[nobody_ / word_bits] &= ~(std::uint64_t{1U} << (nobody_ % word_bits));
 
   for (const auto person : receivers_)
   {
-    set_bit(runner.pool, person);
+    set_bit(runner.team, person);
   }
 
-  runner.scheduler.run(likely_, {}, Staffing{.people = runner.plan.people, .pool = runner.pool});
+  runner.scheduler.run(
+    model_->planned_hours(),
+    {},
+    Staffing{.people = runner.plan.people, .team = runner.team});
   const auto schedule = runner.scheduler.schedule();
 
   for (const auto card : movable_)
@@ -225,7 +247,7 @@ void StaffSearch::anneal(Runner& runner, std::size_t chain, Clock::duration budg
   const auto limit = std::max<std::size_t>(1U, options_->evaluation_limit / chain_count);
   const auto started = Clock::now();
   runner.plan = keep_;
-  runner.random = SplitMix(options_->seed + chain);
+  runner.random = SplitMix(options_->simulation.seed + chain);
 
   if (chain % 2U == 1U)
   {
@@ -233,7 +255,7 @@ void StaffSearch::anneal(Runner& runner, std::size_t chain, Clock::duration budg
   }
 
   auto current = cost(runner);
-  runner.scheduler.driving_chain(runner.driving);
+  runner.scheduler.driving_chain(model_->milestones()[milestone_].card, runner.driving);
   bests_[chain] = runner.plan;
   best_costs_[chain] = current;
 
@@ -245,7 +267,7 @@ void StaffSearch::anneal(Runner& runner, std::size_t chain, Clock::duration budg
     {
       const auto elapsed = Clock::now() - started;
 
-      if (elapsed >= budget)
+      if (elapsed >= budget || timed_out())
       {
         break;
       }
@@ -265,7 +287,7 @@ void StaffSearch::anneal(Runner& runner, std::size_t chain, Clock::duration budg
       || runner.random.unit() < std::exp((current - candidate) / temperature))
     {
       current = candidate;
-      runner.scheduler.driving_chain(runner.driving);
+      runner.scheduler.driving_chain(model_->milestones()[milestone_].card, runner.driving);
 
       if (candidate < best_costs_[chain])
       {

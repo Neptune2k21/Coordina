@@ -30,7 +30,7 @@
     },
     {
       "name": "coordina_graph_work_item",
-      "size": 56,
+      "size": 64,
       "fields": [
         { "name": "node", "offset": 0, "size": 16 },
         { "name": "is_completed", "offset": 16, "size": 4 },
@@ -42,7 +42,8 @@
         { "name": "size", "offset": 40, "size": 4 },
         { "name": "assignment", "offset": 44, "size": 4 },
         { "name": "is_in_progress", "offset": 48, "size": 4 },
-        { "name": "is_context_match", "offset": 52, "size": 4 }
+        { "name": "is_context_match", "offset": 52, "size": 4 },
+        { "name": "elapsed_hours", "offset": 56, "size": 8 }
       ]
     },
     {
@@ -112,53 +113,129 @@
       ]
     },
     {
-      "name": "coordina_graph_forecast_options",
-      "size": 40,
+      "name": "coordina_graph_card_label",
+      "size": 24,
       "fields": [
-        { "name": "milestone", "offset": 0, "size": 16 },
-        { "name": "seed", "offset": 16, "size": 8 },
-        { "name": "person_count", "offset": 24, "size": 4 },
-        { "name": "run_count", "offset": 28, "size": 4 },
-        { "name": "thread_count", "offset": 32, "size": 4 },
-        { "name": "reserved", "offset": 36, "size": 4 }
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "label", "offset": 16, "size": 4 },
+        { "name": "reserved", "offset": 20, "size": 4 }
       ]
     },
     {
-      "name": "coordina_graph_card_forecast",
+      "name": "coordina_graph_milestone",
       "size": 32,
       "fields": [
         { "name": "node", "offset": 0, "size": 16 },
-        { "name": "criticality", "offset": 16, "size": 8 },
-        { "name": "sensitivity", "offset": 24, "size": 8 }
+        { "name": "target_hours", "offset": 16, "size": 8 },
+        { "name": "weight", "offset": 24, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_finished_card",
+      "size": 32,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "hours", "offset": 16, "size": 8 },
+        { "name": "age_days", "offset": 24, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_board",
+      "size": 128,
+      "fields": [
+        { "name": "nodes", "offset": 0, "size": 8 },
+        { "name": "node_count", "offset": 8, "size": 8 },
+        { "name": "edges", "offset": 16, "size": 8 },
+        { "name": "edge_count", "offset": 24, "size": 8 },
+        { "name": "work_items", "offset": 32, "size": 8 },
+        { "name": "work_item_count", "offset": 40, "size": 8 },
+        { "name": "assignees", "offset": 48, "size": 8 },
+        { "name": "assignee_count", "offset": 56, "size": 8 },
+        { "name": "labels", "offset": 64, "size": 8 },
+        { "name": "label_count", "offset": 72, "size": 8 },
+        { "name": "milestones", "offset": 80, "size": 8 },
+        { "name": "milestone_count", "offset": 88, "size": 8 },
+        { "name": "history", "offset": 96, "size": 8 },
+        { "name": "history_count", "offset": 104, "size": 8 },
+        { "name": "person_count", "offset": 112, "size": 4 },
+        { "name": "discovered_count", "offset": 116, "size": 4 },
+        { "name": "finished_count", "offset": 120, "size": 4 },
+        { "name": "extra_people", "offset": 124, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_simulation",
+      "size": 16,
+      "fields": [
+        { "name": "seed", "offset": 0, "size": 8 },
+        { "name": "run_count", "offset": 8, "size": 4 },
+        { "name": "thread_count", "offset": 12, "size": 4 }
       ]
     },
     {
       "name": "coordina_graph_milestone_forecast",
-      "size": 48,
+      "size": 80,
       "fields": [
-        { "name": "cards", "offset": 0, "size": 8 },
-        { "name": "card_capacity", "offset": 8, "size": 8 },
-        { "name": "card_count", "offset": 16, "size": 8 },
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "p10_days", "offset": 16, "size": 8 },
         { "name": "p50_days", "offset": 24, "size": 8 },
         { "name": "p85_days", "offset": 32, "size": 8 },
-        { "name": "unsized_count", "offset": 40, "size": 4 },
-        { "name": "reserved", "offset": 44, "size": 4 }
+        { "name": "p95_days", "offset": 40, "size": 8 },
+        { "name": "on_time", "offset": 48, "size": 8 },
+        { "name": "late_days", "offset": 56, "size": 8 },
+        { "name": "chain_days", "offset": 64, "size": 8 },
+        { "name": "card_count", "offset": 72, "size": 4 },
+        { "name": "unsized_count", "offset": 76, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_card_forecast",
+      "size": 40,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "milestone", "offset": 16, "size": 4 },
+        { "name": "reserved", "offset": 20, "size": 4 },
+        { "name": "criticality", "offset": 24, "size": 8 },
+        { "name": "sensitivity", "offset": 32, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_planned_card",
+      "size": 40,
+      "fields": [
+        { "name": "node", "offset": 0, "size": 16 },
+        { "name": "person", "offset": 16, "size": 4 },
+        { "name": "reserved", "offset": 20, "size": 4 },
+        { "name": "start_days", "offset": 24, "size": 8 },
+        { "name": "finish_days", "offset": 32, "size": 8 }
+      ]
+    },
+    {
+      "name": "coordina_graph_forecast_output",
+      "size": 72,
+      "fields": [
+        { "name": "milestones", "offset": 0, "size": 8 },
+        { "name": "milestone_capacity", "offset": 8, "size": 8 },
+        { "name": "milestone_count", "offset": 16, "size": 8 },
+        { "name": "cards", "offset": 24, "size": 8 },
+        { "name": "card_capacity", "offset": 32, "size": 8 },
+        { "name": "card_count", "offset": 40, "size": 8 },
+        { "name": "plan", "offset": 48, "size": 8 },
+        { "name": "plan_capacity", "offset": 56, "size": 8 },
+        { "name": "plan_count", "offset": 64, "size": 8 }
       ]
     },
     {
       "name": "coordina_graph_scope_options",
-      "size": 64,
+      "size": 56,
       "fields": [
         { "name": "milestone", "offset": 0, "size": 16 },
-        { "name": "seed", "offset": 16, "size": 8 },
-        { "name": "target_hours", "offset": 24, "size": 8 },
+        { "name": "simulation", "offset": 16, "size": 16 },
         { "name": "goal", "offset": 32, "size": 8 },
-        { "name": "person_count", "offset": 40, "size": 4 },
-        { "name": "run_count", "offset": 44, "size": 4 },
-        { "name": "screen_run_count", "offset": 48, "size": 4 },
-        { "name": "thread_count", "offset": 52, "size": 4 },
-        { "name": "evaluation_limit", "offset": 56, "size": 4 },
-        { "name": "time_limit_ms", "offset": 60, "size": 4 }
+        { "name": "screen_run_count", "offset": 40, "size": 4 },
+        { "name": "evaluation_limit", "offset": 44, "size": 4 },
+        { "name": "time_limit_ms", "offset": 48, "size": 4 },
+        { "name": "reserved", "offset": 52, "size": 4 }
       ]
     },
     {
@@ -188,18 +265,14 @@
     },
     {
       "name": "coordina_graph_staffing_options",
-      "size": 56,
+      "size": 48,
       "fields": [
         { "name": "milestone", "offset": 0, "size": 16 },
-        { "name": "seed", "offset": 16, "size": 8 },
-        { "name": "person_count", "offset": 24, "size": 4 },
-        { "name": "run_count", "offset": 28, "size": 4 },
+        { "name": "simulation", "offset": 16, "size": 16 },
         { "name": "screen_run_count", "offset": 32, "size": 4 },
-        { "name": "thread_count", "offset": 36, "size": 4 },
-        { "name": "allow_reassignment", "offset": 40, "size": 4 },
-        { "name": "evaluation_limit", "offset": 44, "size": 4 },
-        { "name": "time_limit_ms", "offset": 48, "size": 4 },
-        { "name": "reserved", "offset": 52, "size": 4 }
+        { "name": "allow_reassignment", "offset": 36, "size": 4 },
+        { "name": "evaluation_limit", "offset": 40, "size": 4 },
+        { "name": "time_limit_ms", "offset": 44, "size": 4 }
       ]
     },
     {
@@ -215,7 +288,7 @@
     },
     {
       "name": "coordina_graph_staffing",
-      "size": 56,
+      "size": 72,
       "fields": [
         { "name": "changes", "offset": 0, "size": 8 },
         { "name": "change_capacity", "offset": 8, "size": 8 },
@@ -223,7 +296,9 @@
         { "name": "p50_days_before", "offset": 24, "size": 8 },
         { "name": "p85_days_before", "offset": 32, "size": 8 },
         { "name": "p50_days_after", "offset": 40, "size": 8 },
-        { "name": "p85_days_after", "offset": 48, "size": 8 }
+        { "name": "p85_days_after", "offset": 48, "size": 8 },
+        { "name": "others_late_days_before", "offset": 56, "size": 8 },
+        { "name": "others_late_days_after", "offset": 64, "size": 8 }
       ]
     }
   ],
@@ -266,7 +341,9 @@
         { "name": "COORDINA_GRAPH_OK", "value": 0 },
         { "name": "COORDINA_GRAPH_INVALID_ARGUMENT", "value": 1 },
         { "name": "COORDINA_GRAPH_INSUFFICIENT_CAPACITY", "value": 2 },
-        { "name": "COORDINA_GRAPH_CYCLE", "value": 3 }
+        { "name": "COORDINA_GRAPH_CYCLE", "value": 3 },
+        { "name": "COORDINA_GRAPH_OUT_OF_MEMORY", "value": 4 },
+        { "name": "COORDINA_GRAPH_INTERNAL_ERROR", "value": 5 }
       ]
     }
   ]

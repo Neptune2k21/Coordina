@@ -162,6 +162,12 @@ int runs_for(std::size_t size)
 
   return size <= 1000U ? 15 : 3;
 }
+
+// Past 1,000 cards the forecasts before and after alone take longer.
+bool is_within(std::size_t size, double elapsed, double budget)
+{
+  return size > 1000U || elapsed < budget;
+}
 }
 
 int main(int argc, char** argv)
@@ -236,37 +242,37 @@ int main(int argc, char** argv)
 
   for (const auto size : sizes)
   {
-    const auto graph = with_release(build_board(size));
-    ForecastResult result{COORDINA_GRAPH_OK, {}};
+    const auto release = release_of(build_board(size));
+    coordina::graph::fixtures::ForecastResult result;
     const auto samples = size <= 1000U ? 5 : 1;
     const auto single = median_milliseconds(
       samples,
       [&]
       {
-        result = run_forecast(graph, 1U);
+        result = release.forecast(forecast_runs, 1U);
       });
     const auto parallel = median_milliseconds(
       samples,
       [&]
       {
-        result = run_forecast(graph, 0U);
+        result = release.forecast(forecast_runs, 0U);
       });
 
-    if (result.status != COORDINA_GRAPH_OK || result.output.p50_days > result.output.p85_days)
+    if (result.status != COORDINA_GRAPH_OK || result.first().p50_days > result.first().p85_days)
     {
       std::fprintf(stderr, "forecast failed with status %d\n", result.status);
       return 1;
     }
 
     std::printf(
-      "%8zu %8u %8zu %10.3f %10.3f %9.1f %9.1f\n",
+      "%8zu %8u %8u %10.3f %10.3f %9.1f %9.1f\n",
       size,
       forecast_runs,
-      result.output.card_count,
+      result.first().card_count,
       single,
       parallel,
-      result.output.p50_days,
-      result.output.p85_days);
+      result.first().p50_days,
+      result.first().p85_days);
   }
 
   std::printf(
@@ -281,17 +287,15 @@ int main(int argc, char** argv)
 
   for (const auto size : sizes)
   {
-    const auto graph = with_release(build_board(size));
-    const auto forecast = run_forecast(graph, 0U);
-    ScopeResult result{COORDINA_GRAPH_OK, {}};
+    auto release = release_of(build_board(size));
+    set_target(release);
+    coordina::graph::fixtures::ScopeResult result;
     const auto elapsed = median_milliseconds(
       size <= 1000U ? 3 : 1,
       [&]
       {
-        result = run_scope(graph, forecast.output.p50_days);
+        result = run_scope(release);
       });
-    // Past 1,000 cards the forecasts before and after alone take longer.
-    const auto within_budget = size > 1000U || elapsed < scope_budget_ms;
 
     if (result.status != COORDINA_GRAPH_OK
       || result.output.on_time_after < result.output.on_time_before)
@@ -308,9 +312,9 @@ int main(int argc, char** argv)
       result.output.on_time_before,
       result.output.on_time_after,
       elapsed,
-      within_budget ? "ok" : "FAILED");
+      is_within(size, elapsed, scope_budget_ms) ? "ok" : "FAILED");
 
-    if (!within_budget)
+    if (!is_within(size, elapsed, scope_budget_ms))
     {
       return 1;
     }
@@ -328,15 +332,14 @@ int main(int argc, char** argv)
 
   for (const auto size : sizes)
   {
-    const auto graph = with_release(build_board(size));
-    StaffingResult result{COORDINA_GRAPH_OK, {}};
+    const auto release = release_of(build_board(size));
+    coordina::graph::fixtures::StaffingResult result;
     const auto elapsed = median_milliseconds(
       size <= 1000U ? 3 : 1,
       [&]
       {
-        result = run_staffing(graph);
+        result = run_staffing(release);
       });
-    const auto within_budget = size > 1000U || elapsed < staffing_budget_ms;
 
     if (result.status != COORDINA_GRAPH_OK
       || result.output.p85_days_after > result.output.p85_days_before)
@@ -353,9 +356,9 @@ int main(int argc, char** argv)
       result.output.p85_days_before,
       result.output.p85_days_after,
       elapsed,
-      within_budget ? "ok" : "FAILED");
+      is_within(size, elapsed, staffing_budget_ms) ? "ok" : "FAILED");
 
-    if (!within_budget)
+    if (!is_within(size, elapsed, staffing_budget_ms))
     {
       return 1;
     }

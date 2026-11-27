@@ -1,6 +1,9 @@
 #include "planning/sampling.h"
 
+#include "numeric/normal.h"
+
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace coordina::graph
@@ -8,6 +11,14 @@ namespace coordina::graph
 namespace
 {
 constexpr std::uint64_t golden_gamma = 0x9e3779b97f4a7c15ULL;
+constexpr std::uint64_t draw_gamma_step = 0xd1342543de82ef95ULL;
+
+// The plastic number's inverse powers: the steps of the two-dimensional
+// sequence that stays evenly spread however many points it has.
+constexpr std::array<double, RunStreams::even_dimensions> even_steps{
+  0.7548776662466927,
+  0.5698402909980532
+};
 
 // The splitmix64 finalizer.
 constexpr std::uint64_t mix(std::uint64_t value) noexcept
@@ -34,9 +45,25 @@ CardStreams::CardStreams(std::uint64_t seed, const std::vector<NodeId>& cards)
   }
 }
 
-double CardStreams::unit(std::size_t card, std::uint64_t run) const noexcept
+double CardStreams::unit(std::size_t card, std::uint64_t run, std::uint64_t draw) const noexcept
 {
-  return to_unit(mix(keys_[card] ^ ((run + 1U) * golden_gamma)));
+  return to_unit(mix(keys_[card] ^ ((run + 1U) * golden_gamma) ^ (draw * draw_gamma_step)));
+}
+
+RunStreams::RunStreams(std::uint64_t seed) noexcept : seed_(mix(seed ^ golden_gamma))
+{
+}
+
+double RunStreams::unit(std::uint64_t run, std::uint64_t dimension) const noexcept
+{
+  if (dimension < even_dimensions)
+  {
+    const auto start = to_unit(mix(seed_ + dimension));
+    const auto value = start + (static_cast<double>(run + 1U) * even_steps.at(dimension));
+    return value - std::floor(value);
+  }
+
+  return to_unit(mix(mix(seed_ ^ (dimension * draw_gamma_step)) ^ ((run + 1U) * golden_gamma)));
 }
 
 SplitMix::SplitMix(std::uint64_t seed) noexcept : state_(mix(seed))
@@ -55,31 +82,28 @@ std::size_t SplitMix::below(std::size_t bound) noexcept
   return std::min(drawn, bound - 1U);
 }
 
-Triangular::Triangular(const SizeRange& range) noexcept
-    : low_(range.low_hours), likely_(range.likely_hours), high_(range.high_hours)
+double draw_gamma(double shape, SplitMix& random) noexcept
 {
-  const auto span = high_ - low_;
+  const auto d = shape - (1.0 / 3.0);
+  const auto c = 1.0 / std::sqrt(9.0 * d);
 
-  if (span > 0.0)
+  for (;;)
   {
-    split_ = (likely_ - low_) / span;
-    below_ = span * (likely_ - low_);
-    above_ = span * (high_ - likely_);
+    const auto normal = normal_quantile(random.unit());
+    const auto cube = 1.0 + (c * normal);
+
+    if (cube <= 0.0)
+    {
+      continue;
+    }
+
+    const auto v = cube * cube * cube;
+    const auto accept = std::log(std::max(random.unit(), 1e-300));
+
+    if (accept < (0.5 * normal * normal) + d - (d * v) + (d * std::log(v)))
+    {
+      return d * v;
+    }
   }
-}
-
-double Triangular::operator()(double unit) const noexcept
-{
-  if (!(high_ > low_))
-  {
-    return likely_;
-  }
-
-  return unit < split_ ? low_ + std::sqrt(unit * below_) : high_ - std::sqrt((1.0 - unit) * above_);
-}
-
-double Triangular::likely() const noexcept
-{
-  return likely_;
 }
 }

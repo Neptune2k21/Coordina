@@ -1,10 +1,11 @@
 #ifndef COORDINA_GRAPH_ENGINE_SCOPE_SEARCH_H
 #define COORDINA_GRAPH_ENGINE_SCOPE_SEARCH_H
 
-#include "planning/forecast_model.h"
+#include "planning/duration_sampler.h"
+#include "planning/plan_simulator.h"
+#include "planning/planned_board.h"
 #include "planning/scope_cut.h"
 #include "planning/scope_graph.h"
-#include "planning/scope_simulator.h"
 
 #include <chrono>
 #include <cstddef>
@@ -23,11 +24,8 @@ namespace coordina::graph
 class ScopeSearch
 {
 public:
-  ScopeSearch(
-    const ForecastModel& model,
-    const std::vector<WorkItem>& work_items,
-    NodeId milestone,
-    const ScopeOptions& options);
+  // The milestone is an open one of the board.
+  ScopeSearch(const PlannedBoard& planned, std::size_t milestone, const ScopeOptions& options);
 
   ScopeCut propose(const std::vector<NodeId>& keep);
   ScopeCut evaluate(const std::vector<NodeId>& cuts);
@@ -47,31 +45,40 @@ private:
   bool exhausted() const;
   void find_cuttable();
   void rebuild();
-  ScopeSample measure(std::size_t runs);
+  PlanSample measure(std::size_t runs);
   Margin margin_of(std::size_t card);
   double value_of_cut() const;
-  double value_of(std::size_t card);
-  void grow(ScopeSample& screen);
-  bool grow_batch(const ScopeSample& sample);
+  bool leaves(std::size_t card) const noexcept;
+  Margin margin_alone(std::size_t card);
+  void grow(PlanSample& screen);
+  bool grow_batch(const PlanSample& sample);
   void shrink(double floor);
   void swap(double floor);
   std::vector<std::size_t> by_value();
+  std::vector<std::size_t> by_value_per_hour();
   std::vector<std::size_t> cheapest_cuts(double budget);
+  void apply_trial();
   std::vector<std::size_t> roots();
-  ScopeCut finish(const ScopeSample& before, const ScopeSample* after);
+  void repair();
+  ScopeCut finish(const MilestoneForecast& before);
 
-  const ForecastModel* model_;
+  const PlannedBoard* planned_;
+  const PlanModel* model_;
   const ScopeOptions* options_;
+  std::size_t milestone_;
+  DurationSampler sampler_;
   ScopeGraph graph_;
-  ScopeSimulator simulator_;
+  PlanSimulator simulator_;
   std::unordered_map<NodeId, std::size_t, NodeHash> index_;
   std::vector<double> values_;
   CardMask blocked_;
   std::vector<std::size_t> cuttable_;
   std::vector<std::size_t> chosen_;
   CardMask cut_;
+  CardMask dropped_;
   CardMask active_;
   CardMask trial_cut_;
+  CardMask trial_dropped_;
   CardMask trial_active_;
   std::vector<double> contribution_;
   std::uint32_t evaluations_ = 0U;

@@ -1,10 +1,10 @@
 #ifndef COORDINA_GRAPH_ENGINE_STAFF_SEARCH_H
 #define COORDINA_GRAPH_ENGINE_STAFF_SEARCH_H
 
-#include "planning/forecast_model.h"
+#include "planning/duration_sampler.h"
+#include "planning/planned_board.h"
 #include "planning/sampling.h"
 #include "planning/schedule.h"
-#include "planning/scope_simulator.h"
 #include "planning/staffing.h"
 
 #include <chrono>
@@ -21,15 +21,15 @@ namespace coordina::graph
 // annealing over who takes each card, in a fixed number of chains that start
 // from the current plan or from everyone at hand pitching in. Plans are
 // compared on a few runs drawn once, so a plan that leaves room to absorb a
-// slip beats one that only fits the likely durations. The best one gives back
-// the changes it does not need, then is measured on every run of the
-// forecast.
+// slip beats one that only fits the median durations. The best one gives back
+// the changes it does not need, then the board is forecast with it.
 class StaffSearch
 {
 public:
+  // The milestone is an open one of the board.
   StaffSearch(
-    const ForecastModel& model,
-    const std::vector<WorkItem>& work_items,
+    const PlannedBoard& planned,
+    std::size_t milestone,
     const StaffingTeam& team,
     const StaffingOptions& options);
 
@@ -48,22 +48,24 @@ private:
   // Who takes each card, and what the plan's cost counts besides its finish.
   struct Plan
   {
-    explicit Plan(const ForecastModel& model);
+    explicit Plan(const PlanModel& model);
 
     std::vector<std::uint32_t> people;
-    // Per person: the cards of the scope they may take.
+    // Per person: the cards of the plan they may take.
     std::vector<std::uint32_t> held;
     std::uint32_t changes = 0U;
+    // The changes that take a card off someone.
+    std::uint32_t handovers = 0U;
     std::uint32_t unskilled = 0U;
   };
 
   // The buffers of one thread, allocated once.
   struct Runner
   {
-    Runner(const ForecastModel& model, std::size_t pool_words);
+    Runner(const PlanModel& model, std::size_t team_words);
 
     Plan plan;
-    std::vector<std::uint64_t> pool;
+    std::vector<std::uint64_t> team;
     std::vector<std::size_t> driving;
     Scheduler scheduler;
     SplitMix random;
@@ -72,7 +74,7 @@ private:
   static void set_bit(std::vector<std::uint64_t>& words, std::uint32_t person) noexcept;
 
   void index_cards();
-  void read_work(const std::vector<WorkItem>& work_items, const std::vector<Assignee>& assignees);
+  void find_busy_elsewhere();
   void link_skills(const std::vector<Assignee>& skilled);
   void draw_screen_runs();
   void pick_receivers(const std::vector<std::uint32_t>& receivers);
@@ -83,29 +85,30 @@ private:
   bool is_skilled(std::size_t card, std::uint32_t person) const noexcept;
   bool can_move(std::size_t card) const noexcept;
   void give(Plan& plan, std::size_t card, std::uint32_t person) const noexcept;
-  void fill_pool(const Plan& plan, std::vector<std::uint64_t>& pool) const noexcept;
+  void fill_team(const Plan& plan, std::vector<std::uint64_t>& team) const noexcept;
   double cost(Runner& runner);
-  ScopeSample measure(Runner& runner);
+  double delay_to_others(std::size_t run, const Scheduler& scheduler) const noexcept;
   void anneal(Runner& runner, std::size_t chain, Clock::duration budget);
   void start_from_everyone(Runner& runner);
   std::size_t draw_card(Runner& runner) const;
   std::uint32_t draw_person(Runner& runner, std::size_t card) const;
   bool timed_out() const;
   void prune(Runner& runner, double& best);
-  std::vector<double> starts_of(Runner& runner, const Plan& plan);
-  StaffingPlan finish(Runner& runner, const ScopeSample& before, const ScopeSample& after);
+  std::vector<Assignee> changes_of(const Plan& plan) const;
+  StaffingPlan finish(const Forecast& before, const Plan& plan) const;
 
-  const ForecastModel* model_;
+  const PlannedBoard* planned_;
+  const PlanModel* model_;
   const StaffingOptions* options_;
+  std::size_t milestone_;
   std::uint32_t nobody_;
-  std::size_t pool_words_;
-  ScopeSimulator simulator_;
+  std::size_t team_words_;
   std::unordered_map<NodeId, std::size_t, NodeHash> index_;
-  std::vector<double> likely_;
   // One row of durations per screening run.
   std::vector<double> screen_hours_;
-  std::vector<std::uint8_t> active_;
-  std::vector<std::uint8_t> in_progress_;
+  // One row per screening run: when each milestone may end without the plan
+  // making it late.
+  std::vector<double> allowed_;
   std::vector<std::uint32_t> skilled_offsets_;
   std::vector<std::uint32_t> skilled_;
   std::vector<std::uint32_t> receivers_;
