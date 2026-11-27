@@ -300,6 +300,35 @@
         { "name": "others_late_days_before", "offset": 56, "size": 8 },
         { "name": "others_late_days_after", "offset": 64, "size": 8 }
       ]
+    },
+    {
+      "name": "coordina_graph_duration_ratio",
+      "size": 32,
+      "fields": [
+        { "name": "low", "offset": 0, "size": 8 },
+        { "name": "median", "offset": 8, "size": 8 },
+        { "name": "high", "offset": 16, "size": 8 },
+        { "name": "key", "offset": 24, "size": 4 },
+        { "name": "card_count", "offset": 28, "size": 4 }
+      ]
+    },
+    {
+      "name": "coordina_graph_calibration",
+      "size": 112,
+      "fields": [
+        { "name": "sizes", "offset": 0, "size": 8 },
+        { "name": "size_capacity", "offset": 8, "size": 8 },
+        { "name": "size_count", "offset": 16, "size": 8 },
+        { "name": "labels", "offset": 24, "size": 8 },
+        { "name": "label_capacity", "offset": 32, "size": 8 },
+        { "name": "label_count", "offset": 40, "size": 8 },
+        { "name": "team", "offset": 48, "size": 32 },
+        { "name": "within_p50", "offset": 80, "size": 8 },
+        { "name": "within_p85", "offset": 88, "size": 8 },
+        { "name": "growth", "offset": 96, "size": 8 },
+        { "name": "replayed_count", "offset": 104, "size": 4 },
+        { "name": "reserved", "offset": 108, "size": 4 }
+      ]
     }
   ],
   "enums": [

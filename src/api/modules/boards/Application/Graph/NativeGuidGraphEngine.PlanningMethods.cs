@@ -61,5 +61,13 @@ public sealed partial class NativeGuidGraphEngine
       UIntPtr changeCount,
       ref NativeGraphStaffingOptions options,
       ref NativeGraphStaffing output);
+
+    [DllImport(
+      LibraryName,
+      EntryPoint = "coordina_graph_calibrate",
+      CallingConvention = CallingConvention.Cdecl)]
+    internal static extern NativeGraphStatus Calibrate(
+      ref NativeGraphBoard board,
+      ref NativeGraphCalibration output);
   }
 }

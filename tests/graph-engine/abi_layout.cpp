@@ -401,6 +401,29 @@ int main()
     COORDINA_FIELD(coordina_graph_staffing, others_late_days_before),
     COORDINA_FIELD(coordina_graph_staffing, others_late_days_after));
 
+  COORDINA_STRUCT(
+    coordina_graph_duration_ratio,
+    COORDINA_FIELD(coordina_graph_duration_ratio, low),
+    COORDINA_FIELD(coordina_graph_duration_ratio, median),
+    COORDINA_FIELD(coordina_graph_duration_ratio, high),
+    COORDINA_FIELD(coordina_graph_duration_ratio, key),
+    COORDINA_FIELD(coordina_graph_duration_ratio, card_count));
+
+  COORDINA_STRUCT(
+    coordina_graph_calibration,
+    COORDINA_FIELD(coordina_graph_calibration, sizes),
+    COORDINA_FIELD(coordina_graph_calibration, size_capacity),
+    COORDINA_FIELD(coordina_graph_calibration, size_count),
+    COORDINA_FIELD(coordina_graph_calibration, labels),
+    COORDINA_FIELD(coordina_graph_calibration, label_capacity),
+    COORDINA_FIELD(coordina_graph_calibration, label_count),
+    COORDINA_FIELD(coordina_graph_calibration, team),
+    COORDINA_FIELD(coordina_graph_calibration, within_p50),
+    COORDINA_FIELD(coordina_graph_calibration, within_p85),
+    COORDINA_FIELD(coordina_graph_calibration, growth),
+    COORDINA_FIELD(coordina_graph_calibration, replayed_count),
+    COORDINA_FIELD(coordina_graph_calibration, reserved));
+
   std::printf("\n  ],\n  \"enums\": [");
   first_entry = true;
 

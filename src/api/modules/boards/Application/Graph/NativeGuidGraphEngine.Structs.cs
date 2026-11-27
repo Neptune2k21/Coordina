@@ -162,4 +162,29 @@ public sealed partial class NativeGuidGraphEngine
     public double OthersLateDaysBefore;
     public double OthersLateDaysAfter;
   }
+
+  [StructLayout(LayoutKind.Sequential)]
+  private readonly record struct NativeGraphDurationRatio(
+    double Low,
+    double Median,
+    double High,
+    uint Key,
+    uint CardCount);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct NativeGraphCalibration
+  {
+    public IntPtr Sizes;
+    public UIntPtr SizeCapacity;
+    public UIntPtr SizeCount;
+    public IntPtr Labels;
+    public UIntPtr LabelCapacity;
+    public UIntPtr LabelCount;
+    public NativeGraphDurationRatio Team;
+    public double WithinP50;
+    public double WithinP85;
+    public double Growth;
+    public uint ReplayedCount;
+    public uint Reserved;
+  }
 }
