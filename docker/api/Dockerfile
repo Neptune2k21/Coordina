@@ -3,7 +3,7 @@
 #   docker build -f docker/api/Dockerfile --target dev .  dotnet watch
 # .dockerignore lists what the build may read.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS source
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS source
 
 WORKDIR /workspace
 
